@@ -18,18 +18,6 @@ long timeNowSeconds();
 GLuint shaderProgram;
 GLuint VAO, VBO, EBO;
 
-/*
-std::vector<GLfloat> vertices = {
-    0.5f,  0.5f, 0.0f,  // Top Right
-    0.5f, -0.5f, 0.0f,  // Bottom Right
-    -0.5f, -0.5f, 0.0f,  // Bottom Left
-    -0.5f,  0.5f, 0.0f,   // Top Left 
-    1.0f,0.9f,0.0f, //toptop left
-    -1.0f,0.9f,0.0f,//top left down a bit
-    -0.5,-1.0f,0.0f
-};
-*/
-
 std::vector<GLfloat> vertices = {
     0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f,   // Bottom Right
    -0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,   // Bottom Left
@@ -82,6 +70,9 @@ int main(int argc, char* argv[]) {
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 
             6 * sizeof(GLfloat), (GLvoid*)(0*sizeof(GLfloat)));
     glEnableVertexAttribArray(0);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 
+            6 * sizeof(GLfloat), (GLvoid*)(3*sizeof(GLfloat)));
+    glEnableVertexAttribArray(1);
     glBindVertexArray(0);
 
     // Uncommenting this call will result in wireframe polygons.
