@@ -46,11 +46,11 @@ void display() {
     while (true) {
         GLfloat timeValue = ((float)((timeNowSeconds() * 12) % 180) * M_PI) / 180.0f;
         std::cout << timeValue << "\n";
-        GLfloat greenValue = sin(timeValue);
-        GLint vertexColorLocation = glGetUniformLocation(shaderProgram, "ourColor");
-        glUseProgram(shaderProgram);
-        glUniform4f(vertexColorLocation, 0.0f, greenValue, 0.0f, 1.0f);
+        //GLfloat greenValue = sin(timeValue);
+        //GLint vertexColorLocation = glGetUniformLocation(shaderProgram, "ourColor");
+        //glUniform4f(vertexColorLocation, 0.0f, greenValue, 0.0f, 1.0f);
 
+        glUseProgram(shaderProgram);
         glBindVertexArray(VAO);
         //someOpenGLFunctionThatDrawsOurTriangle();   
         glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
@@ -80,7 +80,7 @@ int main(int argc, char* argv[]) {
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size()*sizeof(GLfloat), 
             indices.data(), GL_STATIC_DRAW);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 
-            6 * sizeof(GLfloat), (GLvoid*)0);
+            6 * sizeof(GLfloat), (GLvoid*)(0*sizeof(GLfloat)));
     glEnableVertexAttribArray(0);
     glBindVertexArray(0);
 
