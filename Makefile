@@ -1,8 +1,11 @@
-LIBDIRS= -L/usr/X11R6/lib -Iglm
-LDLIBS = -lglut -lGL -lGLU -lX11 -lm 
+GLEWPATH = /modules/cs324/glew-1.11.0
+INCDIRS= -I$(GLEWPATH)/include
+LIBDIRS= -L/usr/X11R6/lib -L$(GLEWPATH)/lib -Iglm
+LDLIBS = -lglut -lGL -lGLU -lX11 -lm  -lGLEW -lpng
 
-CPPFLAGS= -O3 -std=c++11
+CPPFLAGS= $(INCDIRS) -O3 -std=c++11
 LDFLAGS= $(CPPFLAGS) $(LIBDIRS)
+LDFLAGS= $(CPPFLAGS) $(LIBDIRS) -Wl,-rpath,$(GLEWPATH)/lib
 
 TARGETS = 
 
@@ -13,3 +16,4 @@ OBJS =  $(SRCS:.cpp=.o)
 CXX = g++
 
 default: $(TARGETS)
+

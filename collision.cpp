@@ -1,19 +1,13 @@
-#include <GL/glut.h> 
-#include <stdlib.h>
-#include <stddef.h>
-
 #define GLM_FORCE_RADIANS
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/rotate_vector.hpp>
-
-#include "capped_cylinder.h"
-#include "lights_material.h"
-#include "draw_text.h"
 #include <string>
 #include <iostream>
 #include <sstream>
 #include <math.h>
+
+class Cuboid;
 
 // USING RADIANS
 class Cuboid {
@@ -87,11 +81,11 @@ class Cuboid {
 
         void rotateRads(float x, float y, float z) {
             ang_.x += x;
+            ang_.x = fmod(ang_.x,M_PI*0.5f);
             ang_.y += y;
+            ang_.y = fmod(ang_.y,M_PI*0.5f);
             ang_.z += z;
-            ang_.x = fmod(ang_.x,M_PI/2.0f);
-            ang_.y = fmod(ang_.y,M_PI/2.0f);
-            ang_.z = fmod(ang_.z,M_PI/2.0f);
+            ang_.z = fmod(ang_.z,M_PI*0.5f);
         }
 
         void translate(glm::vec3 by) {
@@ -122,7 +116,6 @@ int main() {
     std::cout << Cuboid::colliding(c1,c2) << "\n";
     c2.translate(1.0f,0.0f,0.0f);
     c2.rotateDegs(135.0f,0.0f,0.0f);
-    std::cout << "COOEEE " << c2.ang().x << "\n";
     std::cout << (Cuboid::colliding(c1,c2) ? "They are colliding" : "They are NOT colliding") << "\n";
     std::cout << "c1" << c1 << "\n";
     std::cout << "c2" << c2 << "\n";
