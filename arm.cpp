@@ -18,6 +18,7 @@ long timeNowSeconds();
 GLuint shaderProgram;
 GLuint VAO, VBO, EBO;
 
+/*
 std::vector<GLfloat> vertices = {
     0.5f,  0.5f, 0.0f,  // Top Right
     0.5f, -0.5f, 0.0f,  // Bottom Right
@@ -27,10 +28,18 @@ std::vector<GLfloat> vertices = {
     -1.0f,0.9f,0.0f,//top left down a bit
     -0.5,-1.0f,0.0f
 };
+*/
+
+std::vector<GLfloat> vertices = {
+    0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f,   // Bottom Right
+   -0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,   // Bottom Left
+    0.0f,  0.5f, 0.0f,  0.0f, 0.0f, 1.0f    // Top 
+};
+
 std::vector<GLuint> indices = {  // Note that we start from 0!
     //0, 1, 3,   // First Triangle
     //1, 2, 3,    // Second Triangle
-    5, 4, 6    //
+    0,1,2    //
 };  
 
 void display() {
@@ -71,7 +80,7 @@ int main(int argc, char* argv[]) {
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size()*sizeof(GLfloat), 
             indices.data(), GL_STATIC_DRAW);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 
-            3 * sizeof(GLfloat), (GLvoid*)0);
+            6 * sizeof(GLfloat), (GLvoid*)0);
     glEnableVertexAttribArray(0);
     glBindVertexArray(0);
 
