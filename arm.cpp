@@ -32,15 +32,16 @@ std::vector<GLuint> indices = {  // Note that we start from 0!
 
 void display() {
     while (true) {
-        GLfloat timeValue = ((float)((timeNowSeconds() * 12) % 180) * M_PI) / 180.0f;
-        std::cout << timeValue << "\n";
-        //GLfloat greenValue = sin(timeValue);
-        //GLint vertexColorLocation = glGetUniformLocation(shaderProgram, "ourColor");
-        //glUniform4f(vertexColorLocation, 0.0f, greenValue, 0.0f, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT); 
+        float counter = ((float)(timeNowSeconds() % 12))/12.0f; // [0,1)
 
         glUseProgram(shaderProgram);
+
+        //GLfloat greenValue = sin(timeValue);
+        GLint xOffsetLocation = glGetUniformLocation(shaderProgram, "xOffset");
+        glUniform1f(xOffsetLocation, counter);
+
         glBindVertexArray(VAO);
-        //someOpenGLFunctionThatDrawsOurTriangle();   
         glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
         glBindVertexArray(0);
         glutSwapBuffers(); 
