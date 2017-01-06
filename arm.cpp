@@ -26,6 +26,7 @@ std::string printVec(const glm::vec3 v) {
 std::string fileToString(std::string);
 int init(int argc, char* argv[]);
 GLuint shaders();
+GLuint shaders(std::string vert, std::string frag);
 long timeNowSeconds();
 
 std::vector<glm::vec3> cubePositions = {
@@ -310,11 +311,15 @@ int init(int argc, char* argv[]) {
 }
 
 GLuint shaders() {
+    return shaders("vertex.shader","fragment.shader");
+}
+
+GLuint shaders(std::string vertexFile, std::string fragmentFile) {
 	// create shader object to compile
 	GLuint vertexShader;
 	vertexShader = glCreateShader(GL_VERTEX_SHADER);
 
-    auto tempString = fileToString("vertex.shader");
+    auto tempString = fileToString(vertexFile);
 	const char *vertShaderSource = tempString.c_str();
 	// c_str() returns ptr to c-string representation of string's value
 
@@ -333,7 +338,7 @@ GLuint shaders() {
         std::cout << "Failure, vertex shader compile - \n" << infoLog << "\n";
 	}
     
-    auto tempString2 = fileToString("fragment.shader");
+    auto tempString2 = fileToString(fragmentFile);
 	const char *fragShaderSource = tempString2.c_str();
 	GLuint fragmentShader;
 	fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);

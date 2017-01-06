@@ -7,7 +7,7 @@
 #include <sstream>
 #include <math.h>
 
-#include "collision.hpp"
+#include "Cuboid.hpp"
 
 // USING RADIANS
 
@@ -84,6 +84,7 @@ void Cuboid::rotateRads(float x, float y, float z) {
 void Cuboid::translate(glm::vec3 by) {
     pos_ += by;
 }
+
 void Cuboid::translate(float x, float y, float z) {
     pos_.x += x;
     pos_.y += y;
@@ -94,8 +95,3 @@ std::ostream& operator<<(std::ostream& stream, const Cuboid& c) {
     return stream << "Pos" << printVec(c.pos_) << ", ang:" << printVec(c.ang_) << ", size" << printVec(c.size_);
 }
 
-int main() {
-    Cuboid c1 = Cuboid(0.0f,0.0f,0.0f);
-    std::cout << "Hi there" << c1 << "\n";
-    return 0;
-}

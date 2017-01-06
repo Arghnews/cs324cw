@@ -1,5 +1,5 @@
-#ifndef MY_COLLISION
-#define MY_COLLISION
+#ifndef MY_CUBOID
+#define MY_CUBOID
 #define GLM_FORCE_RADIANS
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
@@ -47,14 +47,10 @@ class Cuboid {
 
 };
 
-#endif
-
-#ifndef MY_PRINTVEC
-#define MY_PRINTVEC
-std::string printVec(const glm::vec3 v) {
+std::string static printVec(const glm::vec3 v) {
     std::stringstream buffer;
     buffer << "(" << v.x << "," << v.y << "," << v.z << ")";
     return buffer.str();
 }
-#endif
 
+#endif
