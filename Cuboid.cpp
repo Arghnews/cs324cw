@@ -35,9 +35,12 @@ glm::vec3 Cuboid::angledSize(const glm::vec3& hsize, const glm::vec3& ang) {
             );
 }
 
+Cuboid::Cuboid() : Cuboid(1.0f,1.0f,1.0f) {
+    }
+
 Cuboid::Cuboid(
         float h, float w, float d) :
-    size_(h,w,d), hsize_(h/2.0f,w/2.0f,d/2.0f) { 
+    hsize_(h/2.0f,w/2.0f,d/2.0f), scale_(glm::vec3(1.0f,1.0f,1.0f)) { 
     }
 
 bool Cuboid::colliding(const Cuboid& c1, const Cuboid& c2) {
@@ -57,11 +60,11 @@ glm::vec3 Cuboid::ang() const {
 }
 
 glm::vec3 Cuboid::size() const {
-    return size_;
+    return 2.0f * hsize();
 }
 
 glm::vec3 Cuboid::hsize() const {
-    return hsize_;
+    return hsize_ * scale_;
 }
 
 void Cuboid::rotateDegs(float x, float y, float z) {
@@ -72,13 +75,17 @@ void Cuboid::rotateDegs(float x, float y, float z) {
             );
 }
 
+void Cuboid::rotateRads(const glm::vec3 xyz) {
+    rotateRads(xyz.x, xyz.y, xyz.z);
+}
+
 void Cuboid::rotateRads(float x, float y, float z) {
     ang_.x += x;
-    ang_.x = fmod(ang_.x,M_PI*0.5f);
+    //ang_.x = fmod(ang_.x,M_PI);
     ang_.y += y;
-    ang_.y = fmod(ang_.y,M_PI*0.5f);
+    //ang_.y = fmod(ang_.y,M_PI);
     ang_.z += z;
-    ang_.z = fmod(ang_.z,M_PI*0.5f);
+    //ang_.z = fmod(ang_.z,M_PI);
 }
 
 void Cuboid::translate(glm::vec3 by) {
@@ -91,11 +98,27 @@ void Cuboid::translate(float x, float y, float z) {
     pos_.z += z;
 }
 
+glm::vec3 Cuboid::scale() const {
+    return scale_;
+}
+
 void Cuboid::changeScale(glm::vec3 by) {
-    scale += by;
+    scale_ += by;
+}
+
+void Cuboid::setScale(glm::vec3 to) {
+    scale_ = to;
+}
+
+void Cuboid::changeScale(float x, float y, float z) {
+    changeScale(glm::vec3(x,y,z));
+}
+
+void Cuboid::setScale(float x, float y, float z) {
+    setScale(glm::vec3(x,y,z));
 }
 
 std::ostream& operator<<(std::ostream& stream, const Cuboid& c) {
-    return stream << "Pos" << printVec(c.pos_) << ", ang:" << printVec(c.ang_) << ", size" << printVec(c.size_);
+    return stream << "Pos" << printVec(c.pos()) << ", ang:" << printVec(c.ang()) << ", size" << printVec(c.size());
 }
 

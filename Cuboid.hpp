@@ -14,7 +14,6 @@ class Cuboid {
     private:
         glm::vec3 pos_; // x, y, z of center
         glm::vec3 ang_; // x, y, z
-        glm::vec3 size_; // h, w, d
         glm::vec3 hsize_; // h, w, d * 1/2
         glm::vec3 scale_; // 1.0,1.0,1.0
         
@@ -29,6 +28,7 @@ class Cuboid {
                 const glm::vec3& ang);
 
     public:
+        Cuboid();
         Cuboid(float h, float w, float d);
 
         bool static colliding(const Cuboid& c1, const Cuboid& c2);
@@ -41,11 +41,15 @@ class Cuboid {
 
         void rotateDegs(float x, float y, float z);
         void rotateRads(float x, float y, float z);
+        void rotateRads(const glm::vec3 xyz);
 
         void translate(glm::vec3 by);
         void translate(float x, float y, float z);
         
         void changeScale(glm::vec3 by);
+        void changeScale(float x, float y, float z);
+        void setScale(float x, float y, float z);
+        void setScale(glm::vec3 to);
 
         friend std::ostream& operator<<(std::ostream&, const Cuboid&);
 

@@ -69,6 +69,10 @@ long timeNowSeconds() {
     return std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 }
 
+long timeNowMillis() {
+    return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+}
+
 GLuint shaders() {
     return shaders("vertex.shader","fragment.shader");
 }
@@ -134,7 +138,9 @@ std::vector<GLfloat> vertices = {
     0.5f,  0.5f, 0.0f,  // Top Right
     0.5f, -0.5f, 0.0f,  // Bottom Right
     -0.5f, -0.5f, 0.0f,  // Bottom Left
-    -0.5f,  0.5f, 0.0f   // Top Left 
+    -0.5f,  0.5f, 0.0f,   // Top Left 
+    0.5f,  0.5f, 0.0f,  // Top Right
+    -0.5f, -0.5f, 0.0f,  // Bottom Left
 };
 
 std::vector<GLfloat> vertices2 = {
