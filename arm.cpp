@@ -14,6 +14,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <map>
+#include <set>
 
 #include "crap.hpp"
 #include "Shape.hpp"
@@ -28,6 +29,9 @@ void display() {
     shapes.push_back(Shape(1.0f,1.0f,1.0f,cube,"Cube1"));
     shapes.push_back(Shape(1.0f,1.0f,1.0f,cube,"Cube2"));
 
+    // ints correspond to index in shapes
+    std::map<int, std::set<int>> collisions;
+
     shapes[0].translate(-1.0f,0.0f,0.0f);
     shapes[1].translate(2.0f,0.0f,0.0f);
     int i = 0;
@@ -36,6 +40,7 @@ void display() {
     int t = t_init;
     bool colliding = false;
     shapes[0].cuboid().setScale(1.0f,0.5f,2.0f);
+    shapes[1].cuboid().setScale(1.0f,1.0f,0.25f);
 
     std::cout << "Hi from arm " << "\n";
 
@@ -100,28 +105,36 @@ void display() {
             t = t_init;
         }
 
-        bool wasColliding = colliding;
-        /*
         for (int i=0; i<shapes.size(); ++i) {
             Shape& shape = shapes[i];
             shape.rotateRads(glm::radians(1.0f),0.0f,0.0f);
         }
-        */
         
-        if (Cuboid::colliding(shapes[0].cuboid(),shapes[1].cuboid())) {
-            colliding = true;
-        } else {
-            colliding = false;
-        }
-        if (colliding != wasColliding) {
-            if (colliding) {
-                std::cout << "Now colliding" << "\n";
-                shapes[0].colliding(true);
-                shapes[1].colliding(true);
-            } else {
-                std::cout << "Now NOT colliding" << "\n";
-                shapes[0].colliding(false);
-                shapes[1].colliding(false);
+
+        auto contains = [&] (int i, int j) -> bool {
+            return collisions[i].find(j) != collisions[i].end();
+        };
+
+        // say 1 collides with 4, due to way this is done, should only ever have
+        // an entry of "4" in 1's set - always the lower one
+        for (int i=0; i<shapes.size(); ++i) {
+            for (int j=i+1; j<shapes.size(); ++j) {
+                const bool collidingBefore = contains(i, j);
+                const bool collidingNow = Cuboid::colliding(shapes[i].cuboid(),shapes[j].cuboid());
+                if (collidingBefore != collidingNow) {
+                    // have changed collision state
+                    if (collidingNow) {
+                        // collision
+                        collisions[i].insert(j);
+                        shapes[i].colliding(true);
+                        shapes[j].colliding(true);
+                    } else {
+                        // no collision
+                        collisions[i].erase(j);
+                        shapes[i].colliding(false);
+                        shapes[j].colliding(false);
+                    }
+                }
             }
         }
 
