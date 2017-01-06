@@ -91,6 +91,10 @@ void Cuboid::translate(float x, float y, float z) {
     pos_.z += z;
 }
 
+void Cuboid::changeScale(glm::vec3 by) {
+    scale += by;
+}
+
 std::ostream& operator<<(std::ostream& stream, const Cuboid& c) {
     return stream << "Pos" << printVec(c.pos_) << ", ang:" << printVec(c.ang_) << ", size" << printVec(c.size_);
 }

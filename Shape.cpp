@@ -36,3 +36,4 @@ int main() {
     std::cout << s1.vertices()[0] << "\n";
     return 0;
 }
+
