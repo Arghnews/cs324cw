@@ -62,19 +62,56 @@ void display() {
 
         // 1 --
         // translate * rotate * scale * vector
-        glm::mat4 trans;
+        
+        /*
         GLuint transformLoc = glGetUniformLocation(shaderProgram, "transform");
 
         trans = glm::mat4();
         // scale, rotate, translate
-        trans = glm::translate(trans, glm::vec3(0.0f,0.0f, 0.0f));
+        //trans = glm::translate(trans, glm::vec3(0.0f,0.0f, 0.0f));
         //trans = glm::rotate(trans, glm::radians(counter*180.0f), glm::vec3(0.0, 0.0, 1.0));
-        trans = glm::scale(trans, glm::vec3(0.75f,0.75f,0.75f));  
+        //trans = glm::scale(trans, glm::vec3(0.75f,0.75f,0.75f));  
+        //
         glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
+        */
+
+        // local space -> world space -> view space -> clip space -> screen space
+        //          model matrix   view matrix  projection matrix   viewport transform
+        // Vclip = Mprojection * Mview * Mmodel * Vlocal
+
+        float aspectRatio = (float)(glutGet(GLUT_WINDOW_WIDTH) / glutGet(GLUT_WINDOW_HEIGHT));
+
+        glm::mat4 trans;
+        glm::mat4 model;
+        //model = glm::rotate(model, glm::radians(-55.0f), glm::vec3(1.0f, 0.0f, 0.0f)); 
+        // scale, rotate, translate
+        trans = glm::translate(trans, glm::vec3(0.0f,0.0f, 0.0f));
+        trans = glm::rotate(trans, glm::radians(counter*180.0f), glm::vec3(0.0, 0.0, 1.0));
+        trans = glm::scale(trans, glm::vec3(0.75f,0.75f,0.75f));  
+        model = model * trans;
+
+        glm::mat4 view;
+        // Note that we're translating the scene in the reverse direction of where we want to move
+        //view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f)); 
+        view = glm::lookAt(
+            glm::vec3(0.0f,-1.0f,1.0f),
+            glm::vec3(0.0f,0.0f,0.0f),
+            glm::vec3(0.0f,1.0f,0.0f));
+
+        glm::mat4 projection;
+        projection = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 100.0f);
+
+        GLint modelLoc = glGetUniformLocation(shaderProgram, "model");
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+        GLint viewLoc = glGetUniformLocation(shaderProgram, "view");
+        glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+        GLint projectionLoc = glGetUniformLocation(shaderProgram, "projection");
+        glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
         glBindVertexArray(VAOs[0]);
         glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
-
+        
+        /*
         trans = glm::mat4();
         // scale, rotate, translate
         trans = glm::translate(trans, glm::vec3(0.0f,0.0f, 0.0f));
@@ -84,6 +121,7 @@ void display() {
 
         glBindVertexArray(VAOs[1]);
         glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, 0);
+        */
 
         // --
 
@@ -131,6 +169,7 @@ int main(int argc, char* argv[]) {
                 3 * sizeof(GLfloat), (GLvoid*)(0*sizeof(GLfloat)));
         glEnableVertexAttribArray(0);
     glBindVertexArray(0);
+
 
     glBindVertexArray(VAOs[1]);
         glBindBuffer(GL_ARRAY_BUFFER, VBOs[1]);
