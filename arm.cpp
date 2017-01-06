@@ -29,18 +29,28 @@ GLuint shaders();
 long timeNowSeconds();
 
 GLuint shaderProgram;
-GLuint VAO, VBO, EBO;
+GLuint VAOs[2], VBOs[2], EBOs[2];
 
 std::vector<GLfloat> vertices = {
-    0.5f, -0.5f, 0.0f,  1.0f, 0.0f, 0.0f,   // Bottom Right
-   -0.5f, -0.5f, 0.0f,  0.0f, 1.0f, 0.0f,   // Bottom Left
-    0.0f,  0.5f, 0.0f,  0.0f, 0.0f, 1.0f    // Top 
+    0.5f,  0.5f, 0.0f,  // Top Right
+    0.5f, -0.5f, 0.0f,  // Bottom Right
+    -0.5f, -0.5f, 0.0f,  // Bottom Left
+    -0.5f,  0.5f, 0.0f   // Top Left 
+};
+
+std::vector<GLfloat> vertices2 = {
+    -1.0f,  -1.0f, 0.0f, 1.0f, 1.0f, 1.0f  // Top Right
+    -0.5f, -0.5f, 0.0f, 0.0f, 0.2f, 0.8f // Bottom Right
+    -0.5f, -1.0f, 0.0f, 1.0f,1.0f,0.0f // Bottom Left
 };
 
 std::vector<GLuint> indices = {  // Note that we start from 0!
-    //0, 1, 3,   // First Triangle
-    //1, 2, 3,    // Second Triangle
-    0,1,2    //
+    0, 1, 3,   // First Triangle
+    1, 2, 3    // Second Triangle
+};  
+
+std::vector<GLuint> indices2 = {  // Note that we start from 0!
+    0, 1, 2,   // First Triangle
 };  
 
 void display() {
@@ -58,14 +68,26 @@ void display() {
         trans = glm::mat4();
         // scale, rotate, translate
         trans = glm::translate(trans, glm::vec3(0.0f,0.0f, 0.0f));
-        trans = glm::rotate(trans, glm::radians(counter*180.0f), glm::vec3(0.0, 0.0, 1.0));
-        trans = glm::scale(trans, glm::vec3(1.0f,1.0f,1.0f));  
+        //trans = glm::rotate(trans, glm::radians(counter*180.0f), glm::vec3(0.0, 0.0, 1.0));
+        trans = glm::scale(trans, glm::vec3(0.75f,0.75f,0.75f));  
         glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
 
-        glBindVertexArray(VAO);
+        glBindVertexArray(VAOs[0]);
         glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
+
+        trans = glm::mat4();
+        // scale, rotate, translate
+        trans = glm::translate(trans, glm::vec3(0.0f,0.0f, 0.0f));
+        trans = glm::rotate(trans, glm::radians(counter*180.0f), glm::vec3(0.0, 0.0, 1.0));
+        trans = glm::scale(trans, glm::vec3(0.75f,0.75f,0.75f));  
+        glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
+
+        glBindVertexArray(VAOs[1]);
+        glDrawElements(GL_TRIANGLES, 3, GL_UNSIGNED_INT, 0);
+
         // --
 
+        /*
         // 2 --
         trans = glm::mat4();
         // scale, rotate, translate
@@ -74,9 +96,10 @@ void display() {
         //trans = glm::scale(trans, glm::vec3(1.0f,1.0f,1.0f));  
         glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
 
-        glBindVertexArray(VAO);
+        glBindVertexArray(VAOs[0]);
         glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
         // --
+        */
 
         glBindVertexArray(0);
         glutSwapBuffers(); 
@@ -91,24 +114,39 @@ int main(int argc, char* argv[]) {
 
     shaderProgram = shaders();
 
-    glGenVertexArrays(1, &VAO);
-	glGenBuffers(1, &VBO);
-	glGenBuffers(1, &EBO);
+    glGenVertexArrays(2, VAOs);
+	glGenBuffers(2, VBOs);
+	glGenBuffers(2, EBOs);
     
-    // repeat this segment for each VAO/VBO binding etc
-    glBindVertexArray(VAO);
-	glBindBuffer(GL_ARRAY_BUFFER, VBO);
-	glBufferData(GL_ARRAY_BUFFER, vertices.size()*sizeof(GLfloat), 
-            vertices.data(), GL_STATIC_DRAW);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size()*sizeof(GLfloat), 
-            indices.data(), GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 
-            6 * sizeof(GLfloat), (GLvoid*)(0*sizeof(GLfloat)));
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 
-            6 * sizeof(GLfloat), (GLvoid*)(3*sizeof(GLfloat)));
-    glEnableVertexAttribArray(1);
+    glBindVertexArray(VAOs[0]);
+        glBindBuffer(GL_ARRAY_BUFFER, VBOs[0]);
+        glBufferData(GL_ARRAY_BUFFER, vertices.size()*sizeof(GLfloat), 
+                vertices.data(), GL_STATIC_DRAW);
+
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBOs[0]);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size()*sizeof(GLfloat), 
+                indices.data(), GL_STATIC_DRAW);
+        
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 
+                3 * sizeof(GLfloat), (GLvoid*)(0*sizeof(GLfloat)));
+        glEnableVertexAttribArray(0);
+    glBindVertexArray(0);
+
+    glBindVertexArray(VAOs[1]);
+        glBindBuffer(GL_ARRAY_BUFFER, VBOs[1]);
+        glBufferData(GL_ARRAY_BUFFER, vertices.size()*sizeof(GLfloat), 
+                vertices2.data(), GL_STATIC_DRAW);
+
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBOs[1]);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices2.size()*sizeof(GLfloat), 
+                indices2.data(), GL_STATIC_DRAW);
+        
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 
+                6 * sizeof(GLfloat), (GLvoid*)(0*sizeof(GLfloat)));
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 
+                6 * sizeof(GLfloat), (GLvoid*)(3*sizeof(GLfloat)));
+        glEnableVertexAttribArray(0);
+        glEnableVertexAttribArray(1);
     glBindVertexArray(0);
 
     // Uncommenting this call will result in wireframe polygons.
@@ -117,9 +155,9 @@ int main(int argc, char* argv[]) {
     std::cout << "Hi from arm " << "\n";
     glutMainLoop(); 
 
-    glDeleteVertexArrays(1, &VAO);
-    glDeleteBuffers(1, &VBO);
-    glDeleteBuffers(1, &EBO);
+    glDeleteVertexArrays(2, VAOs);
+    glDeleteBuffers(2, VBOs);
+    glDeleteBuffers(2, EBOs);
 	return 0; 
 }
 
