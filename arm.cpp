@@ -28,6 +28,63 @@ int init(int argc, char* argv[]);
 GLuint shaders();
 long timeNowSeconds();
 
+std::vector<glm::vec3> cubePositions = {
+    glm::vec3( 0.0f,  0.0f,  0.0f), 
+    glm::vec3( 2.0f,  5.0f, -15.0f), 
+    glm::vec3(-1.5f, -2.2f, -2.5f),  
+    glm::vec3(-3.8f, -2.0f, -12.3f),  
+    glm::vec3( 2.4f, -0.4f, -3.5f),  
+    glm::vec3(-1.7f,  3.0f, -7.5f),  
+    glm::vec3( 1.3f, -2.0f, -2.5f),  
+    glm::vec3( 1.5f,  2.0f, -2.5f), 
+    glm::vec3( 1.5f,  0.2f, -1.5f), 
+    glm::vec3(-1.3f,  1.0f, -1.5f)  
+};
+
+std::vector<GLfloat> cube = {
+    -0.5f, -0.5f, -0.5f,  0.0f, 0.0f, 0.5f,
+    0.5f, -0.5f, -0.5f,  1.0f, 0.0f, 0.5f,
+    0.5f,  0.5f, -0.5f,  1.0f, 1.0f, 0.5f,
+    0.5f,  0.5f, -0.5f,  1.0f, 1.0f, 0.5f,
+    -0.5f,  0.5f, -0.5f,  0.0f, 1.0f, 0.5f,
+    -0.5f, -0.5f, -0.5f,  0.0f, 0.0f, 0.5f,
+
+    -0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 0.5f,
+    0.5f, -0.5f,  0.5f,  1.0f, 0.0f, 0.5f,
+    0.5f,  0.5f,  0.5f,  1.0f, 1.0f, 0.5f,
+    0.5f,  0.5f,  0.5f,  1.0f, 1.0f, 0.5f,
+    -0.5f,  0.5f,  0.5f,  0.0f, 1.0f, 0.5f,
+    -0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 0.5f,
+
+    -0.5f,  0.5f,  0.5f,  1.0f, 0.0f, 0.5f,
+    -0.5f,  0.5f, -0.5f,  1.0f, 1.0f, 0.5f,
+    -0.5f, -0.5f, -0.5f,  0.0f, 1.0f, 0.5f,
+    -0.5f, -0.5f, -0.5f,  0.0f, 1.0f, 0.5f,
+    -0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 0.5f,
+    -0.5f,  0.5f,  0.5f,  1.0f, 0.0f, 0.5f,
+
+    0.5f,  0.5f,  0.5f,  1.0f, 0.0f, 0.5f,
+    0.5f,  0.5f, -0.5f,  1.0f, 1.0f, 0.5f,
+    0.5f, -0.5f, -0.5f,  0.0f, 1.0f, 0.5f,
+    0.5f, -0.5f, -0.5f,  0.0f, 1.0f, 0.5f,
+    0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 0.5f,
+    0.5f,  0.5f,  0.5f,  1.0f, 0.0f, 0.5f,
+
+    -0.5f, -0.5f, -0.5f,  0.0f, 1.0f, 0.5f,
+    0.5f, -0.5f, -0.5f,  1.0f, 1.0f, 0.5f,
+    0.5f, -0.5f,  0.5f,  1.0f, 0.0f, 0.5f,
+    0.5f, -0.5f,  0.5f,  1.0f, 0.0f, 0.5f,
+    -0.5f, -0.5f,  0.5f,  0.0f, 0.0f, 0.5f,
+    -0.5f, -0.5f, -0.5f,  0.0f, 1.0f, 0.5f,
+
+    -0.5f,  0.5f, -0.5f,  0.0f, 1.0f, 0.5f,
+    0.5f,  0.5f, -0.5f,  1.0f, 1.0f, 0.5f,
+    0.5f,  0.5f,  0.5f,  1.0f, 0.0f, 0.5f,
+    0.5f,  0.5f,  0.5f,  1.0f, 0.0f, 0.5f,
+    -0.5f,  0.5f,  0.5f,  0.0f, 0.0f, 0.5f,
+    -0.5f,  0.5f, -0.5f,  0.0f, 1.0f, 0.5f,
+};
+
 GLuint shaderProgram;
 GLuint VAOs[2], VBOs[2], EBOs[2];
 
@@ -75,44 +132,61 @@ void display() {
         glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
         */
 
-        // local space -> world space -> view space -> clip space -> screen space
-        //          model matrix   view matrix  projection matrix   viewport transform
-        // Vclip = Mprojection * Mview * Mmodel * Vlocal
 
-        float aspectRatio = (float)(glutGet(GLUT_WINDOW_WIDTH) / glutGet(GLUT_WINDOW_HEIGHT));
+        //glBindVertexArray(VAOs[0]);
+        //glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
 
-        glm::mat4 trans;
-        glm::mat4 model;
-        //model = glm::rotate(model, glm::radians(-55.0f), glm::vec3(1.0f, 0.0f, 0.0f)); 
-        // scale, rotate, translate
-        trans = glm::translate(trans, glm::vec3(0.0f,0.0f, 0.0f));
-        trans = glm::rotate(trans, glm::radians(counter*180.0f), glm::vec3(0.0, 0.0, 1.0));
-        trans = glm::scale(trans, glm::vec3(0.75f,0.75f,0.75f));  
-        model = model * trans;
 
-        glm::mat4 view;
-        // Note that we're translating the scene in the reverse direction of where we want to move
-        //view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f)); 
-        view = glm::lookAt(
-            glm::vec3(0.0f,-1.0f,1.0f),
-            glm::vec3(0.0f,0.0f,0.0f),
-            glm::vec3(0.0f,1.0f,0.0f));
+        for (int i = 0; i < cubePositions.size(); i++)
+        {
+            glBindVertexArray(VAOs[1]);
 
-        glm::mat4 projection;
-        projection = glm::perspective(glm::radians(45.0f), aspectRatio, 0.1f, 100.0f);
+            //
+            // local space -> world space -> view space -> clip space -> screen space
+            //          model matrix   view matrix  projection matrix   viewport transform
+            // Vclip = Mprojection * Mview * Mmodel * Vlocal
 
-        GLint modelLoc = glGetUniformLocation(shaderProgram, "model");
-        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-        GLint viewLoc = glGetUniformLocation(shaderProgram, "view");
-        glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
-        GLint projectionLoc = glGetUniformLocation(shaderProgram, "projection");
-        glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
+            float aspectRatio = (float)(glutGet(GLUT_WINDOW_WIDTH) / glutGet(GLUT_WINDOW_HEIGHT));
 
-        glBindVertexArray(VAOs[0]);
-        glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
-        
+            glm::mat4 trans;
+            glm::mat4 model;
+            //model = glm::rotate(model, glm::radians(-55.0f), glm::vec3(1.0f, 0.0f, 0.0f)); 
+            // scale, rotate, translate
+            /*
+            trans = glm::translate(trans, glm::vec3(0.0f,0.0f, 0.0f));
+            trans = glm::rotate(trans, glm::radians(counter*180.0f), glm::vec3(0.0, 0.0, 1.0));
+            trans = glm::scale(trans, glm::vec3(0.75f,0.75f,0.75f));  
+            model = model * trans;
+            */
+
+            trans = glm::translate(trans, cubePositions[i]);
+            GLfloat angle = glm::radians(20.0f * i);
+            trans = glm::rotate(trans, angle, glm::vec3(1.0f, 0.3f, 0.5f));
+            model = model * trans;
+
+            glm::mat4 view;
+            // Note that we're translating the scene in the reverse direction of where we want to move
+            //view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f)); 
+            view = glm::lookAt(
+                    glm::vec3(0.0f,-5.0f,5.0f),
+                    glm::vec3(0.0f,0.0f,0.0f),
+                    glm::vec3(0.0f,1.0f,0.0f));
+
+            glm::mat4 projection;
+            projection = glm::perspective(glm::radians(60.0f), aspectRatio, 0.1f, 100.0f);
+
+            GLint modelLoc = glGetUniformLocation(shaderProgram, "model");
+            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+            GLint viewLoc = glGetUniformLocation(shaderProgram, "view");
+            glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+            GLint projectionLoc = glGetUniformLocation(shaderProgram, "projection");
+            glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
+
+            glDrawArrays(GL_TRIANGLES, 0, cube.size());
+        }
+
         /*
-        trans = glm::mat4();
+           trans = glm::mat4();
         // scale, rotate, translate
         trans = glm::translate(trans, glm::vec3(0.0f,0.0f, 0.0f));
         trans = glm::rotate(trans, glm::radians(counter*180.0f), glm::vec3(0.0, 0.0, 1.0));
@@ -152,8 +226,8 @@ int main(int argc, char* argv[]) {
 
     shaderProgram = shaders();
 
-    glGenVertexArrays(2, VAOs);
-	glGenBuffers(2, VBOs);
+    glGenVertexArrays(3, VAOs);
+	glGenBuffers(3, VBOs);
 	glGenBuffers(2, EBOs);
     
     glBindVertexArray(VAOs[0]);
@@ -170,23 +244,29 @@ int main(int argc, char* argv[]) {
         glEnableVertexAttribArray(0);
     glBindVertexArray(0);
 
-
     glBindVertexArray(VAOs[1]);
         glBindBuffer(GL_ARRAY_BUFFER, VBOs[1]);
-        glBufferData(GL_ARRAY_BUFFER, vertices.size()*sizeof(GLfloat), 
+        glBufferData(GL_ARRAY_BUFFER, vertices2.size()*sizeof(GLfloat), 
                 vertices2.data(), GL_STATIC_DRAW);
 
         glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBOs[1]);
         glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices2.size()*sizeof(GLfloat), 
                 indices2.data(), GL_STATIC_DRAW);
         
+        glBindBuffer(GL_ARRAY_BUFFER, VBOs[2]);
+        glBufferData(GL_ARRAY_BUFFER, cube.size()*sizeof(GLfloat), 
+                cube.data(), GL_STATIC_DRAW);
+
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 
                 6 * sizeof(GLfloat), (GLvoid*)(0*sizeof(GLfloat)));
         glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 
                 6 * sizeof(GLfloat), (GLvoid*)(3*sizeof(GLfloat)));
         glEnableVertexAttribArray(0);
         glEnableVertexAttribArray(1);
+
     glBindVertexArray(0);
+
+    glEnable(GL_DEPTH_TEST);
 
     // Uncommenting this call will result in wireframe polygons.
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
@@ -194,8 +274,8 @@ int main(int argc, char* argv[]) {
     std::cout << "Hi from arm " << "\n";
     glutMainLoop(); 
 
-    glDeleteVertexArrays(2, VAOs);
-    glDeleteBuffers(2, VBOs);
+    glDeleteVertexArrays(3, VAOs);
+    glDeleteBuffers(3, VBOs);
     glDeleteBuffers(2, EBOs);
 	return 0; 
 }
@@ -283,3 +363,4 @@ GLuint shaders() {
 long timeNowSeconds() {
     return std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 }
+
