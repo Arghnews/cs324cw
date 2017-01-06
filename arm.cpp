@@ -9,6 +9,19 @@
 #include <chrono>
 #include <math.h>
 #include <thread>
+#define GLM_FORCE_RADIANS
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+
+#ifndef MY_PRINTVEC
+#define MY_PRINTVEC
+std::string printVec(const glm::vec3 v) {
+    std::stringstream buffer;
+    buffer << "(" << v.x << "," << v.y << "," << v.z << ")";
+    return buffer.str();
+}
+#endif
 
 std::string fileToString(std::string);
 int init(int argc, char* argv[]);
@@ -37,12 +50,34 @@ void display() {
 
         glUseProgram(shaderProgram);
 
-        //GLfloat greenValue = sin(timeValue);
-        GLint xOffsetLocation = glGetUniformLocation(shaderProgram, "xOffset");
-        glUniform1f(xOffsetLocation, counter);
+        // 1 --
+        // translate * rotate * scale * vector
+        glm::mat4 trans;
+        GLuint transformLoc = glGetUniformLocation(shaderProgram, "transform");
+
+        trans = glm::mat4();
+        // scale, rotate, translate
+        trans = glm::translate(trans, glm::vec3(0.0f,0.0f, 0.0f));
+        trans = glm::rotate(trans, glm::radians(counter*180.0f), glm::vec3(0.0, 0.0, 1.0));
+        trans = glm::scale(trans, glm::vec3(1.0f,1.0f,1.0f));  
+        glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
 
         glBindVertexArray(VAO);
         glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
+        // --
+
+        // 2 --
+        trans = glm::mat4();
+        // scale, rotate, translate
+        trans = glm::translate(trans, glm::vec3(counter,0.0f, 0.0f));
+        //trans = glm::rotate(trans, glm::radians(counter*180.0f), glm::vec3(0.0, 0.0, 1.0));
+        //trans = glm::scale(trans, glm::vec3(1.0f,1.0f,1.0f));  
+        glUniformMatrix4fv(transformLoc, 1, GL_FALSE, glm::value_ptr(trans));
+
+        glBindVertexArray(VAO);
+        glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
+        // --
+
         glBindVertexArray(0);
         glutSwapBuffers(); 
     }

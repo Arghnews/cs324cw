@@ -45,8 +45,16 @@ class Cuboid {
 
         friend std::ostream& operator<<(std::ostream&, const Cuboid&);
 
-        std::string static printVec(const glm::vec3 v);
-
 };
 
 #endif
+
+#ifndef MY_PRINTVEC
+#define MY_PRINTVEC
+std::string printVec(const glm::vec3 v) {
+    std::stringstream buffer;
+    buffer << "(" << v.x << "," << v.y << "," << v.z << ")";
+    return buffer.str();
+}
+#endif
+

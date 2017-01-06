@@ -90,14 +90,8 @@ void Cuboid::translate(float x, float y, float z) {
     pos_.z += z;
 }
 
-std::string Cuboid::printVec(const glm::vec3 v) {
-    std::stringstream buffer;
-    buffer << "(" << v.x << "," << v.y << "," << v.z << ")";
-    return buffer.str();
-}
-
 std::ostream& operator<<(std::ostream& stream, const Cuboid& c) {
-    return stream << "Pos" << Cuboid::printVec(c.pos_) << ", ang:" << Cuboid::printVec(c.ang_) << ", size" << Cuboid::printVec(c.size_);
+    return stream << "Pos" << printVec(c.pos_) << ", ang:" << printVec(c.ang_) << ", size" << printVec(c.size_);
 }
 
 int main() {
