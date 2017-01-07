@@ -36,6 +36,7 @@ void keyboard(unsigned char key, int mouseX, int mouseY);
 void specialInput(int key, int x, int y);
 void cleanupAndExit();
 Shape& getShape();
+void switchShape(int);
 
 GLuint shaderProgram;
 std::vector<Shape*> shapes;
@@ -53,6 +54,15 @@ void db() {
 
 Shape& getShape() {
     return *shapes[selectedShape];
+}
+
+void switchShape(int by) {
+    if (shapes.size() == 0) {
+        std::cout << "warning - shape list size 0" << "\n";
+    } else if (shapes.size() > 1) {
+        selectedShape += by;
+        selectedShape %= shapes.size();
+    }
 }
 
 void keyboard(unsigned char key, int mouseX, int mouseY) {
@@ -91,8 +101,10 @@ void specialInput(int key, int x, int y) {
             s.translate(0,0,-step);
             break;
         case GLUT_KEY_LEFT:
+            switchShape(-1);
             break;
         case GLUT_KEY_RIGHT:
+            switchShape(1);
             break;
     }
     if (!stop) {
