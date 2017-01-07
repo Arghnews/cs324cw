@@ -12,6 +12,15 @@
 
 // USING RADIANS
 
+Cuboid::Cuboid(const Cuboid& c) :
+    pos_(c.pos_),
+    ang_(c.ang_),
+    hsize_(c.hsize_),
+    scale_(c.scale_)
+    {
+    // copy constructor
+}
+
 bool Cuboid::areColliding(
         const glm::vec3& c1Pos,
         const glm::vec3& c2Pos,

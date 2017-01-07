@@ -20,50 +20,95 @@
 #include "Util.hpp"
 #include "Shape.hpp"
 
+typedef std::vector<Shape*> ShapeList;
+
 int init(int argc, char* argv[]);
 void createShapes();
-std::vector<Shape> shapes;
-void render(GLuint shaderProgram);
-void bindBuffers(std::vector<Shape>& shapes);
+void render();
+void bindBuffers(ShapeList& shapes);
 void bindBuffers(GLuint VAO, GLuint VBO, const fv vertexData);
 void startLoopGl();
 void simpleLoopBody();
 void collisions();
+void keyboard(unsigned char key, int mouseX, int mouseY);
+void cleanupAndExit();
+
+GLuint shaderProgram;
+std::vector<Shape*> shapes;
+
+void db(std::string s) {
+    static int i = 0;
+    std::cout << "DEBUG" << i << " " << s << "\n";
+    i++;
+}
+void db() {
+    db("");
+}
+
+void keyboard(unsigned char key, int mouseX, int mouseY) {
+    bool stop = false;
+	switch (key) {
+		case 'q': stop = true; break;
+
+		case 't':  break;
+		case 'T':  break;
+		case 'p':  break;
+		case 'P':  break;
+		case 'e':  break;
+		case 'E':  break;
+		case 'w':  break;
+		case 'W':  break;
+		case 'h':  break;
+		case 'H':  break;
+		case 'l':  break;
+		case 'L':  break;
+	}
+    if (!stop) {
+        glutPostRedisplay();
+    } else {
+        cleanupAndExit();
+    }
+}
 
 void createShapes() {
-    shapes.push_back(Shape(1.0f,1.0f,1.0f,cube,"Cube1"));
-    shapes.push_back(Shape(1.0f,1.0f,1.0f,cube,"Cube2"));
-    shapes.push_back(Shape(1.0f,1.0f,1.0f,cube,"Cube3"));
-    for (auto& shape: shapes) {
-        glGenVertexArrays(shapes.size(), &shape.VAO);
-        glGenBuffers(shapes.size(), &shape.VBO);
+    shapes.push_back(new Shape(1.0f,1.0f,1.0f,cube,"Cube1"));
+    shapes.push_back(new Shape(1.0f,1.0f,1.0f,cube,"Cube2"));
+    shapes.push_back(new Shape(1.0f,1.0f,1.0f,cube,"Cube3"));
+    shapes.push_back(new Shape(1.0f,1.0f,1.0f,cube,"Cube4"));
+    shapes.push_back(new Shape(1.0f,1.0f,1.0f,cube,"Cube5"));
+
+    shapes[0]->translate(-1.0f,0.0f,0.0f);
+    shapes[1]->translate(1.4f,0.0f,0.0f);
+    shapes[0]->cuboid().setScale(1.0f,0.5f,2.0f);
+    shapes[1]->cuboid().setScale(1.0f,1.0f,0.25f);
+    for (int i=2; i<cubePositions.size() && i<shapes.size(); ++i) {
+        shapes[i]->translate(cubePositions[i]);
     }
-    shapes[0].translate(-1.0f,0.0f,0.0f);
-    shapes[1].translate(2.4f,0.0f,0.0f);
-    shapes[0].cuboid().setScale(1.0f,0.5f,2.0f);
-    shapes[1].cuboid().setScale(1.0f,1.0f,0.25f);
+
+    for (auto shape: shapes) {
+        glGenVertexArrays(1, &(shape->VAO));
+        glGenBuffers(1, &(shape->VBO));
+    }
 }
 
 void display() {
+    
+    startLoopGl();
 
-    GLuint shaderProgram = shaders();
-    createShapes();
+    simpleLoopBody();
 
-    while (true) {
-
-        startLoopGl();
-
-        simpleLoopBody();
-
-        for (auto& shape: shapes) {
-            //shape.rotateRads(glm::radians(1.0f),0.0f,0.0f);
-        }
-
-        collisions();
-
-        bindBuffers(shapes);
-        render(shaderProgram);
+    for (auto shape: shapes) {
+        //shape.rotateRads(glm::radians(1.0f),0.0f,0.0f);
     }
+
+    collisions();
+
+    bindBuffers(shapes);
+    render();
+}
+
+void idle() {
+	glutPostRedisplay();
 }
 
 void collisions() {
@@ -78,7 +123,7 @@ void collisions() {
     // an entry of "4" in 1's set - always the lower one
     for (int i=0; i<shapes.size(); ++i) {
         for (int j=i+1; j<shapes.size(); ++j) {
-            const bool collidingNow = Cuboid::colliding(shapes[i].cuboid(),shapes[j].cuboid());
+            const bool collidingNow = Cuboid::colliding(shapes[i]->cuboid(),shapes[j]->cuboid());
             //if (collidingBefore != collidingNow) {
             // have changed collision state
             if (collidingNow) {
@@ -96,10 +141,10 @@ void collisions() {
     }
 
     for (auto& shapeIndex: collidingSet) {
-        shapes[shapeIndex].colliding(true);
+        shapes[shapeIndex]->colliding(true);
     }
     for (auto& shapeIndex: notCollidingSet) {
-        shapes[shapeIndex].colliding(false);
+        shapes[shapeIndex]->colliding(false);
     }
 
 }
@@ -110,7 +155,9 @@ void simpleLoopBody() {
     const int t_init = 150;
     static int t = t_init;
     if (i<t) {
-        shapes[0].translate(0.04f*dir,0.0f,0.0f);
+        if (shapes.size() > 0) {
+            shapes[0]->translate(0.04f*dir,0.0f,0.0f);
+        }
         ++i;
     } else {
         dir *= -1.0f;
@@ -119,10 +166,10 @@ void simpleLoopBody() {
     }
 }
 
-void render(GLuint shaderProgram) {
+void render() {
     glUseProgram(shaderProgram);
     for (int i=0; i<shapes.size(); ++i) {
-        Shape& shape = shapes[i];
+        Shape& shape = *shapes[i];
         glBindVertexArray(shape.VAO);
         //
         // local space -> world space -> view space -> clip space -> screen space
@@ -152,7 +199,7 @@ void render(GLuint shaderProgram) {
                 glm::vec3(0.0f,1.0f,0.0f));
 
         glm::mat4 projection;
-        projection = glm::perspective(glm::radians(60.0f), aspectRatio, 0.1f, 100.0f);
+        projection = glm::perspective(glm::radians(90.0f), aspectRatio, 0.1f, 100.0f);
 
         GLint modelLoc = glGetUniformLocation(shaderProgram, "model");
         glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
@@ -167,9 +214,9 @@ void render(GLuint shaderProgram) {
     glutSwapBuffers(); 
 }
 
-void bindBuffers(std::vector<Shape>& shapes) {
+void bindBuffers(ShapeList& shapes) {
     for (auto& shape: shapes) {
-        bindBuffers(shape.VAO, shape.VBO, shape.vertices());
+        bindBuffers(shape->VAO, shape->VBO, shape->vertices());
     }
 }
 
@@ -194,14 +241,27 @@ int main(int argc, char* argv[]) {
         return success;
     }
 
+    shaderProgram = shaders();
+    createShapes();
+
     glutMainLoop(); 
 
-    for (auto& shape: shapes) {
-        glDeleteVertexArrays(1, &shape.VAO);
-        glDeleteBuffers(1, &shape.VBO);
-    }
+    // never leaves main loop...
+
+    cleanupAndExit();
 
 	return 0; 
+}
+
+void cleanupAndExit() {
+    for (auto& shape: shapes) {
+        glDeleteVertexArrays(1, &shape->VAO);
+        glDeleteBuffers(1, &shape->VBO);
+    }
+    for (auto shape: shapes) {
+    }
+    shapes.clear();
+    exit(0);
 }
 
 void startLoopGl() {
@@ -217,7 +277,7 @@ int init(int argc, char* argv[]) {
 	glutInit(&argc, argv); 
 	glutInitDisplayMode(GLUT_DOUBLE|GLUT_RGBA|GLUT_DEPTH); 
 
-	glutInitWindowSize(512, 512); 
+	glutInitWindowSize(800, 800); 
 	glutInitWindowPosition(50, 50); 
 
 	glutCreateWindow("Robot arm-y"); 
@@ -229,8 +289,9 @@ int init(int argc, char* argv[]) {
     }
 
     glutDisplayFunc(display); 
+	glutKeyboardFunc(keyboard); 
+	glutIdleFunc(idle); 
 	//glutKeyboardFunc(keyboard); 
 	//glutReshapeFunc(reshape); 
-	//glutIdleFunc(idle); 
     return 0;
 }

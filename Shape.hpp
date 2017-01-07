@@ -17,6 +17,8 @@ class Shape {
         fv _red_vertices;
         
     public:
+        ~Shape();
+        Shape(const Shape&);
         GLuint VAO;
         GLuint VBO;
         Shape(float h, float w, float d, fv vertices,
