@@ -7,20 +7,18 @@
 #include <memory>
 #include "Cuboid.hpp"
 
+typedef std::vector<GLfloat> fv;
+
 class Shape {
     private:
         bool _colliding;
         Cuboid _cuboid;
-        std::shared_ptr<std::vector<GLfloat>> vertPointer;
-        std::shared_ptr<std::vector<GLfloat>> _vertices;
-        std::shared_ptr<std::vector<GLfloat>> _red_vertices;
-        void toggleColour();
-        bool red;
+        std::shared_ptr<fv> vertPointer;
+        fv _vertices;
+        fv _red_vertices;
         
     public:
-        Shape(float h, float w, float d, std::vector<GLfloat> vertices, std::string name);
-
-        Shape();
+        Shape(float h, float w, float d, fv vertices, std::string name);
         bool colliding(bool isColliding);
         bool colliding() const;
         Cuboid& cuboid();
@@ -29,7 +27,7 @@ class Shape {
         void rotateRads(float x, float y, float z);
         void rotateRads(glm::vec3 by); // x, y, z, pretty rough atm
     
-        std::vector<GLfloat>& vertices();
+        fv& vertices();
         std::string name;
         friend std::ostream& operator<<(std::ostream&, const Shape&);
 

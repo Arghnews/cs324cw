@@ -21,13 +21,15 @@
 
 int init(int argc, char* argv[]);
 GLuint shaderProgram;
-GLuint VAOs[2], VBOs[2], EBOs[2];
+GLuint VAOs[3], VBOs[3];
 std::vector<Shape> shapes;
+void render();
 
 void display() {
 
     shapes.push_back(Shape(1.0f,1.0f,1.0f,cube,"Cube1"));
     shapes.push_back(Shape(1.0f,1.0f,1.0f,cube,"Cube2"));
+    shapes.push_back(Shape(1.0f,1.0f,1.0f,cube,"Cube3"));
 
     // ints correspond to index in shapes
     std::map<int, std::set<int>> collisions;
@@ -48,34 +50,35 @@ void display() {
 
         glGenVertexArrays(3, VAOs);
         glGenBuffers(3, VBOs);
-        glGenBuffers(2, EBOs);
 
         glBindVertexArray(VAOs[0]);
         glBindBuffer(GL_ARRAY_BUFFER, VBOs[0]);
-        glBufferData(GL_ARRAY_BUFFER, vertices.size()*sizeof(GLfloat), 
-                vertices.data(), GL_STATIC_DRAW);
-
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBOs[0]);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size()*sizeof(GLfloat), 
-                indices.data(), GL_STATIC_DRAW);
+        glBufferData(GL_ARRAY_BUFFER, shapes[0].vertices().size()*sizeof(GLfloat), 
+                shapes[0].vertices().data(), GL_STATIC_DRAW);
 
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 
-                3 * sizeof(GLfloat), (GLvoid*)(0*sizeof(GLfloat)));
+                6 * sizeof(GLfloat), (GLvoid*)(0*sizeof(GLfloat)));
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 
+                6 * sizeof(GLfloat), (GLvoid*)(3*sizeof(GLfloat)));
         glEnableVertexAttribArray(0);
-        glBindVertexArray(0);
+        glEnableVertexAttribArray(1);
 
         glBindVertexArray(VAOs[1]);
         glBindBuffer(GL_ARRAY_BUFFER, VBOs[1]);
-        glBufferData(GL_ARRAY_BUFFER, vertices2.size()*sizeof(GLfloat), 
-                vertices2.data(), GL_STATIC_DRAW);
-
-        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBOs[1]);
-        glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices2.size()*sizeof(GLfloat), 
-                indices2.data(), GL_STATIC_DRAW);
-
-        glBindBuffer(GL_ARRAY_BUFFER, VBOs[2]);
         glBufferData(GL_ARRAY_BUFFER, shapes[1].vertices().size()*sizeof(GLfloat), 
                 shapes[1].vertices().data(), GL_STATIC_DRAW);
+
+        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 
+                6 * sizeof(GLfloat), (GLvoid*)(0*sizeof(GLfloat)));
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 
+                6 * sizeof(GLfloat), (GLvoid*)(3*sizeof(GLfloat)));
+        glEnableVertexAttribArray(0);
+        glEnableVertexAttribArray(1);
+
+        glBindVertexArray(VAOs[2]);
+        glBindBuffer(GL_ARRAY_BUFFER, VBOs[2]);
+        glBufferData(GL_ARRAY_BUFFER, shapes[2].vertices().size()*sizeof(GLfloat), 
+                shapes[2].vertices().data(), GL_STATIC_DRAW);
 
         glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 
                 6 * sizeof(GLfloat), (GLvoid*)(0*sizeof(GLfloat)));
@@ -107,86 +110,98 @@ void display() {
 
         for (int i=0; i<shapes.size(); ++i) {
             Shape& shape = shapes[i];
-            shape.rotateRads(glm::radians(1.0f),0.0f,0.0f);
+            //shape.rotateRads(glm::radians(1.0f),0.0f,0.0f);
         }
-        
 
-        auto contains = [&] (int i, int j) -> bool {
-            return collisions[i].find(j) != collisions[i].end();
-        };
+        std::set<int> collidingSet;
+        std::set<int> notCollidingSet;
+        for (int i=0; i<shapes.size(); ++i) {
+            notCollidingSet.insert(i);
+        }
+        std::set<std::pair<int,int>> collidingPairs;
 
         // say 1 collides with 4, due to way this is done, should only ever have
         // an entry of "4" in 1's set - always the lower one
         for (int i=0; i<shapes.size(); ++i) {
             for (int j=i+1; j<shapes.size(); ++j) {
-                const bool collidingBefore = contains(i, j);
                 const bool collidingNow = Cuboid::colliding(shapes[i].cuboid(),shapes[j].cuboid());
-                if (collidingBefore != collidingNow) {
+                //if (collidingBefore != collidingNow) {
                     // have changed collision state
                     if (collidingNow) {
                         // collision
-                        collisions[i].insert(j);
-                        shapes[i].colliding(true);
-                        shapes[j].colliding(true);
+                        collidingSet.insert(i);
+                        collidingSet.insert(j);
+                        notCollidingSet.erase(i);
+                        notCollidingSet.erase(j);
+                        collidingPairs.insert(std::make_pair(i,j));
                     } else {
                         // no collision
-                        collisions[i].erase(j);
-                        shapes[i].colliding(false);
-                        shapes[j].colliding(false);
                     }
-                }
+                //}
             }
         }
 
-        glUseProgram(shaderProgram);
-        for (int i=0; i<shapes.size(); ++i) {
-            Shape& shape = shapes[i];
-            glBindVertexArray(VAOs[1]);
-
-            //
-            // local space -> world space -> view space -> clip space -> screen space
-            //          model matrix   view matrix  projection matrix   viewport transform
-            // Vclip = Mprojection * Mview * Mmodel * Vlocal
-
-            float aspectRatio = (float)(glutGet(GLUT_WINDOW_WIDTH) / glutGet(GLUT_WINDOW_HEIGHT));
-
-            glm::mat4 trans;
-            glm::mat4 model;
-
-            // scale, rotate, translate
-
-            trans = glm::translate(trans, shape.cuboid().pos());
-            trans = glm::rotate(trans, shape.cuboid().ang().x, glm::vec3(1.0f,0.0f,0.0f));
-            trans = glm::rotate(trans, shape.cuboid().ang().y, glm::vec3(0.0f,1.0f,0.0f));
-            trans = glm::rotate(trans, shape.cuboid().ang().z, glm::vec3(0.0f,0.0f,1.0f));
-            trans = glm::scale(trans, shape.cuboid().scale());  
-            model = model * trans;
-
-            glm::mat4 view;
-            // Note that we're translating the scene in the reverse direction of where we want to move
-            //view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f)); 
-            view = glm::lookAt(
-                    glm::vec3(2.0f,-3.0f,3.0f),
-                    glm::vec3(2.0f,0.0f,0.0f),
-                    glm::vec3(0.0f,1.0f,0.0f));
-
-            glm::mat4 projection;
-            projection = glm::perspective(glm::radians(60.0f), aspectRatio, 0.1f, 100.0f);
-
-            GLint modelLoc = glGetUniformLocation(shaderProgram, "model");
-            glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-            GLint viewLoc = glGetUniformLocation(shaderProgram, "view");
-            glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
-            GLint projectionLoc = glGetUniformLocation(shaderProgram, "projection");
-            glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
-
-            
-            glDrawArrays(GL_TRIANGLES, 0, shape.vertices().size());
+        for (auto& shapeIndex: collidingSet) {
+            std::cout << shapeIndex << " colliding" << "\n";
+            shapes[shapeIndex].colliding(true);
+        }
+        for (auto& shapeIndex: notCollidingSet) {
+            std::cout << shapeIndex << " not colliding" << "\n";
+            shapes[shapeIndex].colliding(false);
         }
 
+
+        render();
         glBindVertexArray(0);
         glutSwapBuffers(); 
     }
+}
+
+void render() {
+    glUseProgram(shaderProgram);
+    for (int i=0; i<shapes.size(); ++i) {
+        Shape& shape = shapes[i];
+        glBindVertexArray(VAOs[i]);
+        //
+        // local space -> world space -> view space -> clip space -> screen space
+        //          model matrix   view matrix  projection matrix   viewport transform
+        // Vclip = Mprojection * Mview * Mmodel * Vlocal
+
+        float aspectRatio = (float)(glutGet(GLUT_WINDOW_WIDTH) / glutGet(GLUT_WINDOW_HEIGHT));
+
+        glm::mat4 trans;
+        glm::mat4 model;
+
+        // scale, rotate, translate
+
+        trans = glm::translate(trans, shape.cuboid().pos());
+        trans = glm::rotate(trans, shape.cuboid().ang().x, glm::vec3(1.0f,0.0f,0.0f));
+        trans = glm::rotate(trans, shape.cuboid().ang().y, glm::vec3(0.0f,1.0f,0.0f));
+        trans = glm::rotate(trans, shape.cuboid().ang().z, glm::vec3(0.0f,0.0f,1.0f));
+        trans = glm::scale(trans, shape.cuboid().scale());  
+        model = model * trans;
+
+        glm::mat4 view;
+        // Note that we're translating the scene in the reverse direction of where we want to move
+        //view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f)); 
+        view = glm::lookAt(
+                glm::vec3(2.0f,-3.0f,3.0f),
+                glm::vec3(2.0f,0.0f,0.0f),
+                glm::vec3(0.0f,1.0f,0.0f));
+
+        glm::mat4 projection;
+        projection = glm::perspective(glm::radians(60.0f), aspectRatio, 0.1f, 100.0f);
+
+        GLint modelLoc = glGetUniformLocation(shaderProgram, "model");
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+        GLint viewLoc = glGetUniformLocation(shaderProgram, "view");
+        glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+        GLint projectionLoc = glGetUniformLocation(shaderProgram, "projection");
+        glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
+
+        glDrawArrays(GL_TRIANGLES, 0, shape.vertices().size());
+    }
+
 }
 
 int main(int argc, char* argv[]) {
@@ -200,7 +215,6 @@ int main(int argc, char* argv[]) {
 
     glDeleteVertexArrays(3, VAOs);
     glDeleteBuffers(3, VBOs);
-    glDeleteBuffers(2, EBOs);
 	return 0; 
 }
 

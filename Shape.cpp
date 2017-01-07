@@ -12,50 +12,34 @@ std::ostream& operator<<(std::ostream& stream, const Shape& s) {
     return stream << s.name << ": " << s._cuboid;
 }
 
-Shape::Shape() {
-}
-
 Shape::Shape(
-        float h, float w, float d, std::vector<GLfloat> vertices, std::string niceName) :
-            _cuboid(h,w,d), name(niceName), red(false)
+        float h, float w, float d, fv vertices, std::string niceName) :
+            _cuboid(h,w,d), name(niceName), _vertices(vertices)
     {
-        _vertices = std::make_shared<std::vector<GLfloat>>(vertices);
-
         // only works if vertices in x,y,z r,g,b format
 
-        std::vector<GLfloat> red_verts;
-        for (int i = 0; i<_vertices->size(); i+=6) {
-            red_verts.push_back(vertices[i]);
-            red_verts.push_back(vertices[i+1]);
-            red_verts.push_back(vertices[i+2]);
-            red_verts.push_back(0.75f);
-            red_verts.push_back(0.0f);
-            red_verts.push_back(0.0f);
+        for (int i = 0; i<_vertices.size(); i+=6) {
+            _red_vertices.push_back(_vertices[i]);
+            _red_vertices.push_back(_vertices[i+1]);
+            _red_vertices.push_back(_vertices[i+2]);
+            _red_vertices.push_back(0.75f);
+            _red_vertices.push_back(0.0f);
+            _red_vertices.push_back(0.0f);
         }
 
-        _red_vertices = std::make_shared<std::vector<GLfloat>>(red_verts);
-        vertPointer = _vertices;
+        vertPointer = std::make_shared<fv>(_vertices);
 }
 
-std::vector<GLfloat>& Shape::vertices() {
+fv& Shape::vertices() {
     return *vertPointer;
 }
 
-void Shape::toggleColour() {
-    if (!red) {
-        vertPointer = _red_vertices;
-        red = true;
-    } else {
-        vertPointer = _vertices;
-        red = false;
-    }
-}
-
 bool Shape::colliding(bool isColliding) {
-    bool wasColliding = _colliding;
     _colliding = isColliding;
-    if (wasColliding != _colliding) {
-        toggleColour();
+    if (_colliding) {
+        vertPointer = std::make_shared<fv>(_red_vertices);
+    } else {
+        vertPointer = std::make_shared<fv>(_vertices);
     }
 }
 

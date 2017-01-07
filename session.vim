@@ -6,8 +6,8 @@ inoremap <Right> <Nop>
 inoremap <Left> <Nop>
 inoremap <Down> <Nop>
 inoremap <Up> <Nop>
-nnoremap <silent> y :CCTreeWindowSaveCopy
 nnoremap <silent> w :CCTreeWindowToggle
+nnoremap <silent> y :CCTreeWindowSaveCopy
 noremap K <k>
 nmap gx <Plug>NetrwBrowseX
 nnoremap <silent> <Plug>NetrwBrowseX :call netrw#NetrwBrowseX(expand("<cWORD>"),0)
@@ -41,15 +41,16 @@ if expand('%') == '' && !&modified && line('$') <= 1 && getline(1) == ''
   let s:wipebuf = bufnr('%')
 endif
 set shortmess=aoO
-badd +1 arm.cpp
+badd +88 arm.cpp
 badd +1 vertex.shader
 badd +2 fragment.shader
 badd +1 robot-arm.cpp
-badd +34 Shape.cpp
+badd +30 Shape.cpp
 badd +1 Shape.hpp
-badd +16 Cuboid.cpp
+badd +40 Cuboid.cpp
 badd +1 Cuboid.hpp
-badd +0 crap.hpp
+badd +1 crap.hpp
+badd +2 ../temp
 args arm.cpp
 edit crap.hpp
 set splitbelow splitright
@@ -164,11 +165,11 @@ setlocal nowinfixwidth
 setlocal wrap
 setlocal wrapmargin=0
 silent! normal! zE
-let s:l = 75 - ((33 * winheight(0) + 34) / 68)
+let s:l = 93 - ((28 * winheight(0) + 34) / 68)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
-75
+93
 normal! 0
 tabedit arm.cpp
 set splitbelow splitright
@@ -283,12 +284,12 @@ setlocal nowinfixwidth
 setlocal wrap
 setlocal wrapmargin=0
 silent! normal! zE
-let s:l = 43 - ((27 * winheight(0) + 34) / 68)
+let s:l = 52 - ((42 * winheight(0) + 34) / 68)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
-43
-normal! 015|
+52
+normal! 022|
 tabedit Shape.cpp
 set splitbelow splitright
 wincmd _ | wincmd |
@@ -408,12 +409,12 @@ setlocal nowinfixwidth
 setlocal wrap
 setlocal wrapmargin=0
 silent! normal! zE
-let s:l = 40 - ((26 * winheight(0) + 19) / 38)
+let s:l = 9 - ((8 * winheight(0) + 19) / 38)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
-40
-normal! 05|
+9
+normal! 0
 wincmd w
 argglobal
 edit Shape.hpp
@@ -523,12 +524,12 @@ setlocal nowinfixwidth
 setlocal wrap
 setlocal wrapmargin=0
 silent! normal! zE
-let s:l = 18 - ((17 * winheight(0) + 14) / 28)
+let s:l = 10 - ((8 * winheight(0) + 14) / 28)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
-18
-normal! 04|
+10
+normal! 010|
 wincmd w
 exe '1resize ' . ((&lines * 38 + 35) / 70)
 exe '2resize ' . ((&lines * 28 + 35) / 70)
@@ -656,7 +657,7 @@ if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
 40
-normal! 067|
+normal! 0
 wincmd w
 argglobal
 edit Cuboid.hpp
@@ -1014,7 +1015,7 @@ normal! 0
 wincmd w
 exe '1resize ' . ((&lines * 33 + 35) / 70)
 exe '2resize ' . ((&lines * 33 + 35) / 70)
-tabnext 1
+tabnext 2
 if exists('s:wipebuf')
   silent exe 'bwipe ' . s:wipebuf
 endif
