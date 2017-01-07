@@ -18,7 +18,10 @@ class Shape {
         fv _red_vertices;
         
     public:
-        Shape(float h, float w, float d, fv vertices, std::string name);
+        GLuint VAO;
+        GLuint VBO;
+        Shape(float h, float w, float d, fv vertices,
+                std::string niceName);
         bool colliding(bool isColliding);
         bool colliding() const;
         Cuboid& cuboid();

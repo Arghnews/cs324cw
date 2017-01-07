@@ -21,18 +21,25 @@
 
 int init(int argc, char* argv[]);
 GLuint shaderProgram;
-GLuint VAOs[3], VBOs[3];
+void createShapes();
 std::vector<Shape> shapes;
 void render();
+void bindBuffers(Shape& shape);
+void bindBuffers(GLuint VAO, GLuint VBO, const std::vector<GLfloat> vertexData);
 
-void display() {
-
+void createShapes() {
     shapes.push_back(Shape(1.0f,1.0f,1.0f,cube,"Cube1"));
     shapes.push_back(Shape(1.0f,1.0f,1.0f,cube,"Cube2"));
     shapes.push_back(Shape(1.0f,1.0f,1.0f,cube,"Cube3"));
+}
 
-    // ints correspond to index in shapes
-    std::map<int, std::set<int>> collisions;
+void display() {
+
+    createShapes();
+    for (auto& shape: shapes) {
+        glGenVertexArrays(shapes.size(), &shape.VAO);
+        glGenBuffers(shapes.size(), &shape.VBO);
+    }
 
     shapes[0].translate(-1.0f,0.0f,0.0f);
     shapes[1].translate(2.0f,0.0f,0.0f);
@@ -40,54 +47,21 @@ void display() {
     float dir = 1.0f;
     int t_init = 150;
     int t = t_init;
-    bool colliding = false;
     shapes[0].cuboid().setScale(1.0f,0.5f,2.0f);
     shapes[1].cuboid().setScale(1.0f,1.0f,0.25f);
 
     std::cout << "Hi from arm " << "\n";
 
+    /*
+    glGenVertexArrays(shapes.size(), VAOs);
+    glGenBuffers(shapes.size(), VBOs);
+    */
+
     while (true) {
 
-        glGenVertexArrays(3, VAOs);
-        glGenBuffers(3, VBOs);
-
-        glBindVertexArray(VAOs[0]);
-        glBindBuffer(GL_ARRAY_BUFFER, VBOs[0]);
-        glBufferData(GL_ARRAY_BUFFER, shapes[0].vertices().size()*sizeof(GLfloat), 
-                shapes[0].vertices().data(), GL_STATIC_DRAW);
-
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 
-                6 * sizeof(GLfloat), (GLvoid*)(0*sizeof(GLfloat)));
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 
-                6 * sizeof(GLfloat), (GLvoid*)(3*sizeof(GLfloat)));
-        glEnableVertexAttribArray(0);
-        glEnableVertexAttribArray(1);
-
-        glBindVertexArray(VAOs[1]);
-        glBindBuffer(GL_ARRAY_BUFFER, VBOs[1]);
-        glBufferData(GL_ARRAY_BUFFER, shapes[1].vertices().size()*sizeof(GLfloat), 
-                shapes[1].vertices().data(), GL_STATIC_DRAW);
-
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 
-                6 * sizeof(GLfloat), (GLvoid*)(0*sizeof(GLfloat)));
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 
-                6 * sizeof(GLfloat), (GLvoid*)(3*sizeof(GLfloat)));
-        glEnableVertexAttribArray(0);
-        glEnableVertexAttribArray(1);
-
-        glBindVertexArray(VAOs[2]);
-        glBindBuffer(GL_ARRAY_BUFFER, VBOs[2]);
-        glBufferData(GL_ARRAY_BUFFER, shapes[2].vertices().size()*sizeof(GLfloat), 
-                shapes[2].vertices().data(), GL_STATIC_DRAW);
-
-        glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 
-                6 * sizeof(GLfloat), (GLvoid*)(0*sizeof(GLfloat)));
-        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 
-                6 * sizeof(GLfloat), (GLvoid*)(3*sizeof(GLfloat)));
-        glEnableVertexAttribArray(0);
-        glEnableVertexAttribArray(1);
-
-        glBindVertexArray(0);
+        for (auto& shape: shapes) {
+            bindBuffers(shape);
+        }
 
         glEnable(GL_DEPTH_TEST);
 
@@ -161,7 +135,7 @@ void render() {
     glUseProgram(shaderProgram);
     for (int i=0; i<shapes.size(); ++i) {
         Shape& shape = shapes[i];
-        glBindVertexArray(VAOs[i]);
+        glBindVertexArray(shape.VAO);
         //
         // local space -> world space -> view space -> clip space -> screen space
         //          model matrix   view matrix  projection matrix   viewport transform
@@ -204,6 +178,25 @@ void render() {
 
 }
 
+void bindBuffers(Shape& shape) {
+    bindBuffers(shape.VAO, shape.VBO, shape.vertices());
+}
+
+void bindBuffers(GLuint VAO, GLuint VBO, const std::vector<GLfloat> vertexData) {
+    glBindVertexArray(VAO);
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, vertexData.size()*sizeof(GLfloat), 
+            vertexData.data(), GL_STATIC_DRAW);
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 
+            6 * sizeof(GLfloat), (GLvoid*)(0*sizeof(GLfloat)));
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 
+            6 * sizeof(GLfloat), (GLvoid*)(3*sizeof(GLfloat)));
+    glEnableVertexAttribArray(0);
+    glEnableVertexAttribArray(1);
+    glBindVertexArray(0);
+}
+
 int main(int argc, char* argv[]) {
     int success = init(argc, argv);
     if (success != 0) {
@@ -213,8 +206,11 @@ int main(int argc, char* argv[]) {
     shaderProgram = shaders();
     glutMainLoop(); 
 
-    glDeleteVertexArrays(3, VAOs);
-    glDeleteBuffers(3, VBOs);
+    for (auto& shape: shapes) {
+        glDeleteVertexArrays(1, &shape.VAO);
+        glDeleteBuffers(1, &shape.VBO);
+    }
+
 	return 0; 
 }
 
