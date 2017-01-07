@@ -21,6 +21,25 @@ Cuboid::Cuboid(const Cuboid& c) :
     // copy constructor
 }
 
+std::vector<glm::vec3> Cuboid::getVertices() {
+
+    std::vector<glm::vec3> vertices;
+    const glm::vec3 centre = pos();
+    const glm::vec3 d = hsize();
+    vertices.push_back(centre + d); // x,y,z
+    vertices.push_back(centre + -1.0f*d); // -x,-y,-z
+
+    vertices.push_back(centre + glm::vec3(-d.x,d.y,d.z)); // -x,y,z
+    vertices.push_back(centre + glm::vec3(d.x,-d.y,d.z)); // x,-y,z
+    vertices.push_back(centre + glm::vec3(d.x,d.y,-d.z)); // x,y,-z
+
+    vertices.push_back(centre + glm::vec3(-d.x,-d.y,d.z)); // -x,-y,z
+    vertices.push_back(centre + glm::vec3(d.x,-d.y,-d.z)); // x,-y,-z
+    vertices.push_back(centre + glm::vec3(-d.x,d.y,-d.z)); // -x,y,-z
+
+    return vertices;
+}
+
 bool Cuboid::areColliding(
         const glm::vec3& c1Pos,
         const glm::vec3& c2Pos,

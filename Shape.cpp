@@ -8,6 +8,86 @@
 
 #include "Shape.hpp"
 
+typedef std::pair<float,float> Projection;
+
+std::vector<glm::vec3> Shape::getAxes(std::vector<glm::vec3> vertices) {
+    auto perp = [&] (const glm::vec3& v) -> glm::vec3 {
+        return glm::vec3(-v.y,v.x,0.0f);
+    };
+
+    int size = vertices.size();
+    std::vector<glm::vec3> axes(size);
+    // loop over the vertices
+    for (int i = 0; i < size; i++) {
+        // get the current vertex
+        glm::vec3 p1 = vertices[i];
+        // get the next vertex
+        glm::vec3 p2 = vertices[i + 1 == size ? 0 : i + 1];
+        // subtract the two to get the edge vector
+        glm::vec3 edge = p1 - p2;
+        // get either perpendicular vector
+        glm::vec3 normal = perp(edge);
+        // the perp method is just (x, y) => (-y, x) or (y, -x)
+        axes[i] = normal;
+    }
+}
+
+bool Shape::colliding(Shape& s1, Shape& s2) {
+    std::vector<glm::vec3> s1Verts = s1.cuboid().getVertices();
+    std::vector<glm::vec3> s2Verts = s2.cuboid().getVertices();
+    std::vector<glm::vec3> axes1 = getAxes(s1Verts);
+    std::vector<glm::vec3> axes2 = getAxes(s2Verts);
+
+    auto project = [&] (const glm::vec3 axis, const std::vector<glm::vec3> verts) -> Projection {
+        float min = glm::dot(axis,verts[0]);
+        float max = min;
+        for (int i = 1; i < verts.size(); i++) {
+            // NOTE: the axis must be normalized to get accurate projections
+            float p = glm::dot(axis,verts[i]);
+            if (p < min) {
+                min = p;
+            } else if (p > max) {
+                max = p;
+            }
+        }
+        Projection proj = std::make_pair(min, max);
+        return proj;
+    };
+
+    auto overlap = [&] (Projection p1, Projection p2) -> bool {
+        const bool ol = (p2.first <= p1.second) && (p1.second >= p2.second);
+        return ol;
+    };
+
+    // loop over the axes1
+    for (int i = 0; i < axes1.size(); i++) {
+        glm::vec3 axis = axes1[i];
+        // project both shapes onto the axis
+        Projection p1 = project(axis,s1Verts);
+        Projection p2 = project(axis,s2Verts);
+        // do the projections overlap?
+        if (!overlap(p1,p2)) {
+            // then we can guarantee that the shapes do not overlap
+            return false;
+        }
+    }
+    // loop over the axes2
+    for (int i = 0; i < axes2.size(); i++) {
+        glm::vec3 axis = axes2[i];
+        // project both shapes onto the axis
+        Projection p1 = project(axis,s1Verts);
+        Projection p2 = project(axis,s2Verts);
+        // do the projections overlap?
+        if (!overlap(p1,p2)) {
+            // then we can guarantee that the shapes do not overlap
+            return false;
+        }
+    }
+    // if we get here then we know that every axis had overlap on it
+    // so we can guarantee an intersection
+    return true;
+}
+
 std::ostream& operator<<(std::ostream& stream, const Shape& s) {
     //return stream << "Pos" << printVec(c.pos_) << ", ang:" << printVec(c.ang_) << ", size" << printVec(c.size_);
     return stream << s.name << ": " << s._cuboid;

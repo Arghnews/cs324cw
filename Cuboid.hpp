@@ -29,6 +29,7 @@ class Cuboid {
                 const glm::vec3& ang);
 
     public:
+        std::vector<glm::vec3> getVertices();
         Cuboid(const Cuboid&);
         Cuboid();
         Cuboid(float h, float w, float d);

@@ -82,6 +82,9 @@ void keyboard(unsigned char key, int mouseX, int mouseY) {
                    s.translate(step,0,0);
                    break;
 	}
+
+    // currently seg faults, to fix
+    //std::cout << Shape::colliding(*(shapes[0]),*(shapes[1])) << "\n";
     std::cout << s << "\n";
     if (shapes.size() > 1) {
         std::cout << *shapes[1] << "\n";

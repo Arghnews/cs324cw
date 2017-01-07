@@ -10,6 +10,7 @@
 
 class Shape {
     private:
+        std::vector<glm::vec3> static getAxes(std::vector<glm::vec3> vertices);
         bool _colliding;
         Cuboid _cuboid;
         std::shared_ptr<fv> vertPointer;
@@ -17,6 +18,7 @@ class Shape {
         fv _red_vertices;
         
     public:
+        bool static colliding(Shape&, Shape&);
         ~Shape();
         Shape(const Shape&);
         GLuint VAO;
