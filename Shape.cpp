@@ -29,7 +29,6 @@ Shape::Shape(
         }
 
         vertPointer = std::make_shared<fv>(_vertices);
-        std::cout << name << " - beware... I LIVE" << "\n";
 }
 
 Shape::Shape(const Shape& s) :
@@ -42,7 +41,6 @@ Shape::Shape(const Shape& s) :
         _red_vertices(s._red_vertices)
     {
         // copy constructor
-        std::cout << "COPY CALLED ON " << s.name << "\n";
         if (_colliding) {
             vertPointer = std::make_shared<fv>(_red_vertices);
         } else {
@@ -51,7 +49,6 @@ Shape::Shape(const Shape& s) :
 }
 
 Shape::~Shape() {
-    std::cout << name << "'m dying..." << "\n";
 }
 
 fv& Shape::vertices() {

@@ -15,6 +15,9 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <map>
 #include <set>
+#include <chrono>
+#include <thread>
+#include <algorithm>
 
 #include "crap.hpp"
 #include "Util.hpp"
@@ -28,13 +31,16 @@ void render();
 void bindBuffers(ShapeList& shapes);
 void bindBuffers(GLuint VAO, GLuint VBO, const fv vertexData);
 void startLoopGl();
-void simpleLoopBody();
 void collisions();
 void keyboard(unsigned char key, int mouseX, int mouseY);
+void specialInput(int key, int x, int y);
 void cleanupAndExit();
+Shape& getShape();
 
 GLuint shaderProgram;
 std::vector<Shape*> shapes;
+int selectedShape(0); // index of shape to move
+float step = 0.25f; // for movement
 
 void db(std::string s) {
     static int i = 0;
@@ -45,24 +51,50 @@ void db() {
     db("");
 }
 
+Shape& getShape() {
+    return *shapes[selectedShape];
+}
+
 void keyboard(unsigned char key, int mouseX, int mouseY) {
+    Shape& s = getShape();
     bool stop = false;
 	switch (key) {
 		case 'q': stop = true; break;
-
-		case 't':  break;
-		case 'T':  break;
-		case 'p':  break;
-		case 'P':  break;
-		case 'e':  break;
-		case 'E':  break;
-		case 'w':  break;
-		case 'W':  break;
-		case 'h':  break;
-		case 'H':  break;
-		case 'l':  break;
-		case 'L':  break;
+        case 'w':  
+                   s.translate(0,step,0);
+                   break;
+        case 'a':
+                   s.translate(-step,0,0);
+                   break;
+	    case 's':  
+                   s.translate(0,-step,0);
+                   break;
+		case 'd':  
+                   s.translate(step,0,0);
+                   break;
 	}
+    if (!stop) {
+        glutPostRedisplay();
+    } else {
+        cleanupAndExit();
+    }
+}
+
+void specialInput(int key, int x, int y) {
+    Shape& s = getShape();
+    bool stop = false;
+    switch(key) {
+        case GLUT_KEY_UP:
+            s.translate(0,0,step);
+            break;    
+        case GLUT_KEY_DOWN:
+            s.translate(0,0,-step);
+            break;
+        case GLUT_KEY_LEFT:
+            break;
+        case GLUT_KEY_RIGHT:
+            break;
+    }
     if (!stop) {
         glutPostRedisplay();
     } else {
@@ -93,18 +125,24 @@ void createShapes() {
 
 void display() {
     
+    long startTime = timeNowMicros();
+
     startLoopGl();
 
-    simpleLoopBody();
-
     for (auto shape: shapes) {
-        //shape.rotateRads(glm::radians(1.0f),0.0f,0.0f);
+        //shape->rotateRads(glm::radians(1.0f),0.0f,0.0f);
     }
 
     collisions();
 
     bindBuffers(shapes);
     render();
+
+    long timeTaken = timeNowMicros() - startTime;
+    const float fps = 60.0f;
+    const float fullFrametime = (1000.0f*1000.0f)/fps;
+    int sleepTime = std::max((int)(fullFrametime - timeTaken),0);
+    std::this_thread::sleep_for(std::chrono::microseconds(sleepTime));
 }
 
 void idle() {
@@ -147,23 +185,6 @@ void collisions() {
         shapes[shapeIndex]->colliding(false);
     }
 
-}
-
-void simpleLoopBody() {
-    static int i = 0;
-    static float dir = 1.0f;
-    const int t_init = 150;
-    static int t = t_init;
-    if (i<t) {
-        if (shapes.size() > 0) {
-            shapes[0]->translate(0.04f*dir,0.0f,0.0f);
-        }
-        ++i;
-    } else {
-        dir *= -1.0f;
-        i = 0;
-        t = t_init;
-    }
 }
 
 void render() {
@@ -259,6 +280,7 @@ void cleanupAndExit() {
         glDeleteBuffers(1, &shape->VBO);
     }
     for (auto shape: shapes) {
+        delete shape;
     }
     shapes.clear();
     exit(0);
@@ -291,6 +313,7 @@ int init(int argc, char* argv[]) {
     glutDisplayFunc(display); 
 	glutKeyboardFunc(keyboard); 
 	glutIdleFunc(idle); 
+    glutSpecialFunc(specialInput); 
 	//glutKeyboardFunc(keyboard); 
 	//glutReshapeFunc(reshape); 
     return 0;
