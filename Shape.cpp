@@ -8,6 +8,16 @@
 
 #include "Shape.hpp"
 
+void db(std::string s) {
+    static int i = 0;
+    std::cout << "DEBUG" << i << " " << s << "\n";
+    i++;
+}
+
+void db() {
+    db("");
+}
+
 typedef std::pair<float,float> Projection;
 
 std::vector<glm::vec3> Shape::getAxes(std::vector<glm::vec3> vertices) {
@@ -30,6 +40,7 @@ std::vector<glm::vec3> Shape::getAxes(std::vector<glm::vec3> vertices) {
         // the perp method is just (x, y) => (-y, x) or (y, -x)
         axes[i] = normal;
     }
+    return axes;
 }
 
 bool Shape::colliding(Shape& s1, Shape& s2) {
@@ -38,7 +49,8 @@ bool Shape::colliding(Shape& s1, Shape& s2) {
     std::vector<glm::vec3> axes1 = getAxes(s1Verts);
     std::vector<glm::vec3> axes2 = getAxes(s2Verts);
 
-    auto project = [&] (const glm::vec3 axis, const std::vector<glm::vec3> verts) -> Projection {
+    auto project = [&] (const glm::vec3 axe, const std::vector<glm::vec3> verts) -> Projection {
+        glm::vec3 axis = glm::normalize(axe);
         float min = glm::dot(axis,verts[0]);
         float max = min;
         for (int i = 1; i < verts.size(); i++) {
@@ -55,7 +67,8 @@ bool Shape::colliding(Shape& s1, Shape& s2) {
     };
 
     auto overlap = [&] (Projection p1, Projection p2) -> bool {
-        const bool ol = (p2.first <= p1.second) && (p1.second >= p2.second);
+        //std::cout << "Overlap of (" <<p1.first<<","<<p1.second<<") ("<<p2.first<<","<<p2.second<<")" << "\n";
+        const bool ol = (p1.second >= p2.first) && (p1.first <= p2.second);
         return ol;
     };
 

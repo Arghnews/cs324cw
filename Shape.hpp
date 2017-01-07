@@ -7,6 +7,8 @@
 #include <GL/glut.h> 
 #include <memory>
 #include "Cuboid.hpp"
+#include <iostream>
+#include <string>
 
 class Shape {
     private:

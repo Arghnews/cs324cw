@@ -37,8 +37,6 @@ void specialInput(int key, int x, int y);
 void cleanupAndExit();
 Shape& getShape();
 void switchShape(int);
-void db(std::string s);
-void db();
 
 GLuint shaderProgram;
 std::vector<Shape*> shapes;
@@ -84,12 +82,6 @@ void keyboard(unsigned char key, int mouseX, int mouseY) {
 	}
 
     // currently seg faults, to fix
-    //std::cout << Shape::colliding(*(shapes[0]),*(shapes[1])) << "\n";
-    std::cout << s << "\n";
-    if (shapes.size() > 1) {
-        std::cout << *shapes[1] << "\n";
-    }
-    std::cout << "\n";
     if (!stop) {
         glutPostRedisplay();
     } else {
@@ -184,7 +176,8 @@ void collisions() {
     // an entry of "4" in 1's set - always the lower one
     for (int i=0; i<shapes.size(); ++i) {
         for (int j=i+1; j<shapes.size(); ++j) {
-            const bool collidingNow = Cuboid::colliding(shapes[i]->cuboid(),shapes[j]->cuboid());
+            //const bool collidingNow = Cuboid::colliding(shapes[i]->cuboid(),shapes[j]->cuboid());
+            const bool collidingNow= Shape::colliding(*(shapes[i]),*(shapes[j]));
             //if (collidingBefore != collidingNow) {
             // have changed collision state
             if (collidingNow) {
@@ -278,16 +271,6 @@ void bindBuffers(GLuint VAO, GLuint VBO, const fv vertexData) {
     glEnableVertexAttribArray(0);
     glEnableVertexAttribArray(1);
     glBindVertexArray(0);
-}
-
-void db(std::string s) {
-    static int i = 0;
-    std::cout << "DEBUG" << i << " " << s << "\n";
-    i++;
-}
-
-void db() {
-    db("");
 }
 
 Shape& getShape() {
