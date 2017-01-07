@@ -1,0 +1,2 @@
+-- make sat work with rotations - requires writing a function to return vertices of shape
+taking into account rotation, ie. will need to move them

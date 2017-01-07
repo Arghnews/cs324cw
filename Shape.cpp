@@ -21,12 +21,16 @@ void db() {
 typedef std::pair<float,float> Projection;
 
 std::vector<glm::vec3> Shape::getAxes(std::vector<glm::vec3> vertices) {
-    auto perp = [&] (const glm::vec3& v) -> glm::vec3 {
-        return glm::vec3(-v.y,v.x,0.0f);
+    auto perp = [&] (const glm::vec3& v) -> std::vector<glm::vec3> {
+        //return glm::vec3(-v.y,v.x,0.0f);
+        std::vector<glm::vec3> normals;
+        normals.push_back(glm::vec3(-v.y,v.x,0.0f));
+        normals.push_back(glm::vec3(0.0f,v.z,-v.y));
+        return normals;
     };
 
     int size = vertices.size();
-    std::vector<glm::vec3> axes(size);
+    std::vector<glm::vec3> axes;
     // loop over the vertices
     for (int i = 0; i < size; i++) {
         // get the current vertex
@@ -36,9 +40,9 @@ std::vector<glm::vec3> Shape::getAxes(std::vector<glm::vec3> vertices) {
         // subtract the two to get the edge vector
         glm::vec3 edge = p1 - p2;
         // get either perpendicular vector
-        glm::vec3 normal = perp(edge);
+        std::vector<glm::vec3> normals = perp(edge);
         // the perp method is just (x, y) => (-y, x) or (y, -x)
-        axes[i] = normal;
+        axes.insert( axes.end(), normals.begin(), normals.end() );
     }
     return axes;
 }
