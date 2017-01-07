@@ -17,121 +17,109 @@
 #include <set>
 
 #include "crap.hpp"
+#include "Util.hpp"
 #include "Shape.hpp"
 
 int init(int argc, char* argv[]);
-GLuint shaderProgram;
 void createShapes();
 std::vector<Shape> shapes;
-void render();
-void bindBuffers(Shape& shape);
-void bindBuffers(GLuint VAO, GLuint VBO, const std::vector<GLfloat> vertexData);
+void render(GLuint shaderProgram);
+void bindBuffers(std::vector<Shape>& shapes);
+void bindBuffers(GLuint VAO, GLuint VBO, const fv vertexData);
+void startLoopGl();
+void simpleLoopBody();
+void collisions();
 
 void createShapes() {
     shapes.push_back(Shape(1.0f,1.0f,1.0f,cube,"Cube1"));
     shapes.push_back(Shape(1.0f,1.0f,1.0f,cube,"Cube2"));
     shapes.push_back(Shape(1.0f,1.0f,1.0f,cube,"Cube3"));
-}
-
-void display() {
-
-    createShapes();
     for (auto& shape: shapes) {
         glGenVertexArrays(shapes.size(), &shape.VAO);
         glGenBuffers(shapes.size(), &shape.VBO);
     }
-
     shapes[0].translate(-1.0f,0.0f,0.0f);
-    shapes[1].translate(2.0f,0.0f,0.0f);
-    int i = 0;
-    float dir = 1.0f;
-    int t_init = 150;
-    int t = t_init;
+    shapes[1].translate(2.4f,0.0f,0.0f);
     shapes[0].cuboid().setScale(1.0f,0.5f,2.0f);
     shapes[1].cuboid().setScale(1.0f,1.0f,0.25f);
+}
 
-    std::cout << "Hi from arm " << "\n";
+void display() {
 
-    /*
-    glGenVertexArrays(shapes.size(), VAOs);
-    glGenBuffers(shapes.size(), VBOs);
-    */
+    GLuint shaderProgram = shaders();
+    createShapes();
 
     while (true) {
 
+        startLoopGl();
+
+        simpleLoopBody();
+
         for (auto& shape: shapes) {
-            bindBuffers(shape);
-        }
-
-        glEnable(GL_DEPTH_TEST);
-
-        // Uncommenting this call will result in wireframe polygons.
-        //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-
-
-        glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT); 
-        float counter = ((float)(timeNowSeconds() % 12))/12.0f; // [0,1)
-        float millis = (float)((timeNowMillis()%4096)/2048); //
-
-        if (i<t) {
-            shapes[0].translate(0.04f*dir,0.0f,0.0f);
-            ++i;
-        } else {
-            dir *= -1.0f;
-            i = 0;
-            t = t_init;
-        }
-
-        for (int i=0; i<shapes.size(); ++i) {
-            Shape& shape = shapes[i];
             //shape.rotateRads(glm::radians(1.0f),0.0f,0.0f);
         }
 
-        std::set<int> collidingSet;
-        std::set<int> notCollidingSet;
-        for (int i=0; i<shapes.size(); ++i) {
-            notCollidingSet.insert(i);
-        }
-        std::set<std::pair<int,int>> collidingPairs;
+        collisions();
 
-        // say 1 collides with 4, due to way this is done, should only ever have
-        // an entry of "4" in 1's set - always the lower one
-        for (int i=0; i<shapes.size(); ++i) {
-            for (int j=i+1; j<shapes.size(); ++j) {
-                const bool collidingNow = Cuboid::colliding(shapes[i].cuboid(),shapes[j].cuboid());
-                //if (collidingBefore != collidingNow) {
-                    // have changed collision state
-                    if (collidingNow) {
-                        // collision
-                        collidingSet.insert(i);
-                        collidingSet.insert(j);
-                        notCollidingSet.erase(i);
-                        notCollidingSet.erase(j);
-                        collidingPairs.insert(std::make_pair(i,j));
-                    } else {
-                        // no collision
-                    }
-                //}
-            }
-        }
-
-        for (auto& shapeIndex: collidingSet) {
-            std::cout << shapeIndex << " colliding" << "\n";
-            shapes[shapeIndex].colliding(true);
-        }
-        for (auto& shapeIndex: notCollidingSet) {
-            std::cout << shapeIndex << " not colliding" << "\n";
-            shapes[shapeIndex].colliding(false);
-        }
-
-
-        render();
-        glBindVertexArray(0);
-        glutSwapBuffers(); 
+        bindBuffers(shapes);
+        render(shaderProgram);
     }
 }
 
-void render() {
+void collisions() {
+    std::set<int> collidingSet;
+    std::set<int> notCollidingSet;
+    for (int i=0; i<shapes.size(); ++i) {
+        notCollidingSet.insert(i);
+    }
+    std::set<std::pair<int,int>> collidingPairs;
+
+    // say 1 collides with 4, due to way this is done, should only ever have
+    // an entry of "4" in 1's set - always the lower one
+    for (int i=0; i<shapes.size(); ++i) {
+        for (int j=i+1; j<shapes.size(); ++j) {
+            const bool collidingNow = Cuboid::colliding(shapes[i].cuboid(),shapes[j].cuboid());
+            //if (collidingBefore != collidingNow) {
+            // have changed collision state
+            if (collidingNow) {
+                // collision
+                collidingSet.insert(i);
+                collidingSet.insert(j);
+                notCollidingSet.erase(i);
+                notCollidingSet.erase(j);
+                collidingPairs.insert(std::make_pair(i,j));
+            } else {
+                // no collision
+            }
+            //}
+        }
+    }
+
+    for (auto& shapeIndex: collidingSet) {
+        shapes[shapeIndex].colliding(true);
+    }
+    for (auto& shapeIndex: notCollidingSet) {
+        shapes[shapeIndex].colliding(false);
+    }
+
+}
+
+void simpleLoopBody() {
+    static int i = 0;
+    static float dir = 1.0f;
+    const int t_init = 150;
+    static int t = t_init;
+    if (i<t) {
+        shapes[0].translate(0.04f*dir,0.0f,0.0f);
+        ++i;
+    } else {
+        dir *= -1.0f;
+        i = 0;
+        t = t_init;
+    }
+}
+
+void render(GLuint shaderProgram) {
     glUseProgram(shaderProgram);
     for (int i=0; i<shapes.size(); ++i) {
         Shape& shape = shapes[i];
@@ -175,14 +163,17 @@ void render() {
 
         glDrawArrays(GL_TRIANGLES, 0, shape.vertices().size());
     }
-
+    glBindVertexArray(0);
+    glutSwapBuffers(); 
 }
 
-void bindBuffers(Shape& shape) {
-    bindBuffers(shape.VAO, shape.VBO, shape.vertices());
+void bindBuffers(std::vector<Shape>& shapes) {
+    for (auto& shape: shapes) {
+        bindBuffers(shape.VAO, shape.VBO, shape.vertices());
+    }
 }
 
-void bindBuffers(GLuint VAO, GLuint VBO, const std::vector<GLfloat> vertexData) {
+void bindBuffers(GLuint VAO, GLuint VBO, const fv vertexData) {
     glBindVertexArray(VAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
     glBufferData(GL_ARRAY_BUFFER, vertexData.size()*sizeof(GLfloat), 
@@ -203,7 +194,6 @@ int main(int argc, char* argv[]) {
         return success;
     }
 
-    shaderProgram = shaders();
     glutMainLoop(); 
 
     for (auto& shape: shapes) {
@@ -212,6 +202,15 @@ int main(int argc, char* argv[]) {
     }
 
 	return 0; 
+}
+
+void startLoopGl() {
+    glEnable(GL_DEPTH_TEST);
+
+    // Uncommenting this call will result in wireframe polygons.
+    //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+
+    glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT); 
 }
 
 int init(int argc, char* argv[]) {

@@ -1,13 +1,12 @@
 #ifndef MY_SHAPE
 #define MY_SHAPE
+#include "Util.hpp"
 #include <sstream>
 #include <vector>
 #include <GL/glew.h> 
 #include <GL/glut.h> 
 #include <memory>
 #include "Cuboid.hpp"
-
-typedef std::vector<GLfloat> fv;
 
 class Shape {
     private:
