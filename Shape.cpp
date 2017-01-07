@@ -19,18 +19,21 @@ void db() {
 }
 
 typedef std::pair<float,float> Projection;
+typedef std::vector<glm::vec3> vv3;
 
-std::vector<glm::vec3> Shape::getAxes(std::vector<glm::vec3> vertices) {
-    auto perp = [&] (const glm::vec3& v) -> std::vector<glm::vec3> {
-        //return glm::vec3(-v.y,v.x,0.0f);
-        std::vector<glm::vec3> normals;
+vv3 Shape::getAxes(vv3 vertices) {
+    auto perp = [&] (const glm::vec3& v) -> vv3 {
+        vv3 normals;
         normals.push_back(glm::vec3(-v.y,v.x,0.0f));
+
         normals.push_back(glm::vec3(0.0f,v.z,-v.y));
+
+        normals.push_back(glm::vec3(-v.z,0.0f,v.x));
         return normals;
     };
 
     int size = vertices.size();
-    std::vector<glm::vec3> axes;
+    vv3 axes;
     // loop over the vertices
     for (int i = 0; i < size; i++) {
         // get the current vertex
@@ -40,7 +43,7 @@ std::vector<glm::vec3> Shape::getAxes(std::vector<glm::vec3> vertices) {
         // subtract the two to get the edge vector
         glm::vec3 edge = p1 - p2;
         // get either perpendicular vector
-        std::vector<glm::vec3> normals = perp(edge);
+        vv3 normals = perp(edge);
         // the perp method is just (x, y) => (-y, x) or (y, -x)
         axes.insert( axes.end(), normals.begin(), normals.end() );
     }
@@ -48,12 +51,12 @@ std::vector<glm::vec3> Shape::getAxes(std::vector<glm::vec3> vertices) {
 }
 
 bool Shape::colliding(Shape& s1, Shape& s2) {
-    std::vector<glm::vec3> s1Verts = s1.cuboid().getVertices();
-    std::vector<glm::vec3> s2Verts = s2.cuboid().getVertices();
-    std::vector<glm::vec3> axes1 = getAxes(s1Verts);
-    std::vector<glm::vec3> axes2 = getAxes(s2Verts);
+    vv3 s1Verts = s1.cuboid().getVertices();
+    vv3 s2Verts = s2.cuboid().getVertices();
+    vv3 axes1 = getAxes(s1Verts);
+    vv3 axes2 = getAxes(s2Verts);
 
-    auto project = [&] (const glm::vec3 axe, const std::vector<glm::vec3> verts) -> Projection {
+    auto project = [&] (const glm::vec3 axe, const vv3 verts) -> Projection {
         glm::vec3 axis = glm::normalize(axe);
         float min = glm::dot(axis,verts[0]);
         float max = min;

@@ -116,18 +116,14 @@ void specialInput(int key, int x, int y) {
 void createShapes() {
     shapes.push_back(new Shape(1.0f,1.0f,1.0f,cube,"Cube1"));
     shapes.push_back(new Shape(1.0f,1.0f,1.0f,cube,"Cube2"));
-    /*
     shapes.push_back(new Shape(1.0f,1.0f,1.0f,cube,"Cube3"));
     shapes.push_back(new Shape(1.0f,1.0f,1.0f,cube,"Cube4"));
     shapes.push_back(new Shape(1.0f,1.0f,1.0f,cube,"Cube5"));
-    */
 
     shapes[0]->translate(-1.0f,0.0f,0.0f);
     shapes[1]->translate(1.4f,0.0f,0.0f);
-    /*
     shapes[0]->cuboid().setScale(1.0f,0.5f,2.0f);
     shapes[1]->cuboid().setScale(1.0f,1.0f,0.25f);
-    */
     for (int i=2; i<cubePositions.size() && i<shapes.size(); ++i) {
         shapes[i]->translate(cubePositions[i]);
     }
@@ -157,6 +153,10 @@ void display() {
     const float fps = 60.0f;
     const float fullFrametime = (1000.0f*1000.0f)/fps;
     int sleepTime = std::max((int)(fullFrametime - timeTaken),0);
+    /*bool SPARE_TIME_FOR_WHEN_ILETT_WHINES = false;
+    if (SPARE_TIME_FOR_WHEN_ILETT_WHINES) {
+        std::cout << "Spare frame time " << sleepTime*1000 << "ms\n";
+    }*/
     std::this_thread::sleep_for(std::chrono::microseconds(sleepTime));
 }
 

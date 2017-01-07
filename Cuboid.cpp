@@ -26,16 +26,24 @@ std::vector<glm::vec3> Cuboid::getVertices() {
     std::vector<glm::vec3> vertices;
     const glm::vec3 centre = pos();
     const glm::vec3 d = hsize();
-    vertices.push_back(centre + d); // x,y,z
-    vertices.push_back(centre + -1.0f*d); // -x,-y,-z
+    const glm::vec3 a = ang();
+    vertices.push_back(d); // x,y,z
+    vertices.push_back(-d); // -x,-y,-z
 
-    vertices.push_back(centre + glm::vec3(-d.x,d.y,d.z)); // -x,y,z
-    vertices.push_back(centre + glm::vec3(d.x,-d.y,d.z)); // x,-y,z
-    vertices.push_back(centre + glm::vec3(d.x,d.y,-d.z)); // x,y,-z
+    vertices.push_back(glm::vec3(-d.x,d.y,d.z)); // -x,y,z
+    vertices.push_back(glm::vec3(d.x,-d.y,d.z)); // x,-y,z
+    vertices.push_back(glm::vec3(d.x,d.y,-d.z)); // x,y,-z
 
-    vertices.push_back(centre + glm::vec3(-d.x,-d.y,d.z)); // -x,-y,z
-    vertices.push_back(centre + glm::vec3(d.x,-d.y,-d.z)); // x,-y,-z
-    vertices.push_back(centre + glm::vec3(-d.x,d.y,-d.z)); // -x,y,-z
+    vertices.push_back(glm::vec3(-d.x,-d.y,d.z)); // -x,-y,z
+    vertices.push_back(glm::vec3(d.x,-d.y,-d.z)); // x,-y,-z
+    vertices.push_back(glm::vec3(-d.x,d.y,-d.z)); // -x,y,-z
+
+    for (auto& v: vertices) {
+        v = glm::rotate(v, a.x, glm::vec3(0.0f,0.0f,1.0f)); // rotate in x
+        v = glm::rotate(v, a.y, glm::vec3(1.0f,0.0f,0.0f)); // in y
+        v = glm::rotate(v, a.z, glm::vec3(0.0f,1.0f,0.0f)); // in z
+        v += centre;
+    }
 
     return vertices;
 }
