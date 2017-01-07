@@ -80,6 +80,14 @@ void Shape::translate(glm::vec3 by) {
     _cuboid.translate(by);
 }
 
+void Shape::rotateDegs(float x, float y, float z) {
+    rotateRads(
+            (x*M_PI)/180.0f,
+            (y*M_PI)/180.0f,
+            (z*M_PI)/180.0f
+            );
+}
+
 void Shape::rotateRads(float x, float y, float z) {
     rotateRads(glm::vec3(x,y,z));
 }

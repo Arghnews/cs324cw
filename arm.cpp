@@ -37,52 +37,56 @@ void specialInput(int key, int x, int y);
 void cleanupAndExit();
 Shape& getShape();
 void switchShape(int);
+void db(std::string s);
+void db();
 
 GLuint shaderProgram;
 std::vector<Shape*> shapes;
 int selectedShape(0); // index of shape to move
 float step = 0.25f; // for movement
 
-void db(std::string s) {
-    static int i = 0;
-    std::cout << "DEBUG" << i << " " << s << "\n";
-    i++;
-}
-void db() {
-    db("");
-}
-
-Shape& getShape() {
-    return *shapes[selectedShape];
-}
-
-void switchShape(int by) {
-    if (shapes.size() == 0) {
-        std::cout << "warning - shape list size 0" << "\n";
-    } else if (shapes.size() > 1) {
-        selectedShape += by;
-        selectedShape %= shapes.size();
-    }
-}
-
 void keyboard(unsigned char key, int mouseX, int mouseY) {
     Shape& s = getShape();
     bool stop = false;
 	switch (key) {
-		case 'q': stop = true; break;
+        case 'r':  s.rotateDegs(10.0f,0.0f,0.0f);
+                   break;
+        case 'R':  s.rotateDegs(-10.0f,0.0f,0.0f);
+                   break;
+        case 'y':  s.rotateDegs(0.0f,10.0f,0.0f);
+                   break;
+        case 'Y':  s.rotateDegs(0.0f,-10.0f,0.0f);
+                   break;
+        case 'z':  s.rotateDegs(0.0f,0.0f,10.0f);
+                   break;
+        case 'Z':  s.rotateDegs(0.0f,0.0f,-10.0f);
+                   break;
+                
+        case 'Q':
+        case 'q':  stop = true; 
+                   break;
+        case 'W':  
         case 'w':  
                    s.translate(0,step,0);
                    break;
+        case 'A':
         case 'a':
                    s.translate(-step,0,0);
                    break;
+	    case 'S':  
 	    case 's':  
                    s.translate(0,-step,0);
                    break;
+		case 'D':  
 		case 'd':  
                    s.translate(step,0,0);
                    break;
 	}
+    std::cout << s << "\n";
+    if (shapes.size() > 1) {
+        std::cout << *shapes[1] << "\n";
+    }
+    std::cout << "\n";
     if (!stop) {
         glutPostRedisplay();
     } else {
@@ -117,14 +121,18 @@ void specialInput(int key, int x, int y) {
 void createShapes() {
     shapes.push_back(new Shape(1.0f,1.0f,1.0f,cube,"Cube1"));
     shapes.push_back(new Shape(1.0f,1.0f,1.0f,cube,"Cube2"));
+    /*
     shapes.push_back(new Shape(1.0f,1.0f,1.0f,cube,"Cube3"));
     shapes.push_back(new Shape(1.0f,1.0f,1.0f,cube,"Cube4"));
     shapes.push_back(new Shape(1.0f,1.0f,1.0f,cube,"Cube5"));
+    */
 
     shapes[0]->translate(-1.0f,0.0f,0.0f);
     shapes[1]->translate(1.4f,0.0f,0.0f);
+    /*
     shapes[0]->cuboid().setScale(1.0f,0.5f,2.0f);
     shapes[1]->cuboid().setScale(1.0f,1.0f,0.25f);
+    */
     for (int i=2; i<cubePositions.size() && i<shapes.size(); ++i) {
         shapes[i]->translate(cubePositions[i]);
     }
@@ -214,13 +222,14 @@ void render() {
         glm::mat4 trans;
         glm::mat4 model;
 
+        // TEMPORARILY SWAPPED
         // scale, rotate, translate
 
         trans = glm::translate(trans, shape.cuboid().pos());
-        trans = glm::rotate(trans, shape.cuboid().ang().x, glm::vec3(1.0f,0.0f,0.0f));
-        trans = glm::rotate(trans, shape.cuboid().ang().y, glm::vec3(0.0f,1.0f,0.0f));
-        trans = glm::rotate(trans, shape.cuboid().ang().z, glm::vec3(0.0f,0.0f,1.0f));
-        trans = glm::scale(trans, shape.cuboid().scale());  
+        trans = glm::rotate(trans, shape.cuboid().ang().x, glm::vec3(0.0f,0.0f,1.0f));
+        trans = glm::rotate(trans, shape.cuboid().ang().y, glm::vec3(1.0f,0.0f,0.0f));
+        trans = glm::rotate(trans, shape.cuboid().ang().z, glm::vec3(0.0f,1.0f,0.0f));
+        //trans = glm::scale(trans, shape.cuboid().scale());  
         model = model * trans;
 
         glm::mat4 view;
@@ -266,6 +275,29 @@ void bindBuffers(GLuint VAO, GLuint VBO, const fv vertexData) {
     glEnableVertexAttribArray(0);
     glEnableVertexAttribArray(1);
     glBindVertexArray(0);
+}
+
+void db(std::string s) {
+    static int i = 0;
+    std::cout << "DEBUG" << i << " " << s << "\n";
+    i++;
+}
+
+void db() {
+    db("");
+}
+
+Shape& getShape() {
+    return *shapes[selectedShape];
+}
+
+void switchShape(int by) {
+    if (shapes.size() == 0) {
+        std::cout << "warning - shape list size 0" << "\n";
+    } else if (shapes.size() > 1) {
+        selectedShape += by;
+        selectedShape %= shapes.size();
+    }
 }
 
 int main(int argc, char* argv[]) {

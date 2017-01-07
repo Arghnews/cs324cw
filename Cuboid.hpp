@@ -48,8 +48,6 @@ class Cuboid {
         void translate(glm::vec3 by);
         void translate(float x, float y, float z);
         
-        void changeScale(glm::vec3 by);
-        void changeScale(float x, float y, float z);
         void setScale(float x, float y, float z);
         void setScale(glm::vec3 to);
 

@@ -38,6 +38,11 @@ bool Cuboid::areColliding(
 
 glm::vec3 Cuboid::angledSize(const glm::vec3& hsize, const glm::vec3& ang) {
     // want abs as these are abs lengths
+
+    // none
+    //return hsize;
+    
+    //
     return glm::vec3(
             fabs(cos(ang.x)) * hsize.x,
             fabs(cos(ang.y)) * hsize.y,
@@ -112,16 +117,8 @@ glm::vec3 Cuboid::scale() const {
     return scale_;
 }
 
-void Cuboid::changeScale(glm::vec3 by) {
-    scale_ += by;
-}
-
 void Cuboid::setScale(glm::vec3 to) {
     scale_ = to;
-}
-
-void Cuboid::changeScale(float x, float y, float z) {
-    changeScale(glm::vec3(x,y,z));
 }
 
 void Cuboid::setScale(float x, float y, float z) {
@@ -129,6 +126,7 @@ void Cuboid::setScale(float x, float y, float z) {
 }
 
 std::ostream& operator<<(std::ostream& stream, const Cuboid& c) {
-    return stream << "Pos" << printVec(c.pos()) << ", ang:" << printVec(c.ang()) << ", size" << printVec(c.size());
+    const glm::vec3 c1HSize = c.angledSize(c.hsize(),c.ang());
+    return stream << "Pos" << printVec(c.pos()) << ", ang:" << printVec(c.ang()) << ", size" << printVec(c.size()) << ", angSize" << printVec(c1HSize);
 }
 

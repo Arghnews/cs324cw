@@ -30,6 +30,7 @@ class Shape {
         void translate(glm::vec3 by);
         void rotateRads(float x, float y, float z);
         void rotateRads(glm::vec3 by); // x, y, z, pretty rough atm
+        void rotateDegs(float x, float y, float z);
     
         fv& vertices();
         std::string name;
