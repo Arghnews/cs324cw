@@ -6,6 +6,7 @@
 #include <GL/glut.h> 
 #include <memory>
 #include <set>
+#include <cmath>
 
 #include "Shape.hpp"
 
@@ -18,6 +19,7 @@ void db(std::string s) {
 void db() {
     db("");
 }
+
 vv3 Shape::getEdges(vv3 v) {
     vv3 e;
     int size = v.size();
@@ -45,34 +47,40 @@ vv3 Shape::getAxes(vv3 v1, vv3 v2) {
     concat(axes, axes2);
     for (auto& axis1: axes1) {
         for (auto& axis2: axes2) {
-            axes.push_back(glm::cross(axis1,axis2));
+            auto t = glm::normalize(glm::cross(axis1,axis2));
+            if (!isnan(t.x) && !isnan(t.y) && !isnan(t.z))
+                axes.push_back(t);
         }
     }
     return axes;
 }
 
 std::pair<float, float> Shape::project(const v3 axis_in, const vv3 verts) {
-        const v3 axis = glm::normalize(axis_in);
-        float min = glm::dot(axis,verts[0]);
-        float max = min;
-        for (int i = 1; i < verts.size(); i++) {
-            // NOTE: the axis must be normalized to get accurate projections
-            float p = glm::dot(axis,verts[i]);
-            if (p < min) {
-                min = p;
-            }
-            if (p > max) {
-                max = p;
-            }
+    const v3 axis = glm::normalize(axis_in);
+    float min = glm::dot(axis,verts[0]);
+    float max = min;
+    for (int i = 1; i < verts.size(); i++) {
+        // NOTE: the axis must be normalized to get accurate projections
+        float p = glm::dot(axis,verts[i]);
+        if (p < min) {
+            min = p;
         }
-        Projection proj = std::make_pair(min, max);
-        return proj;
+        if (p > max) {
+            max = p;
+        }
+    }
+    Projection proj = std::make_pair(min, max);
+    return proj;
 }
 
 bool Shape::colliding(Shape& s1, Shape& s2) {
     vv3 s1Verts = s1.cuboid().getVertices();
     vv3 s2Verts = s2.cuboid().getVertices();
     vv3 allAxes = getAxes(s1Verts, s2Verts);
+    std::cout << "All axes to test for shapes " << s1 << "," << s2 << "\n";
+    for (auto a: allAxes) {
+        std::cout << printVec(a) << "\n";
+    }
 
     auto overlap = [&] (const Projection& p1, const Projection& p2) -> bool {
         return (p1.second >= p2.first) && (p1.first <= p2.second);

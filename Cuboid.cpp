@@ -22,7 +22,6 @@ Cuboid::Cuboid(const Cuboid& c) :
 }
 
 std::vector<glm::vec3> Cuboid::getVertices() {
-
     std::vector<glm::vec3> vertices;
     const glm::vec3 centre = pos();
     const glm::vec3 d = hsize();
@@ -39,9 +38,11 @@ std::vector<glm::vec3> Cuboid::getVertices() {
     vertices.push_back(glm::vec3(-d.x,d.y,-d.z)); // -x,y,-z
 
     for (auto& v: vertices) {
+        /*
         v = glm::rotate(v, a.x, glm::vec3(0.0f,0.0f,1.0f)); // rotate in x
         v = glm::rotate(v, a.y, glm::vec3(1.0f,0.0f,0.0f)); // in y
         v = glm::rotate(v, a.z, glm::vec3(0.0f,1.0f,0.0f)); // in z
+        */
         v += centre;
     }
 
@@ -82,7 +83,9 @@ Cuboid::Cuboid() : Cuboid(1.0f,1.0f,1.0f) {
 
 Cuboid::Cuboid(
         float h, float w, float d) :
-    hsize_(h/2.0f,w/2.0f,d/2.0f), scale_(glm::vec3(1.0f,1.0f,1.0f)) { 
+    hsize_(h/2.0f,w/2.0f,d/2.0f),
+    scale_(glm::vec3(1.0f,1.0f,1.0f))
+        {
     }
 
 bool Cuboid::colliding(const Cuboid& c1, const Cuboid& c2) {

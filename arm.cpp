@@ -225,10 +225,10 @@ void render() {
         // scale, rotate, translate
 
         trans = glm::translate(trans, shape.cuboid().pos());
-        trans = glm::rotate(trans, shape.cuboid().ang().x, glm::vec3(0.0f,0.0f,1.0f));
-        trans = glm::rotate(trans, shape.cuboid().ang().y, glm::vec3(1.0f,0.0f,0.0f));
-        trans = glm::rotate(trans, shape.cuboid().ang().z, glm::vec3(0.0f,1.0f,0.0f));
-        trans = glm::scale(trans, shape.cuboid().scale());  
+        //trans = glm::rotate(trans, shape.cuboid().ang().x, glm::vec3(0.0f,0.0f,1.0f));
+        //trans = glm::rotate(trans, shape.cuboid().ang().y, glm::vec3(1.0f,0.0f,0.0f));
+        //trans = glm::rotate(trans, shape.cuboid().ang().z, glm::vec3(0.0f,1.0f,0.0f));
+        //trans = glm::scale(trans, shape.cuboid().scale());  
         model = model * trans;
 
         glm::mat4 view;

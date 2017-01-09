@@ -13,10 +13,10 @@
 typedef glm::vec3 v3;
 typedef std::pair<float,float> Projection;
 typedef std::vector<v3> vv3;
-typedef std::set<v3> sv3;
 
 class Shape {
     private:
+        //void static concat(vv3& grower, const vv3& added);
         std::pair<float, float> static project(const v3 axis, const vv3 verts);
         vv3 static getEdges(vv3 v);
         std::vector<glm::vec3> static getAxes(std::vector<glm::vec3> v1,std::vector<glm::vec3> v2);
