@@ -80,7 +80,8 @@ void keyboard(unsigned char key, int mouseX, int mouseY) {
                    s.translate(step,0,0);
                    break;
 	}
-
+    std::cout << *shapes[0] << "\n";
+    std::cout << *shapes[1] << "\n";
     // currently seg faults, to fix
     if (!stop) {
         glutPostRedisplay();
@@ -116,14 +117,16 @@ void specialInput(int key, int x, int y) {
 void createShapes() {
     shapes.push_back(new Shape(1.0f,1.0f,1.0f,cube,"Cube1"));
     shapes.push_back(new Shape(1.0f,1.0f,1.0f,cube,"Cube2"));
+    /*
     shapes.push_back(new Shape(1.0f,1.0f,1.0f,cube,"Cube3"));
     shapes.push_back(new Shape(1.0f,1.0f,1.0f,cube,"Cube4"));
     shapes.push_back(new Shape(1.0f,1.0f,1.0f,cube,"Cube5"));
+    */
 
     shapes[0]->translate(-1.0f,0.0f,0.0f);
     shapes[1]->translate(1.4f,0.0f,0.0f);
-    shapes[0]->cuboid().setScale(1.0f,0.5f,2.0f);
-    shapes[1]->cuboid().setScale(1.0f,1.0f,0.25f);
+    //shapes[0]->cuboid().setScale(1.0f,1.0f,1.0f);
+    //shapes[1]->cuboid().setScale(1.0f,1.0f,1.0f);
     for (int i=2; i<cubePositions.size() && i<shapes.size(); ++i) {
         shapes[i]->translate(cubePositions[i]);
     }
@@ -225,7 +228,7 @@ void render() {
         trans = glm::rotate(trans, shape.cuboid().ang().x, glm::vec3(0.0f,0.0f,1.0f));
         trans = glm::rotate(trans, shape.cuboid().ang().y, glm::vec3(1.0f,0.0f,0.0f));
         trans = glm::rotate(trans, shape.cuboid().ang().z, glm::vec3(0.0f,1.0f,0.0f));
-        //trans = glm::scale(trans, shape.cuboid().scale());  
+        trans = glm::scale(trans, shape.cuboid().scale());  
         model = model * trans;
 
         glm::mat4 view;

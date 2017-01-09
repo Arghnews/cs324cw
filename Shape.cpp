@@ -5,6 +5,7 @@
 #include <GL/glew.h> 
 #include <GL/glut.h> 
 #include <memory>
+#include <set>
 
 #include "Shape.hpp"
 
@@ -17,47 +18,41 @@ void db(std::string s) {
 void db() {
     db("");
 }
+vv3 Shape::getEdges(vv3 v) {
+    vv3 e;
+    int size = v.size();
+    for (int i = 0; i < size; i++) {
+        v3 p1 = v[i];
+        v3 p2 = v[i + 1 == size ? 0 : i + 1];
+        v3 edge = p1 - p2;
+        e.push_back(edge);
+    }
+    return e;
+}
 
-typedef std::pair<float,float> Projection;
-typedef std::vector<glm::vec3> vv3;
-
-vv3 Shape::getAxes(vv3 vertices) {
-    auto perp = [&] (const glm::vec3& v) -> vv3 {
-        vv3 normals;
-        normals.push_back(glm::vec3(-v.y,v.x,0.0f));
-
-        normals.push_back(glm::vec3(0.0f,v.z,-v.y));
-
-        normals.push_back(glm::vec3(-v.z,0.0f,v.x));
-        return normals;
+// returns normalised axes
+vv3 Shape::getAxes(vv3 v1, vv3 v2) {
+    auto concat = [&] (vv3& grower, const vv3& added) {
+        grower.insert( grower.end(), added.begin(), added.end() );
     };
 
-    int size = vertices.size();
+    // shape 1 and 2's vertices
+    // edges are axes
     vv3 axes;
-    // loop over the vertices
-    for (int i = 0; i < size; i++) {
-        // get the current vertex
-        glm::vec3 p1 = vertices[i];
-        // get the next vertex
-        glm::vec3 p2 = vertices[i + 1 == size ? 0 : i + 1];
-        // subtract the two to get the edge vector
-        glm::vec3 edge = p1 - p2;
-        // get either perpendicular vector
-        vv3 normals = perp(edge);
-        // the perp method is just (x, y) => (-y, x) or (y, -x)
-        axes.insert( axes.end(), normals.begin(), normals.end() );
+    const vv3 axes1 = getEdges(v1);
+    concat(axes, axes1);
+    const vv3 axes2 = getEdges(v2);
+    concat(axes, axes2);
+    for (auto& axis1: axes1) {
+        for (auto& axis2: axes2) {
+            axes.push_back(glm::cross(axis1,axis2));
+        }
     }
     return axes;
 }
 
-bool Shape::colliding(Shape& s1, Shape& s2) {
-    vv3 s1Verts = s1.cuboid().getVertices();
-    vv3 s2Verts = s2.cuboid().getVertices();
-    vv3 axes1 = getAxes(s1Verts);
-    vv3 axes2 = getAxes(s2Verts);
-
-    auto project = [&] (const glm::vec3 axe, const vv3 verts) -> Projection {
-        glm::vec3 axis = glm::normalize(axe);
+std::pair<float, float> Shape::project(const v3 axis_in, const vv3 verts) {
+        const v3 axis = glm::normalize(axis_in);
         float min = glm::dot(axis,verts[0]);
         float max = min;
         for (int i = 1; i < verts.size(); i++) {
@@ -65,46 +60,35 @@ bool Shape::colliding(Shape& s1, Shape& s2) {
             float p = glm::dot(axis,verts[i]);
             if (p < min) {
                 min = p;
-            } else if (p > max) {
+            }
+            if (p > max) {
                 max = p;
             }
         }
         Projection proj = std::make_pair(min, max);
         return proj;
+}
+
+bool Shape::colliding(Shape& s1, Shape& s2) {
+    vv3 s1Verts = s1.cuboid().getVertices();
+    vv3 s2Verts = s2.cuboid().getVertices();
+    vv3 allAxes = getAxes(s1Verts, s2Verts);
+
+    auto overlap = [&] (const Projection& p1, const Projection& p2) -> bool {
+        return (p1.second >= p2.first) && (p1.first <= p2.second);
     };
 
-    auto overlap = [&] (Projection p1, Projection p2) -> bool {
-        //std::cout << "Overlap of (" <<p1.first<<","<<p1.second<<") ("<<p2.first<<","<<p2.second<<")" << "\n";
-        const bool ol = (p1.second >= p2.first) && (p1.first <= p2.second);
-        return ol;
-    };
-
-    // loop over the axes1
-    for (int i = 0; i < axes1.size(); i++) {
-        glm::vec3 axis = axes1[i];
-        // project both shapes onto the axis
-        Projection p1 = project(axis,s1Verts);
-        Projection p2 = project(axis,s2Verts);
-        // do the projections overlap?
-        if (!overlap(p1,p2)) {
-            // then we can guarantee that the shapes do not overlap
+    for (const auto& axis: allAxes) {
+        Projection projection1 = project(axis, s1Verts);
+        Projection projection2 = project(axis, s2Verts);
+        if (!overlap(projection1,projection2)) {
             return false;
         }
     }
-    // loop over the axes2
-    for (int i = 0; i < axes2.size(); i++) {
-        glm::vec3 axis = axes2[i];
-        // project both shapes onto the axis
-        Projection p1 = project(axis,s1Verts);
-        Projection p2 = project(axis,s2Verts);
-        // do the projections overlap?
-        if (!overlap(p1,p2)) {
-            // then we can guarantee that the shapes do not overlap
-            return false;
-        }
-    }
+
     // if we get here then we know that every axis had overlap on it
     // so we can guarantee an intersection
+    std::cout << "Colliding\n";
     return true;
 }
 
@@ -173,10 +157,10 @@ Cuboid& Shape::cuboid() {
 }
 
 void Shape::translate(float x, float y, float z) {
-    translate(glm::vec3(x,y,z));
+    translate(v3(x,y,z));
 }
 
-void Shape::translate(glm::vec3 by) {
+void Shape::translate(v3 by) {
     _cuboid.translate(by);
 }
 
@@ -189,10 +173,10 @@ void Shape::rotateDegs(float x, float y, float z) {
 }
 
 void Shape::rotateRads(float x, float y, float z) {
-    rotateRads(glm::vec3(x,y,z));
+    rotateRads(v3(x,y,z));
 }
 
-void Shape::rotateRads(glm::vec3 by) {
+void Shape::rotateRads(v3 by) {
     _cuboid.rotateRads(by);
 }
 
