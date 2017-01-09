@@ -17,21 +17,10 @@ class Cuboid {
         glm::vec3 ang_; // x, y, z
         glm::vec3 hsize_; // h, w, d * 1/2
         glm::vec3 scale_; // 1.0,1.0,1.0
-        
-        bool static areColliding(
-                const glm::vec3& c1Pos,
-                const glm::vec3& c2Pos,
-                const glm::vec3& c1HSize,
-                const glm::vec3& c2HSize
-                );
-
-        glm::vec3 static angledSize(const glm::vec3& hsize, 
-                const glm::vec3& ang);
 
     public:
         std::vector<glm::vec3> getVertices();
         Cuboid(const Cuboid&);
-        Cuboid();
         Cuboid(float h, float w, float d);
 
         bool static colliding(const Cuboid& c1, const Cuboid& c2);

@@ -7,6 +7,7 @@
 #include <memory>
 #include <set>
 #include <cmath>
+#include <algorithm>
 
 #include "Shape.hpp"
 
@@ -76,11 +77,24 @@ std::pair<float, float> Shape::project(const v3 axis_in, const vv3 verts) {
 bool Shape::colliding(Shape& s1, Shape& s2) {
     vv3 s1Verts = s1.cuboid().getVertices();
     vv3 s2Verts = s2.cuboid().getVertices();
-    vv3 allAxes = getAxes(s1Verts, s2Verts);
+    vv3 allAxes_non_unique = getAxes(s1Verts, s2Verts);
+    vv3 allAxes;
+    // quick and easy unique directions
+    for (int i=0; i<allAxes_non_unique.size(); ++i) {
+        const bool has = std::find(allAxes.begin(), allAxes.end(),
+                allAxes_non_unique[i]) != allAxes.end();
+        const bool hasFlipped = std::find(allAxes.begin(), allAxes.end(),
+                allAxes_non_unique[i]*-1.0f) != allAxes.end();
+        if (!has && !hasFlipped) {
+            allAxes.push_back(allAxes_non_unique[i]);
+        }
+    }
     std::cout << "All axes to test for shapes " << s1 << "," << s2 << "\n";
     for (auto a: allAxes) {
         std::cout << printVec(a) << "\n";
     }
+    std::cout << "-----" << "\n";
+    std::cout << "-----" << "\n";
 
     auto overlap = [&] (const Projection& p1, const Projection& p2) -> bool {
         return (p1.second >= p2.first) && (p1.first <= p2.second);

@@ -81,7 +81,6 @@ void keyboard(unsigned char key, int mouseX, int mouseY) {
                    break;
 	}
     std::cout << *shapes[0] << "\n";
-    std::cout << *shapes[1] << "\n";
     // currently seg faults, to fix
     if (!stop) {
         glutPostRedisplay();
@@ -125,8 +124,8 @@ void createShapes() {
 
     shapes[0]->translate(-1.0f,0.0f,0.0f);
     shapes[1]->translate(1.4f,0.0f,0.0f);
-    //shapes[0]->cuboid().setScale(1.0f,1.0f,1.0f);
-    //shapes[1]->cuboid().setScale(1.0f,1.0f,1.0f);
+    shapes[0]->cuboid().setScale(1.0f,1.0f,1.0f);
+    shapes[1]->cuboid().setScale(1.0f,1.0f,1.0f);
     for (int i=2; i<cubePositions.size() && i<shapes.size(); ++i) {
         shapes[i]->translate(cubePositions[i]);
     }
@@ -180,7 +179,7 @@ void collisions() {
     for (int i=0; i<shapes.size(); ++i) {
         for (int j=i+1; j<shapes.size(); ++j) {
             //const bool collidingNow = Cuboid::colliding(shapes[i]->cuboid(),shapes[j]->cuboid());
-            const bool collidingNow= Shape::colliding(*(shapes[i]),*(shapes[j]));
+            const bool collidingNow = Shape::colliding(*(shapes[i]),*(shapes[j]));
             //if (collidingBefore != collidingNow) {
             // have changed collision state
             if (collidingNow) {
@@ -225,22 +224,23 @@ void render() {
         // scale, rotate, translate
 
         trans = glm::translate(trans, shape.cuboid().pos());
-        //trans = glm::rotate(trans, shape.cuboid().ang().x, glm::vec3(0.0f,0.0f,1.0f));
-        //trans = glm::rotate(trans, shape.cuboid().ang().y, glm::vec3(1.0f,0.0f,0.0f));
-        //trans = glm::rotate(trans, shape.cuboid().ang().z, glm::vec3(0.0f,1.0f,0.0f));
-        //trans = glm::scale(trans, shape.cuboid().scale());  
+        trans = glm::rotate(trans, shape.cuboid().ang().x, glm::vec3(0.0f,0.0f,1.0f));
+        trans = glm::rotate(trans, shape.cuboid().ang().y, glm::vec3(1.0f,0.0f,0.0f));
+        trans = glm::rotate(trans, shape.cuboid().ang().z, glm::vec3(0.0f,1.0f,0.0f));
+        trans = glm::scale(trans, shape.cuboid().scale());  
         model = model * trans;
 
         glm::mat4 view;
         // Note that we're translating the scene in the reverse direction of where we want to move
         //view = glm::translate(view, glm::vec3(0.0f, 0.0f, -3.0f)); 
         view = glm::lookAt(
-                glm::vec3(2.0f,-3.0f,3.0f),
+                glm::vec3(2.0f,-0.0f,3.5f),
                 glm::vec3(2.0f,0.0f,0.0f),
                 glm::vec3(0.0f,1.0f,0.0f));
 
         glm::mat4 projection;
-        projection = glm::perspective(glm::radians(90.0f), aspectRatio, 0.1f, 100.0f);
+        //projection = glm::perspective(glm::radians(90.0f), aspectRatio, 0.1f, 100.0f);
+        projection = glm::ortho(-5.0f,5.0f,-5.0f,5.0f,0.1f, 100.0f);
 
         GLint modelLoc = glGetUniformLocation(shaderProgram, "model");
         glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
