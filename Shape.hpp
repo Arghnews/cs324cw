@@ -10,21 +10,16 @@
 #include <iostream>
 #include <string>
 
-typedef glm::vec3 v3;
-typedef std::pair<float,float> Projection;
-typedef std::vector<v3> vv3;
-
 class Shape {
     private:
         //void static concat(vv3& grower, const vv3& added);
         std::pair<float, float> static project(const v3 axis, const vv3 verts);
         vv3 static getEdges(vv3 v);
-        std::vector<glm::vec3> static getAxes(std::vector<glm::vec3> v1,std::vector<glm::vec3> v2);
+        vv3 static getAxes(vv3 v1,vv3 v2);
         bool _colliding;
         Cuboid _cuboid;
-        std::shared_ptr<fv> vertPointer;
+        //std::shared_ptr<fv> vertPointer;
         fv _vertices;
-        fv _red_vertices;
         
     public:
         bool static colliding(Shape&, Shape&);
@@ -32,18 +27,17 @@ class Shape {
         Shape(const Shape&);
         GLuint VAO;
         GLuint VBO;
-        Shape(float h, float w, float d, fv vertices,
-                std::string niceName);
+        Shape(fv points,std::string niceName);
         bool colliding(bool isColliding);
         bool colliding() const;
         Cuboid& cuboid();
         void translate(float x, float y, float z);
-        void translate(glm::vec3 by);
+        void translate(v3 by);
         void rotateRads(float x, float y, float z);
-        void rotateRads(glm::vec3 by); // x, y, z, pretty rough atm
+        void rotateRads(v3 by); // x, y, z, pretty rough atm
         void rotateDegs(float x, float y, float z);
     
-        fv& vertices();
+        fv points();
         std::string name;
         friend std::ostream& operator<<(std::ostream&, const Shape&);
 

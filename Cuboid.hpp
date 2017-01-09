@@ -2,6 +2,8 @@
 #define MY_CUBOID
 #define GLM_FORCE_RADIANS
 #include "Util.hpp"
+#include <GL/glew.h> 
+#include <GL/glut.h> 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/rotate_vector.hpp>
@@ -13,41 +15,37 @@
 // USING RADIANS
 class Cuboid {
     private:
-        glm::vec3 pos_; // x, y, z of center
-        glm::vec3 ang_; // x, y, z
-        glm::vec3 hsize_; // h, w, d * 1/2
-        glm::vec3 scale_; // 1.0,1.0,1.0
+        v3 pos_; // x, y, z of center
+        v3 ang_; // x, y, z
+        v3 scale_; // 1.0,1.0,1.0
+        vv3 vertices_;
+        fv points_;
 
     public:
-        std::vector<glm::vec3> getVertices();
+        vv3 getVertices();
+        fv points();
         Cuboid(const Cuboid&);
-        Cuboid(float h, float w, float d);
+        Cuboid(fv points);
 
         bool static colliding(const Cuboid& c1, const Cuboid& c2);
 
-        glm::vec3 pos() const;
-        glm::vec3 ang() const;
-        glm::vec3 size() const;
-        glm::vec3 hsize() const;
-        glm::vec3 scale() const;
+        v3 pos() const;
+        v3 ang() const;
+        v3 scale() const;
 
         void rotateDegs(float x, float y, float z);
         void rotateRads(float x, float y, float z);
-        void rotateRads(const glm::vec3 xyz);
+        void rotateRads(const v3 xyz);
 
-        void translate(glm::vec3 by);
+        void translate(v3 by);
         void translate(float x, float y, float z);
-        
-        void setScale(float x, float y, float z);
-        void setScale(glm::vec3 to);
 
         friend std::ostream& operator<<(std::ostream&, const Cuboid&);
-
 };
 
 #ifndef MY_PRINTVEC
 #define MY_PRINTVEC
-std::string static printVec(const glm::vec3 v) {
+std::string static printVec(const v3 v) {
     std::stringstream buffer;
     buffer << "(" << v.x << "," << v.y << "," << v.z << ")";
     return buffer.str();
@@ -55,3 +53,51 @@ std::string static printVec(const glm::vec3 v) {
 #endif
 
 #endif
+
+/*
+// USING RADIANS
+class Cuboid {
+    private:
+        v3 pos_; // x, y, z of center
+        v3 ang_; // x, y, z
+        v3 hsize_; // h, w, d * 1/2
+        v3 scale_; // 1.0,1.0,1.0
+
+    public:
+        vv3 getVertices();
+        Cuboid(const Cuboid&);
+        Cuboid(float h, float w, float d);
+
+        bool static colliding(const Cuboid& c1, const Cuboid& c2);
+
+        v3 pos() const;
+        v3 ang() const;
+        v3 size() const;
+        v3 hsize() const;
+        v3 scale() const;
+
+        void rotateDegs(float x, float y, float z);
+        void rotateRads(float x, float y, float z);
+        void rotateRads(const v3 xyz);
+
+        void translate(v3 by);
+        void translate(float x, float y, float z);
+        
+        void setScale(float x, float y, float z);
+        void setScale(v3 to);
+
+        friend std::ostream& operator<<(std::ostream&, const Cuboid&);
+
+};
+
+#ifndef MY_PRINTVEC
+#define MY_PRINTVEC
+std::string static printVec(const v3 v) {
+    std::stringstream buffer;
+    buffer << "(" << v.x << "," << v.y << "," << v.z << ")";
+    return buffer.str();
+}
+#endif
+
+#endif
+*/

@@ -1,6 +1,8 @@
+#include "Util.hpp"
+
 #ifndef MY_PRINTVEC
 #define MY_PRINTVEC
-std::string static printVec(const glm::vec3 v) {
+std::string static printVec(const v3 v) {
     std::stringstream buffer;
     buffer << "(" << v.x << "," << v.y << "," << v.z << ")";
     return buffer.str();
@@ -81,20 +83,20 @@ GLuint shaders() {
     return shaders("vertex.shader","fragment.shader");
 }
 
-std::vector<glm::vec3> cubePositions = {
-    glm::vec3( 0.0f,  0.0f,  0.0f), 
-    glm::vec3( 2.0f,  5.0f, -15.0f), 
-    glm::vec3(-1.5f, -2.2f, -2.5f),  
-    glm::vec3(-3.8f, -2.0f, -12.3f),  
-    glm::vec3( 2.4f, -0.4f, -3.5f),  
-    glm::vec3(-1.7f,  3.0f, -7.5f),  
-    glm::vec3( 1.3f, -2.0f, -2.5f),  
-    glm::vec3( 1.5f,  2.0f, -2.5f), 
-    glm::vec3( 1.5f,  0.2f, -1.5f), 
-    glm::vec3(-1.3f,  1.0f, -1.5f)  
+vv3 cubePositions = {
+    v3( 0.0f,  0.0f,  0.0f), 
+    v3( 2.0f,  5.0f, -15.0f), 
+    v3(-1.5f, -2.2f, -2.5f),  
+    v3(-3.8f, -2.0f, -12.3f),  
+    v3( 2.4f, -0.4f, -3.5f),  
+    v3(-1.7f,  3.0f, -7.5f),  
+    v3( 1.3f, -2.0f, -2.5f),  
+    v3( 1.5f,  2.0f, -2.5f), 
+    v3( 1.5f,  0.2f, -1.5f), 
+    v3(-1.3f,  1.0f, -1.5f)  
 };
 
-std::vector<GLfloat> cube = {
+fv cube = {
     -0.5f, -0.5f, -0.5f,  0.0f, 0.0f, 0.5f,
     0.5f, -0.5f, -0.5f,  1.0f, 0.0f, 0.5f,
     0.5f,  0.5f, -0.5f,  1.0f, 1.0f, 0.5f,
@@ -138,7 +140,7 @@ std::vector<GLfloat> cube = {
     -0.5f,  0.5f, -0.5f,  0.0f, 1.0f, 0.5f,
 };
 
-std::vector<GLfloat> vertices = {
+fv vertices = {
     0.5f,  0.5f, 0.0f,  // Top Right
     0.5f, -0.5f, 0.0f,  // Bottom Right
     -0.5f, -0.5f, 0.0f,  // Bottom Left
@@ -147,7 +149,7 @@ std::vector<GLfloat> vertices = {
     -0.5f, -0.5f, 0.0f,  // Bottom Left
 };
 
-std::vector<GLfloat> vertices2 = {
+fv vertices2 = {
     -1.0f,  -1.0f, 0.0f, 1.0f, 1.0f, 1.0f  // Top Right
     -0.5f, -0.5f, 0.0f, 0.0f, 0.2f, 0.8f // Bottom Right
     -0.5f, -1.0f, 0.0f, 1.0f,1.0f,0.0f // Bottom Left

@@ -119,10 +119,11 @@ std::ostream& operator<<(std::ostream& stream, const Shape& s) {
     return stream << s.name << ": " << s._cuboid;
 }
 
-Shape::Shape(fv points, std::string niceName) :
-            _cuboid(points), name(niceName)
+Shape::Shape(fv vertices, std::string niceName) :
+            _cuboid(vertices), name(niceName), _vertices(vertices)
     {
         // only works if vertices in x,y,z r,g,b format
+        vertPointer = std::make_shared<fv>(_vertices);
 }
 
 Shape::Shape(const Shape& s) :
@@ -130,20 +131,30 @@ Shape::Shape(const Shape& s) :
         _colliding(s._colliding),
         _cuboid(s._cuboid),
         VAO(s.VAO),
-        VBO(s.VBO)
+        VBO(s.VBO),
+        _vertices(s._vertices)
     {
         // copy constructor
+        vertPointer = std::make_shared<fv>(_vertices);
 }
 
 Shape::~Shape() {
 }
 
-fv Shape::points() {
-    return _cuboid.points();
+fv Shape::vertices() {
+    // no colour, need add colour
+    fv ve = _cuboid.vertices();
+    for (int i=0; i<_vertices.size(); i+=6) {
+        ve[i] = _vertices[i];
+        ve[i+1] = _vertices[i+1];
+        ve[i+2] = _vertices[i+2];
+    }
+    return ve;
 }
 
 bool Shape::colliding(bool isColliding) {
     _colliding = isColliding;
+    vertPointer = std::make_shared<fv>(_vertices);
 }
 
 bool Shape::colliding() const {
