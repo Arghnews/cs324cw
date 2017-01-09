@@ -18,7 +18,6 @@ Cuboid::Cuboid(const Cuboid& c) :
     pos_(c.pos_),
     ang_(c.ang_),
     scale_(c.scale_),
-    vertices_(c.vertices_),
     points_(c.points_)
     {
     // copy constructor
@@ -30,10 +29,16 @@ fv Cuboid::points() {
 }
 
 vv3 Cuboid::getVertices() {
-    /*
     const v3 centre = pos();
-    const v3 d = hsize();
     const v3 a = ang();
+
+    vv3 vertices;
+    for (int i=0; i<points_.size(); i+=6) {
+        v3 vertex = v3(points_[i], points_[i+1], points_[i+2]);
+        vertex += centre;
+        vertices.push_back(vertex);
+    }
+    /*
     vertices.push_back(d); // x,y,z
     vertices.push_back(-d); // -x,-y,-z
 
@@ -44,25 +49,29 @@ vv3 Cuboid::getVertices() {
     vertices.push_back(v3(-d.x,-d.y,d.z)); // -x,-y,z
     vertices.push_back(v3(d.x,-d.y,-d.z)); // x,-y,-z
     vertices.push_back(v3(-d.x,d.y,-d.z)); // -x,y,-z
+    */
 
-    for (auto& v: vertices) {
+    //for (auto& v: vertices_) {
+        /*
         v = glm::rotate(v, a.x, v3(0.0f,0.0f,1.0f)); // rotate in x
         v = glm::rotate(v, a.y, v3(1.0f,0.0f,0.0f)); // in y
         v = glm::rotate(v, a.z, v3(0.0f,1.0f,0.0f)); // in z
-        v += centre;
-    }
-    */
-    return vertices_;
+        */
+    //   v += centre;
+    //}
+    return vertices;
 }
 
 Cuboid::Cuboid(fv points) : 
     scale_(v3(1.0f,1.0f,1.0f)),
     points_(points)
 {
+        /*
         for (int i=0; i<points.size(); i+=6) {
             v3 vertex = v3(points[i], points[i+1], points[i+2]);
             vertices_.push_back(vertex);
         }
+        */
             // need to build verts from v
             // need to be able to return fv or vv3
             // going to assume getting vec with colours

@@ -19,7 +19,6 @@ class Shape {
         bool _colliding;
         Cuboid _cuboid;
         //std::shared_ptr<fv> vertPointer;
-        fv _vertices;
         
     public:
         bool static colliding(Shape&, Shape&);

@@ -77,6 +77,12 @@ std::pair<float, float> Shape::project(const v3 axis_in, const vv3 verts) {
 bool Shape::colliding(Shape& s1, Shape& s2) {
     vv3 s1Verts = s1.cuboid().getVertices();
     vv3 s2Verts = s2.cuboid().getVertices();
+    for (auto a: s1Verts) {
+        std::cout << "S1v: " << printVec(a) << "\n";
+    }
+    for (auto a: s2Verts) {
+        std::cout << "S2v: " << printVec(a) << "\n";
+    }
     vv3 allAxes_non_unique = getAxes(s1Verts, s2Verts);
     vv3 allAxes;
     // quick and easy unique directions
@@ -110,7 +116,7 @@ bool Shape::colliding(Shape& s1, Shape& s2) {
 
     // if we get here then we know that every axis had overlap on it
     // so we can guarantee an intersection
-    std::cout << "Colliding\n";
+    std::cout << "Colliding!!!!\n";
     return true;
 }
 

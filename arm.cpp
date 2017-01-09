@@ -150,7 +150,7 @@ void display() {
     render();
 
     long timeTaken = timeNowMicros() - startTime;
-    const float fps = 60.0f;
+    const float fps = 0.2f;
     const float fullFrametime = (1000.0f*1000.0f)/fps;
     int sleepTime = std::max((int)(fullFrametime - timeTaken),0);
     /*bool SPARE_TIME_FOR_WHEN_ILETT_WHINES = false;
@@ -181,6 +181,7 @@ void collisions() {
             //if (collidingBefore != collidingNow) {
             // have changed collision state
             if (collidingNow) {
+                std::cout << "COLLIDING \n";
                 // collision
                 collidingSet.insert(i);
                 collidingSet.insert(j);
@@ -222,10 +223,12 @@ void render() {
         // scale, rotate, translate
 
         trans = glm::translate(trans, shape.cuboid().pos());
+        /*
         trans = glm::rotate(trans, shape.cuboid().ang().x, v3(0.0f,0.0f,1.0f));
         trans = glm::rotate(trans, shape.cuboid().ang().y, v3(1.0f,0.0f,0.0f));
         trans = glm::rotate(trans, shape.cuboid().ang().z, v3(0.0f,1.0f,0.0f));
         trans = glm::scale(trans, shape.cuboid().scale());  
+        */
         model = model * trans;
 
         glm::mat4 view;
