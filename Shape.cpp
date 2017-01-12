@@ -8,6 +8,7 @@
 #include <set>
 #include <cmath>
 #include <algorithm>
+#include <string>
 
 #include "Shape.hpp"
 
@@ -21,15 +22,29 @@ void db() {
     db("");
 }
 
-vv3 Shape::getEdges(vv3 v) {
+vv3 Shape::getEdges(const vv3& v) {
     vv3 e;
-    int size = v.size();
-    for (int i = 0; i < size; i++) {
-        v3 p1 = v[i];
-        v3 p2 = v[i + 1 == size ? 0 : i + 1];
-        v3 edge = p1 - p2;
-        e.push_back(edge);
+    // 36 vertices ->
+    // since it's straight from the gl
+    // every 3 points make up a triangle
+    // every 2 triangles make a face
+    //
+    const int size = v.size();
+    for (int i=0; i<size; i+=6) {
+        vv3 square;
+        square.push_back(v[i+0]);
+        square.push_back(v[i+1]);
+        square.push_back(v[i+2]);
+        square.push_back(v[i+3]);
+        square.push_back(v[i+4]);
+        square.push_back(v[i+5]);
+        square = unique(square);
+        const int sqSize = square.size();
+        for (int i=0; i<sqSize; ++i) {
+            e.push_back((square[i] - square[(i+1)%sqSize]));
+        }   
     }
+    // 3 axis
     return e;
 }
 
@@ -42,17 +57,34 @@ vv3 Shape::getAxes(vv3 v1, vv3 v2) {
     // shape 1 and 2's vertices
     // edges are axes
     vv3 axes;
-    const vv3 axes1 = getEdges(v1);
+    std::cout << "HI\n";
+    const vv3 axes1 = unique(getEdges(v1),true);
+    std::cout << "axes for cube 1: " << axes1.size() << "\n";
+    for (auto a: axes1) {
+        std::cout << printVec(a) << "\n";
+    }
     concat(axes, axes1);
-    const vv3 axes2 = getEdges(v2);
+    const vv3 axes2 = unique(getEdges(v2),true);
+    std::cout << "axes for cube 2: " << axes2.size() << "\n";
+    for (auto a: axes2) {
+        std::cout << printVec(a) << "\n";
+    }
     concat(axes, axes2);
+
+    std::cout << "Size of total axes before unique " << axes.size() << "\n";
+    axes = unique(axes);
+    std::cout << "Size of total axes after unique " << axes.size() << "\n";
+
+
+
+    /*
     for (auto& axis1: axes1) {
         for (auto& axis2: axes2) {
             auto t = glm::normalize(glm::cross(axis1,axis2));
             if (!isnan(t.x) && !isnan(t.y) && !isnan(t.z))
                 axes.push_back(t);
         }
-    }
+    }*/
     return axes;
 }
 
@@ -74,27 +106,35 @@ std::pair<float, float> Shape::project(const v3 axis_in, const vv3 verts) {
     return proj;
 }
 
+vv3 Shape::unique(const vv3& vec_in) {
+    return unique(vec_in, false);
+}
+
+vv3 Shape::unique(const vv3& vec_in, const bool ignoreSign) {
+    vv3 allAxes;
+    vv3 uniq;
+    // quick and easy unique directions
+    for (int i=0; i<vec_in.size(); ++i) {
+        const bool has = std::find(uniq.begin(), uniq.end(),
+                vec_in[i]) != uniq.end();
+        const bool hasFlipped = ignoreSign && std::find(uniq.begin(), uniq.end(),
+                vec_in[i]*-1.0f) != uniq.end();
+        if (!has && !hasFlipped) {
+            uniq.push_back(vec_in[i]);
+        }
+    }
+    return uniq;
+}
+
 bool Shape::colliding(Shape& s1, Shape& s2) {
     vv3 s1Verts = s1.cuboid().getVertices();
     vv3 s2Verts = s2.cuboid().getVertices();
-    for (auto a: s1Verts) {
-        std::cout << "S1v: " << printVec(a) << "\n";
-    }
-    for (auto a: s2Verts) {
-        std::cout << "S2v: " << printVec(a) << "\n";
-    }
+    std::cout << "Number of verts shape1:" << s1Verts.size() << " " << s2Verts.size() << "\n";
     vv3 allAxes_non_unique = getAxes(s1Verts, s2Verts);
-    vv3 allAxes;
-    // quick and easy unique directions
-    for (int i=0; i<allAxes_non_unique.size(); ++i) {
-        const bool has = std::find(allAxes.begin(), allAxes.end(),
-                allAxes_non_unique[i]) != allAxes.end();
-        const bool hasFlipped = std::find(allAxes.begin(), allAxes.end(),
-                allAxes_non_unique[i]*-1.0f) != allAxes.end();
-        if (!has && !hasFlipped) {
-            allAxes.push_back(allAxes_non_unique[i]);
-        }
-    }
+
+    vv3 allAxes = unique(allAxes_non_unique, true);
+
+    std::cout << "Number of axes " << allAxes_non_unique.size() << " -> " << allAxes.size() << "\n";
     std::cout << "All axes to test for shapes " << s1 << "," << s2 << "\n";
     for (auto a: allAxes) {
         std::cout << printVec(a) << "\n";
@@ -125,16 +165,21 @@ std::ostream& operator<<(std::ostream& stream, const Shape& s) {
     return stream << s.name << ": " << s._cuboid;
 }
 
-Shape::Shape(fv points, std::string niceName) :
-            _cuboid(points), name(niceName)
+Shape::Shape(fv points, fv colours, std::string niceName) :
+            _cuboid(points), _colours(colours), name(niceName)
     {
         // only works if vertices in x,y,z r,g,b format
+}
+
+fv Shape::colours() {
+    return _colours;
 }
 
 Shape::Shape(const Shape& s) :
         name(s.name),
         _colliding(s._colliding),
         _cuboid(s._cuboid),
+        _colours(s._colours),
         VAO(s.VAO),
         VBO(s.VBO)
     {

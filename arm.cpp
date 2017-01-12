@@ -29,7 +29,7 @@ int init(int argc, char* argv[]);
 void createShapes();
 void render();
 void bindBuffers(ShapeList& shapes);
-void bindBuffers(GLuint VAO, GLuint VBO, const fv vertexData);
+void bindBuffers(GLuint VAO, GLuint VBO, const fv vertexData, const fv colourData);
 void startLoopGl();
 void collisions();
 void keyboard(unsigned char key, int mouseX, int mouseY);
@@ -114,8 +114,8 @@ void specialInput(int key, int x, int y) {
 }
 
 void createShapes() {
-    shapes.push_back(new Shape(cube,"Cube1"));
-    shapes.push_back(new Shape(cube,"Cube2"));
+    shapes.push_back(new Shape(cubePoints,cubeColours,"Cube1"));
+    shapes.push_back(new Shape(cubePoints,cubeColours,"Cube2"));
     /*
     shapes.push_back(new Shape(1.0f,1.0f,1.0f,cube,"Cube3"));
     shapes.push_back(new Shape(1.0f,1.0f,1.0f,cube,"Cube4"));
@@ -150,7 +150,7 @@ void display() {
     render();
 
     long timeTaken = timeNowMicros() - startTime;
-    const float fps = 0.2f;
+    const float fps = 60.0f;
     const float fullFrametime = (1000.0f*1000.0f)/fps;
     int sleepTime = std::max((int)(fullFrametime - timeTaken),0);
     /*bool SPARE_TIME_FOR_WHEN_ILETT_WHINES = false;
@@ -235,13 +235,13 @@ void render() {
         // Note that we're translating the scene in the reverse direction of where we want to move
         //view = glm::translate(view, v3(0.0f, 0.0f, -3.0f)); 
         view = glm::lookAt(
-                v3(2.0f,-0.0f,3.5f),
-                v3(2.0f,0.0f,0.0f),
-                v3(0.0f,1.0f,0.0f));
+                v3(2.0f,2.0f,2.0f), // eye
+                v3(0.0f,0.0f,0.0f),  // center
+                v3(0.0f,1.0f,0.0f)); // up
 
         glm::mat4 projection;
-        //projection = glm::perspective(glm::radians(90.0f), aspectRatio, 0.1f, 100.0f);
-        projection = glm::ortho(-5.0f,5.0f,-5.0f,5.0f,0.1f, 100.0f);
+        projection = glm::perspective(glm::radians(80.0f), aspectRatio, 0.1f, 100.0f);
+        //projection = glm::ortho(-5.0f,5.0f,-5.0f,5.0f,0.1f, 100.0f);
 
         GLint modelLoc = glGetUniformLocation(shaderProgram, "model");
         glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
@@ -258,20 +258,31 @@ void render() {
 
 void bindBuffers(ShapeList& shapes) {
     for (auto& shape: shapes) {
-        bindBuffers(shape->VAO, shape->VBO, shape->points());
+        bindBuffers(shape->VAO, shape->VBO, shape->points(), shape->colours());
     }
 }
 
-void bindBuffers(GLuint VAO, GLuint VBO, const fv vertexData) {
+void bindBuffers(GLuint VAO, GLuint VBO, const fv vertexData, const fv colourData) {
+    fv data(vertexData.size()+colourData.size());
+    const int size = data.size()/3;
+    const int vSize = vertexData.size();
+    const int cSize = colourData.size();
+    for (int i=0; i<size; i+=3) {
+        data[2*i+0] = vertexData[i+0];
+        data[2*i+1] = vertexData[i+1];
+        data[2*i+2] = vertexData[i+2];
+        data[2*i+3] = colourData[i+0];
+        data[2*i+4] = colourData[i+1];
+        data[2*i+5] = colourData[i+2];
+    }
     glBindVertexArray(VAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, vertexData.size()*sizeof(GLfloat), 
-            vertexData.data(), GL_STATIC_DRAW);
-
+    glBufferData(GL_ARRAY_BUFFER, data.size()*sizeof(GLfloat), 
+            data.data(), GL_STATIC_DRAW);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 
             6 * sizeof(GLfloat), (GLvoid*)(0*sizeof(GLfloat)));
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 
-            6 * sizeof(GLfloat), (GLvoid*)(3*sizeof(GLfloat)));
+            6 * sizeof(GLfloat), (GLvoid*)(0*sizeof(GLfloat)));
     glEnableVertexAttribArray(0);
     glEnableVertexAttribArray(1);
     glBindVertexArray(0);

@@ -31,13 +31,16 @@ fv Cuboid::points() {
 vv3 Cuboid::getVertices() {
     const v3 centre = pos();
     const v3 a = ang();
+    const fv& points = points_;
+    const int size = points.size(); // 108 points -> 36 vertices
 
     vv3 vertices;
-    for (int i=0; i<points_.size(); i+=6) {
-        v3 vertex = v3(points_[i], points_[i+1], points_[i+2]);
+    for (int i=0; i<size; i+=3) {
+        v3 vertex = v3(points[i], points[i+1], points[i+2]);
         vertex += centre;
         vertices.push_back(vertex);
     }
+
     /*
     vertices.push_back(d); // x,y,z
     vertices.push_back(-d); // -x,-y,-z
@@ -66,15 +69,6 @@ Cuboid::Cuboid(fv points) :
     scale_(v3(1.0f,1.0f,1.0f)),
     points_(points)
 {
-        /*
-        for (int i=0; i<points.size(); i+=6) {
-            v3 vertex = v3(points[i], points[i+1], points[i+2]);
-            vertices_.push_back(vertex);
-        }
-        */
-            // need to build verts from v
-            // need to be able to return fv or vv3
-            // going to assume getting vec with colours
 }
 
 v3 Cuboid::pos() const {
