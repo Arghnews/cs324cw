@@ -73,11 +73,11 @@ void keyboard(unsigned char key, int mouseX, int mouseY) {
                    break;
         case 'A':
         case 'a':
-                   s.translate(-step,0,0);
+                   s.translate(step,0,0);
                    break;
 		case 'D':  
 		case 'd':  
-                   s.translate(step,0,0);
+                   s.translate(-step,0,0);
                    break;
 	}
     std::cout << *shapes[0] << "\n";
@@ -264,19 +264,6 @@ void bindBuffers(ShapeList& shapes) {
 }
 
 void bindBuffers(GLuint VAO, std::vector<GLuint> VBOs, const fv vertexData, const fv colourData) {
-    /*
-    fv data(vertexData.size()+colourData.size());
-    const int size = data.size()/2;
-    const int vSize = vertexData.size();
-    const int cSize = colourData.size();
-    for (int i=0; i<size; i+=3) {
-        data[2*i+0] = vertexData[i+0];
-        data[2*i+1] = vertexData[i+1];
-        data[2*i+2] = vertexData[i+2];
-        data[2*i+3] = colourData[i+0];
-        data[2*i+4] = colourData[i+1];
-        data[2*i+5] = colourData[i+2];
-    }*/
     glBindVertexArray(VAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBOs[0]);
     glBufferData(GL_ARRAY_BUFFER, vertexData.size()*sizeof(GLfloat), 

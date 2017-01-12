@@ -6,8 +6,8 @@ inoremap <Right> <Nop>
 inoremap <Left> <Nop>
 inoremap <Down> <Nop>
 inoremap <Up> <Nop>
-nnoremap <silent> y :CCTreeWindowSaveCopy
 nnoremap <silent> w :CCTreeWindowToggle
+nnoremap <silent> y :CCTreeWindowSaveCopy
 noremap K <k>
 nmap gx <Plug>NetrwBrowseX
 nnoremap <silent> <Plug>NetrwBrowseX :call netrw#NetrwBrowseX(expand("<cWORD>"),0)
@@ -41,17 +41,17 @@ if expand('%') == '' && !&modified && line('$') <= 1 && getline(1) == ''
   let s:wipebuf = bufnr('%')
 endif
 set shortmess=aoO
-badd +260 arm.cpp
+badd +291 arm.cpp
 badd +1 vertex.shader
 badd +2 fragment.shader
 badd +1 robot-arm.cpp
-badd +160 Shape.cpp
+badd +179 Shape.cpp
 badd +1 Shape.hpp
-badd +24 Cuboid.cpp
+badd +40 Cuboid.cpp
 badd +1 Cuboid.hpp
 badd +1 crap.hpp
 badd +2 ../temp
-badd +0 Util.hpp
+badd +1 Util.hpp
 args arm.cpp
 edit crap.hpp
 set splitbelow splitright
@@ -285,12 +285,12 @@ setlocal nowinfixwidth
 setlocal wrap
 setlocal wrapmargin=0
 silent! normal! zE
-let s:l = 52 - ((0 * winheight(0) + 34) / 68)
+let s:l = 239 - ((34 * winheight(0) + 34) / 68)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
-52
-normal! 022|
+239
+normal! 019|
 tabedit Shape.cpp
 set splitbelow splitright
 wincmd _ | wincmd |
@@ -301,8 +301,8 @@ set nosplitbelow
 set nosplitright
 wincmd t
 set winheight=1 winwidth=1
-exe '1resize ' . ((&lines * 38 + 35) / 70)
-exe '2resize ' . ((&lines * 28 + 35) / 70)
+exe '1resize ' . ((&lines * 43 + 35) / 70)
+exe '2resize ' . ((&lines * 23 + 35) / 70)
 argglobal
 nnoremap <buffer> <silent> - :CCTreeRecurseDepthMinus
 nnoremap <buffer> <silent> = :CCTreeRecurseDepthPlus
@@ -410,11 +410,11 @@ setlocal nowinfixwidth
 setlocal wrap
 setlocal wrapmargin=0
 silent! normal! zE
-let s:l = 9 - ((8 * winheight(0) + 19) / 38)
+let s:l = 41 - ((27 * winheight(0) + 21) / 43)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
-9
+41
 normal! 0
 wincmd w
 argglobal
@@ -525,15 +525,15 @@ setlocal nowinfixwidth
 setlocal wrap
 setlocal wrapmargin=0
 silent! normal! zE
-let s:l = 10 - ((8 * winheight(0) + 14) / 28)
+let s:l = 10 - ((6 * winheight(0) + 11) / 23)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
 10
 normal! 010|
 wincmd w
-exe '1resize ' . ((&lines * 38 + 35) / 70)
-exe '2resize ' . ((&lines * 28 + 35) / 70)
+exe '1resize ' . ((&lines * 43 + 35) / 70)
+exe '2resize ' . ((&lines * 23 + 35) / 70)
 tabedit Cuboid.cpp
 set splitbelow splitright
 wincmd _ | wincmd |
@@ -890,7 +890,7 @@ setlocal nowinfixwidth
 setlocal wrap
 setlocal wrapmargin=0
 silent! normal! zE
-let s:l = 7 - ((6 * winheight(0) + 34) / 68)
+let s:l = 7 - ((0 * winheight(0) + 34) / 68)
 if s:l < 1 | let s:l = 1 | endif
 exe s:l
 normal! zt
@@ -1135,7 +1135,7 @@ normal! 0
 wincmd w
 exe '1resize ' . ((&lines * 33 + 35) / 70)
 exe '2resize ' . ((&lines * 33 + 35) / 70)
-tabnext 5
+tabnext 3
 if exists('s:wipebuf')
   silent exe 'bwipe ' . s:wipebuf
 endif

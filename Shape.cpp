@@ -60,31 +60,34 @@ vv3 Shape::getAxes(vv3 v1, vv3 v2) {
     std::cout << "HI\n";
     const vv3 axes1 = unique(getEdges(v1),true);
     std::cout << "axes for cube 1: " << axes1.size() << "\n";
-    for (auto a: axes1) {
+    for (auto& a: axes1) {
         std::cout << printVec(a) << "\n";
     }
-    concat(axes, axes1);
     const vv3 axes2 = unique(getEdges(v2),true);
     std::cout << "axes for cube 2: " << axes2.size() << "\n";
-    for (auto a: axes2) {
+    for (auto& a: axes2) {
         std::cout << printVec(a) << "\n";
     }
+
+    std::cout << "Size of axes 1 and then 2: " << axes1.size() << ", " << axes2.size() << "\n";
+    vv3 axes3;
+    auto i = 0;
+    for (const auto& axis1: axes1) {
+        for (const auto& axis2: axes2) {
+            const auto t = glm::normalize(glm::cross(axis1,axis2));
+            if (!isnan(t.x) && !isnan(t.y) && !isnan(t.z)) {
+                axes3.push_back(t);
+            }
+        }
+    }
+    std::cout << "Size of axes 3 " << axes3.size() << "\n";
+    concat(axes, axes1);
     concat(axes, axes2);
+    concat(axes, axes3);
 
     std::cout << "Size of total axes before unique " << axes.size() << "\n";
     axes = unique(axes);
     std::cout << "Size of total axes after unique " << axes.size() << "\n";
-
-
-
-    /*
-    for (auto& axis1: axes1) {
-        for (auto& axis2: axes2) {
-            auto t = glm::normalize(glm::cross(axis1,axis2));
-            if (!isnan(t.x) && !isnan(t.y) && !isnan(t.z))
-                axes.push_back(t);
-        }
-    }*/
     return axes;
 }
 
