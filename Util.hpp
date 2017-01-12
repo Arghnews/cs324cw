@@ -15,6 +15,14 @@ typedef glm::vec3 v3;
 typedef std::pair<float,float> Projection;
 typedef std::vector<v3> vv3;
 typedef glm::mat4 m4;
+typedef glm::fquat fq;
+
+/*
+
+   Efficiency, this function -> hash of some kind, maybe unordered set etc
+   Compare cubes only to nearby ones, by taking position
+
+   */
 
 vv3 static unique(const vv3& vec_in, const bool ignoreSign) {
     vv3 allAxes;

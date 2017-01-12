@@ -116,13 +116,11 @@ void specialInput(int key, int x, int y) {
 }
 
 void createShapes() {
-    shapes.push_back(new Shape(cubePoints,cubeColours,"Cube1"));
-    shapes.push_back(new Shape(cubePoints,cubeColours,"Cube2"));
-    /*
-    shapes.push_back(new Shape(1.0f,1.0f,1.0f,cube,"Cube3"));
-    shapes.push_back(new Shape(1.0f,1.0f,1.0f,cube,"Cube4"));
-    shapes.push_back(new Shape(1.0f,1.0f,1.0f,cube,"Cube5"));
-    */
+    int cubes = 50;
+    for (int i=0; i<cubes; ++i) {
+        std::string name = "Cube" + i;
+        shapes.push_back(new Shape(cubePoints,cubeColours,name));
+    }
 
     shapes[0]->translate(-1.0f,0.0f,0.0f);
     shapes[1]->translate(1.4f,0.0f,0.0f);
@@ -156,10 +154,10 @@ void display() {
     const float fps = 60.0f;
     const float fullFrametime = (1000.0f*1000.0f)/fps;
     int sleepTime = std::max((int)(fullFrametime - timeTaken),0);
-    /*bool SPARE_TIME_FOR_WHEN_ILETT_WHINES = false;
+    bool SPARE_TIME_FOR_WHEN_ILETT_WHINES = true;
     if (SPARE_TIME_FOR_WHEN_ILETT_WHINES) {
         std::cout << "Spare frame time " << sleepTime*1000 << "ms\n";
-    }*/
+    }
     std::this_thread::sleep_for(std::chrono::microseconds(sleepTime));
 }
 
@@ -184,7 +182,6 @@ void collisions() {
             //if (collidingBefore != collidingNow) {
             // have changed collision state
             if (collidingNow) {
-                std::cout << "COLLIDING \n";
                 // collision
                 collidingSet.insert(i);
                 collidingSet.insert(j);
@@ -194,7 +191,6 @@ void collisions() {
             } else {
                 // no collision
             }
-            //}
         }
     }
 
@@ -211,7 +207,7 @@ void render() {
     glUseProgram(shaderProgram);
     for (int i=0; i<shapes.size(); ++i) {
         Shape& shape = *shapes[i];
-        auto& qua = shape.cuboid().qua;
+        auto qua = shape.cuboid().qua();
         glBindVertexArray(shape.VAO);
         //
         // local space -> world space -> view space -> clip space -> screen space
@@ -223,7 +219,6 @@ void render() {
         m4 model;
         m4 trans;
         m4 rotateM = glm::mat4_cast(qua);
-
         trans = glm::translate(trans, shape.cuboid().pos());
         //trans = glm::scale(trans, shape.cuboid().scale());  
         model = trans * rotateM;
@@ -232,7 +227,7 @@ void render() {
         // Note that we're translating the scene in the reverse direction of where we want to move
         //view = glm::translate(view, v3(0.0f, 0.0f, -3.0f)); 
         view = glm::lookAt(
-                v3(0.0001f,2.5f,0.0001f), // eye
+                v3(4.0f,5.5f,2.0f), // eye
                 v3(0.0f,0.0f,0.0f),  // center
                 v3(0.0f,1.0f,0.0f)); // up
 

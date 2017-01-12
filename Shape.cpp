@@ -59,19 +59,12 @@ vv3 Shape::getAxes(vv3 v1, vv3 v2) {
     // shape 1 and 2's vertices
     // edges are axes
     vv3 axes;
-    std::cout << "HI\n";
     const vv3 axes1 = unique(getEdges(v1),true);
-    std::cout << "axes for cube 1: " << axes1.size() << "\n";
     for (auto& a: axes1) {
-        std::cout << printVec(a) << "\n";
     }
     const vv3 axes2 = unique(getEdges(v2),true);
-    std::cout << "axes for cube 2: " << axes2.size() << "\n";
     for (auto& a: axes2) {
-        std::cout << printVec(a) << "\n";
     }
-
-    std::cout << "Size of axes 1 and then 2: " << axes1.size() << ", " << axes2.size() << "\n";
     vv3 axes3;
     auto i = 0;
     for (const auto& axis1: axes1) {
@@ -82,14 +75,11 @@ vv3 Shape::getAxes(vv3 v1, vv3 v2) {
             }
         }
     }
-    std::cout << "Size of axes 3 " << axes3.size() << "\n";
     concat(axes, axes1);
     concat(axes, axes2);
     concat(axes, axes3);
 
-    std::cout << "Size of total axes before unique " << axes.size() << "\n";
     axes = unique(axes);
-    std::cout << "Size of total axes after unique " << axes.size() << "\n";
     return axes;
 }
 
@@ -114,18 +104,12 @@ std::pair<float, float> Shape::project(const v3 axis_in, const vv3 verts) {
 bool Shape::colliding(Shape& s1, Shape& s2) {
     vv3 s1Verts = s1.cuboid().getVertices();
     vv3 s2Verts = s2.cuboid().getVertices();
-    std::cout << "Number of verts shape1:" << s1Verts.size() << " " << s2Verts.size() << "\n";
     vv3 allAxes_non_unique = getAxes(s1Verts, s2Verts);
 
     vv3 allAxes = unique(allAxes_non_unique, true);
 
-    std::cout << "Number of axes " << allAxes_non_unique.size() << " -> " << allAxes.size() << "\n";
-    std::cout << "All axes to test for shapes " << s1 << "," << s2 << "\n";
     for (auto a: allAxes) {
-        std::cout << printVec(a) << "\n";
     }
-    std::cout << "-----" << "\n";
-    std::cout << "-----" << "\n";
 
     auto overlap = [&] (const Projection& p1, const Projection& p2) -> bool {
         return (p1.second >= p2.first) && (p1.first <= p2.second);
@@ -141,7 +125,6 @@ bool Shape::colliding(Shape& s1, Shape& s2) {
 
     // if we get here then we know that every axis had overlap on it
     // so we can guarantee an intersection
-    std::cout << "Colliding!!!!\n";
     return true;
 }
 

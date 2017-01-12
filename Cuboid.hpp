@@ -21,9 +21,10 @@ class Cuboid {
         v3 ang_; // x, y, z
         v3 scale_; // 1.0,1.0,1.0
         fv points_;
+        fq qua_;
 
     public:
-        glm::fquat qua;
+        fq qua() const;
         vv3 getVertices();
         fv points();
         Cuboid(const Cuboid&);

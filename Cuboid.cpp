@@ -20,11 +20,11 @@ Cuboid::Cuboid(const Cuboid& c) :
     pos_(c.pos_),
     ang_(c.ang_),
     scale_(c.scale_),
-    points_(c.points_)
+    points_(c.points_),
+    qua_(c.qua_)
     {
     // copy constructor
 }
-
 
 fv Cuboid::points() {
     return points_;
@@ -39,7 +39,7 @@ vv3 Cuboid::getVertices() {
     vv3 vertices;
     for (int i=0; i<size; i+=3) {
         v3 vertex = v3(points[i], points[i+1], points[i+2]);
-        vertex = qua * vertex;
+        vertex = qua_ * vertex;
         vertex += centre;
         vertices.push_back(vertex);
     }
@@ -68,28 +68,18 @@ void Cuboid::rotateDegs(float x, float y, float z) {
             );
 }
 
+fq Cuboid::qua() const {
+    return qua_;
+}
+
 void Cuboid::rotateRads(const v3 xyz) {
     rotateRads(xyz.x, xyz.y, xyz.z);
 }
-/*
-        trans = glm::rotate(trans, shape.cuboid().ang().x, v3(0.0f,1.0f,0.0f));
-        trans = glm::rotate(trans, shape.cuboid().ang().y, v3(1.0f,0.0f,0.0f));
-        trans = glm::rotate(trans, shape.cuboid().ang().z, v3(0.0f,0.0f,1.0f));
-        */
+
 void Cuboid::rotateRads(float yaw, float pitch, float roll) {
-    v3 vec(yaw,pitch,roll);
-    glm::fquat q = glm::quat(vec);
-    qua = q * qua;
-    // the function that actually does the rotating
-    /*
-    ang_.x += x; // about up
-    //ang_.x = fmod(ang_.x,M_PI);
-    ang_.y += y;
-    //ang_.y = fmod(ang_.y,M_PI);
-    ang_.z += z;
-    //ang_.z = fmod(ang_.z,M_PI);
-    //
-    */
+    const v3 vec(yaw,pitch,roll);
+    const fq q = glm::quat(vec);
+    qua_ = q * qua_;
 }
 
 void Cuboid::translate(v3 by) {
@@ -109,113 +99,3 @@ v3 Cuboid::scale() const {
 std::ostream& operator<<(std::ostream& stream, const Cuboid& c) {
     //return stream << "Pos" << printVec(c.pos()) << ", ang:" << printVec(c.ang()) << ", size" << printVec(c.size());
 }
-
-/*
-
-// USING RADIANS
-
-Cuboid::Cuboid(const Cuboid& c) :
-    pos_(c.pos_),
-    ang_(c.ang_),
-    hsize_(c.hsize_),
-    scale_(c.scale_)
-    {
-    // copy constructor
-}
-
-vv3 Cuboid::getVertices() {
-    vv3 vertices;
-    const v3 centre = pos();
-    const v3 d = hsize();
-    const v3 a = ang();
-    vertices.push_back(d); // x,y,z
-    vertices.push_back(-d); // -x,-y,-z
-
-    vertices.push_back(v3(-d.x,d.y,d.z)); // -x,y,z
-    vertices.push_back(v3(d.x,-d.y,d.z)); // x,-y,z
-    vertices.push_back(v3(d.x,d.y,-d.z)); // x,y,-z
-
-    vertices.push_back(v3(-d.x,-d.y,d.z)); // -x,-y,z
-    vertices.push_back(v3(d.x,-d.y,-d.z)); // x,-y,-z
-    vertices.push_back(v3(-d.x,d.y,-d.z)); // -x,y,-z
-
-    for (auto& v: vertices) {
-        v = glm::rotate(v, a.x, v3(0.0f,0.0f,1.0f)); // rotate in x
-        v = glm::rotate(v, a.y, v3(1.0f,0.0f,0.0f)); // in y
-        v = glm::rotate(v, a.z, v3(0.0f,1.0f,0.0f)); // in z
-        v += centre;
-    }
-    return vertices;
-}
-
-Cuboid::Cuboid(
-        float h, float w, float d) :
-    hsize_(h/2.0f,w/2.0f,d/2.0f),
-    scale_(v3(1.0f,1.0f,1.0f))
-        {
-    }
-
-v3 Cuboid::pos() const {
-    return pos_;
-}
-
-v3 Cuboid::ang() const {
-    return ang_;
-}
-
-v3 Cuboid::size() const {
-    return 2.0f * hsize();
-}
-
-v3 Cuboid::hsize() const {
-    return hsize_ * scale_;
-}
-
-void Cuboid::rotateDegs(float x, float y, float z) {
-    rotateRads(
-            (x*M_PI)/180.0f,
-            (y*M_PI)/180.0f,
-            (z*M_PI)/180.0f
-            );
-}
-
-void Cuboid::rotateRads(const v3 xyz) {
-    rotateRads(xyz.x, xyz.y, xyz.z);
-}
-
-void Cuboid::rotateRads(float x, float y, float z) {
-    ang_.x += x;
-    //ang_.x = fmod(ang_.x,M_PI);
-    ang_.y += y;
-    //ang_.y = fmod(ang_.y,M_PI);
-    ang_.z += z;
-    //ang_.z = fmod(ang_.z,M_PI);
-}
-
-void Cuboid::translate(v3 by) {
-    pos_ += by;
-}
-
-void Cuboid::translate(float x, float y, float z) {
-    pos_.x += x;
-    pos_.y += y;
-    pos_.z += z;
-}
-
-v3 Cuboid::scale() const {
-    return scale_;
-}
-
-void Cuboid::setScale(v3 to) {
-    scale_ = to;
-}
-
-void Cuboid::setScale(float x, float y, float z) {
-    setScale(v3(x,y,z));
-}
-
-std::ostream& operator<<(std::ostream& stream, const Cuboid& c) {
-    return stream << "Pos" << printVec(c.pos()) << ", ang:" << printVec(c.ang()) << ", size" << printVec(c.size());
-}
-
-*/
