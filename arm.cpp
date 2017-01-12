@@ -224,9 +224,11 @@ void render() {
         // scale, rotate, translate
 
         trans = glm::translate(trans, shape.cuboid().pos());
+        /*
         trans = glm::rotate(trans, shape.cuboid().ang().x, v3(0.0f,1.0f,0.0f));
         trans = glm::rotate(trans, shape.cuboid().ang().y, v3(1.0f,0.0f,0.0f));
         trans = glm::rotate(trans, shape.cuboid().ang().z, v3(0.0f,0.0f,1.0f));
+        */
         //trans = glm::scale(trans, shape.cuboid().scale());  
         model = model * trans;
 

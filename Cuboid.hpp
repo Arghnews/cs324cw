@@ -19,6 +19,9 @@ class Cuboid {
         v3 ang_; // x, y, z
         v3 scale_; // 1.0,1.0,1.0
         fv points_;
+        v3 up;
+        v3 right;
+        v3 ahead;
 
     public:
         vv3 getVertices();

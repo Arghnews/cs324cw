@@ -9,8 +9,6 @@
 #include <iostream>
 #include <sstream>
 #include <math.h>
-#include <glm/gtc/quaternion.hpp>
-#include <glm/gtx/quaternion.hpp>
 
 #include "Cuboid.hpp"
 
@@ -47,7 +45,10 @@ vv3 Cuboid::getVertices() {
 
 Cuboid::Cuboid(fv points) : 
     scale_(v3(1.0f,1.0f,1.0f)),
-    points_(points)
+    points_(points),
+    up(0.0f,1.0f,0.0f),
+    right(1.0f,0.0f,0.0f),
+    ahead(0.0f,0.0f,1.0f)
 {
 }
 
@@ -70,15 +71,22 @@ void Cuboid::rotateDegs(float x, float y, float z) {
 void Cuboid::rotateRads(const v3 xyz) {
     rotateRads(xyz.x, xyz.y, xyz.z);
 }
-
+/*
+        trans = glm::rotate(trans, shape.cuboid().ang().x, v3(0.0f,1.0f,0.0f));
+        trans = glm::rotate(trans, shape.cuboid().ang().y, v3(1.0f,0.0f,0.0f));
+        trans = glm::rotate(trans, shape.cuboid().ang().z, v3(0.0f,0.0f,1.0f));
+        */
 void Cuboid::rotateRads(float x, float y, float z) {
     // the function that actually does the rotating
-    ang_.x += x;
+    /*
+    ang_.x += x; // about up
     //ang_.x = fmod(ang_.x,M_PI);
     ang_.y += y;
     //ang_.y = fmod(ang_.y,M_PI);
     ang_.z += z;
     //ang_.z = fmod(ang_.z,M_PI);
+    //
+    */
 }
 
 void Cuboid::translate(v3 by) {
