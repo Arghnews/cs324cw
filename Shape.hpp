@@ -12,8 +12,6 @@
 
 class Shape {
     private:
-        vv3 static unique(const vv3&);
-        vv3 static unique(const vv3&, bool ignoreSign);
         //void static concat(vv3& grower, const vv3& added);
         std::pair<float, float> static project(const v3 axis, const vv3 verts);
         vv3 static getEdges(const vv3& v);

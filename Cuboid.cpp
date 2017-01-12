@@ -9,6 +9,8 @@
 #include <iostream>
 #include <sstream>
 #include <math.h>
+#include <glm/gtc/quaternion.hpp>
+#include <glm/gtx/quaternion.hpp>
 
 #include "Cuboid.hpp"
 
@@ -34,16 +36,9 @@ vv3 Cuboid::getVertices() {
     const fv& points = points_;
     const int size = points.size(); // 108 points -> 36 vertices
 
-    const glm::vec3 x(0.0f, 1.0f, 0.0f);
-    const glm::vec3 y(1.0f, 0.0f, 0.0f);
-    const glm::vec3 z(0.0f, 0.0f, 1.0f);
-
     vv3 vertices;
     for (int i=0; i<size; i+=3) {
         v3 vertex = v3(points[i], points[i+1], points[i+2]);
-        vertex = glm::rotate(vertex, a.x, x);
-        vertex = glm::rotate(vertex, a.y, y);
-        vertex = glm::rotate(vertex, a.z, z);
         vertex += centre;
         vertices.push_back(vertex);
     }

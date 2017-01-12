@@ -109,26 +109,6 @@ std::pair<float, float> Shape::project(const v3 axis_in, const vv3 verts) {
     return proj;
 }
 
-vv3 Shape::unique(const vv3& vec_in) {
-    return unique(vec_in, false);
-}
-
-vv3 Shape::unique(const vv3& vec_in, const bool ignoreSign) {
-    vv3 allAxes;
-    vv3 uniq;
-    // quick and easy unique directions
-    for (int i=0; i<vec_in.size(); ++i) {
-        const bool has = std::find(uniq.begin(), uniq.end(),
-                vec_in[i]) != uniq.end();
-        const bool hasFlipped = ignoreSign && std::find(uniq.begin(), uniq.end(),
-                vec_in[i]*-1.0f) != uniq.end();
-        if (!has && !hasFlipped) {
-            uniq.push_back(vec_in[i]);
-        }
-    }
-    return uniq;
-}
-
 bool Shape::colliding(Shape& s1, Shape& s2) {
     vv3 s1Verts = s1.cuboid().getVertices();
     vv3 s2Verts = s2.cuboid().getVertices();
