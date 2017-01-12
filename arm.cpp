@@ -29,7 +29,7 @@ int init(int argc, char* argv[]);
 void createShapes();
 void render();
 void bindBuffers(ShapeList& shapes);
-void bindBuffers(GLuint VAO, GLuint VBO, const fv vertexData, const fv colourData);
+void bindBuffers(GLuint VAO, std::vector<GLuint> VBOs, const fv vertexData, const fv colourData);
 void startLoopGl();
 void collisions();
 void keyboard(unsigned char key, int mouseX, int mouseY);
@@ -65,15 +65,15 @@ void keyboard(unsigned char key, int mouseX, int mouseY) {
                    break;
         case 'W':  
         case 'w':  
-                   s.translate(0,step,0);
+                   s.translate(0,0,step);
+                   break;
+	    case 'S':  
+	    case 's':  
+                   s.translate(0,0,-step);
                    break;
         case 'A':
         case 'a':
                    s.translate(-step,0,0);
-                   break;
-	    case 'S':  
-	    case 's':  
-                   s.translate(0,-step,0);
                    break;
 		case 'D':  
 		case 'd':  
@@ -94,10 +94,10 @@ void specialInput(int key, int x, int y) {
     bool stop = false;
     switch(key) {
         case GLUT_KEY_UP:
-            s.translate(0,0,step);
+            s.translate(0,step,0);
             break;    
         case GLUT_KEY_DOWN:
-            s.translate(0,0,-step);
+            s.translate(0,-step,0);
             break;
         case GLUT_KEY_LEFT:
             switchShape(-1);
@@ -130,7 +130,8 @@ void createShapes() {
 
     for (auto shape: shapes) {
         glGenVertexArrays(1, &(shape->VAO));
-        glGenBuffers(1, &(shape->VBO));
+        glGenBuffers(1, &(shape->VBOs[0])); // vertex
+        glGenBuffers(1, &(shape->VBOs[1])); // colour
     }
 }
 
@@ -235,7 +236,7 @@ void render() {
         // Note that we're translating the scene in the reverse direction of where we want to move
         //view = glm::translate(view, v3(0.0f, 0.0f, -3.0f)); 
         view = glm::lookAt(
-                v3(2.0f,2.0f,2.0f), // eye
+                v3(2.0f,2.0f,-2.0f), // eye
                 v3(0.0f,0.0f,0.0f),  // center
                 v3(0.0f,1.0f,0.0f)); // up
 
@@ -258,13 +259,14 @@ void render() {
 
 void bindBuffers(ShapeList& shapes) {
     for (auto& shape: shapes) {
-        bindBuffers(shape->VAO, shape->VBO, shape->points(), shape->colours());
+        bindBuffers(shape->VAO, shape->VBOs, shape->points(), shape->colours());
     }
 }
 
-void bindBuffers(GLuint VAO, GLuint VBO, const fv vertexData, const fv colourData) {
+void bindBuffers(GLuint VAO, std::vector<GLuint> VBOs, const fv vertexData, const fv colourData) {
+    /*
     fv data(vertexData.size()+colourData.size());
-    const int size = data.size()/3;
+    const int size = data.size()/2;
     const int vSize = vertexData.size();
     const int cSize = colourData.size();
     for (int i=0; i<size; i+=3) {
@@ -274,16 +276,19 @@ void bindBuffers(GLuint VAO, GLuint VBO, const fv vertexData, const fv colourDat
         data[2*i+3] = colourData[i+0];
         data[2*i+4] = colourData[i+1];
         data[2*i+5] = colourData[i+2];
-    }
+    }*/
     glBindVertexArray(VAO);
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, data.size()*sizeof(GLfloat), 
-            data.data(), GL_STATIC_DRAW);
+    glBindBuffer(GL_ARRAY_BUFFER, VBOs[0]);
+    glBufferData(GL_ARRAY_BUFFER, vertexData.size()*sizeof(GLfloat), 
+            vertexData.data(), GL_STATIC_DRAW);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 
-            6 * sizeof(GLfloat), (GLvoid*)(0*sizeof(GLfloat)));
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 
-            6 * sizeof(GLfloat), (GLvoid*)(0*sizeof(GLfloat)));
+            3 * sizeof(GLfloat), (GLvoid*)(0*sizeof(GLfloat)));
     glEnableVertexAttribArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, VBOs[1]);
+    glBufferData(GL_ARRAY_BUFFER, colourData.size()*sizeof(GLfloat), 
+            colourData.data(), GL_STATIC_DRAW);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 
+            3 * sizeof(GLfloat), (GLvoid*)(0*sizeof(GLfloat)));
     glEnableVertexAttribArray(1);
     glBindVertexArray(0);
 }
@@ -322,9 +327,10 @@ int main(int argc, char* argv[]) {
 void cleanupAndExit() {
     for (auto& shape: shapes) {
         glDeleteVertexArrays(1, &shape->VAO);
-        glDeleteBuffers(1, &shape->VBO);
+        glDeleteBuffers(1, &shape->VBOs[0]);
+        glDeleteBuffers(1, &shape->VBOs[1]);
     }
-    for (auto shape: shapes) {
+    for (auto& shape: shapes) {
         delete shape;
     }
     shapes.clear();

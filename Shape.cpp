@@ -166,7 +166,7 @@ std::ostream& operator<<(std::ostream& stream, const Shape& s) {
 }
 
 Shape::Shape(fv points, fv colours, std::string niceName) :
-            _cuboid(points), _colours(colours), name(niceName)
+            _cuboid(points), _colours(colours), name(niceName), VBOs(2)
     {
         // only works if vertices in x,y,z r,g,b format
 }
@@ -175,18 +175,18 @@ fv Shape::colours() {
     return _colours;
 }
 
+Shape::~Shape() {
+}
+
 Shape::Shape(const Shape& s) :
         name(s.name),
         _colliding(s._colliding),
         _cuboid(s._cuboid),
         _colours(s._colours),
         VAO(s.VAO),
-        VBO(s.VBO)
+        VBOs(s.VBOs)
     {
         // copy constructor
-}
-
-Shape::~Shape() {
 }
 
 fv Shape::points() {

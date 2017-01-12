@@ -28,7 +28,7 @@ class Shape {
         ~Shape();
         Shape(const Shape&);
         GLuint VAO;
-        GLuint VBO;
+        std::vector<GLuint> VBOs;
         Shape(fv points, fv colours, std::string niceName);
         bool colliding(bool isColliding);
         bool colliding() const;
