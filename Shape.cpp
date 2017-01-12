@@ -4,6 +4,8 @@
 #include <vector>
 #include <GL/glew.h> 
 #include <GL/glut.h> 
+#include <glm/gtc/quaternion.hpp>
+#include <glm/gtx/quaternion.hpp>
 #include <memory>
 #include <set>
 #include <cmath>

@@ -12,6 +12,8 @@
 #define GLM_FORCE_RADIANS
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/quaternion.hpp>
+#include <glm/gtx/quaternion.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <map>
 #include <set>
@@ -209,6 +211,7 @@ void render() {
     glUseProgram(shaderProgram);
     for (int i=0; i<shapes.size(); ++i) {
         Shape& shape = *shapes[i];
+        auto& qua = shape.cuboid().qua;
         glBindVertexArray(shape.VAO);
         //
         // local space -> world space -> view space -> clip space -> screen space
@@ -217,32 +220,25 @@ void render() {
 
         float aspectRatio = (float)(glutGet(GLUT_WINDOW_WIDTH) / glutGet(GLUT_WINDOW_HEIGHT));
 
-        glm::mat4 trans;
-        glm::mat4 model;
-
-        // TEMPORARILY SWAPPED
-        // scale, rotate, translate
+        m4 model;
+        m4 trans;
+        m4 rotateM = glm::mat4_cast(qua);
 
         trans = glm::translate(trans, shape.cuboid().pos());
-        /*
-        trans = glm::rotate(trans, shape.cuboid().ang().x, v3(0.0f,1.0f,0.0f));
-        trans = glm::rotate(trans, shape.cuboid().ang().y, v3(1.0f,0.0f,0.0f));
-        trans = glm::rotate(trans, shape.cuboid().ang().z, v3(0.0f,0.0f,1.0f));
-        */
         //trans = glm::scale(trans, shape.cuboid().scale());  
-        model = model * trans;
+        model = trans * rotateM;
 
         glm::mat4 view;
         // Note that we're translating the scene in the reverse direction of where we want to move
         //view = glm::translate(view, v3(0.0f, 0.0f, -3.0f)); 
         view = glm::lookAt(
-                v3(1.0f,2.0f,1.0f), // eye
+                v3(0.0001f,2.5f,0.0001f), // eye
                 v3(0.0f,0.0f,0.0f),  // center
                 v3(0.0f,1.0f,0.0f)); // up
 
         glm::mat4 projection;
-        //projection = glm::perspective(glm::radians(80.0f), aspectRatio, 0.1f, 100.0f);
-        projection = glm::ortho(-3.0f,3.0f,-3.0f,3.0f,0.1f, 100.0f);
+        projection = glm::perspective(glm::radians(80.0f), aspectRatio, 0.1f, 100.0f);
+        //projection = glm::ortho(-3.0f,3.0f,-3.0f,3.0f,0.1f, 100.0f);
 
         GLint modelLoc = glGetUniformLocation(shaderProgram, "model");
         glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));

@@ -1,8 +1,10 @@
 #include "Util.hpp"
 #define GLM_FORCE_RADIANS
 #include <glm/glm.hpp>
-#include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtx/rotate_vector.hpp>
+//#include <glm/gtc/matrix_transform.hpp>
+//#include <glm/gtx/rotate_vector.hpp>
+#include <glm/gtc/quaternion.hpp>
+#include <glm/gtx/quaternion.hpp>
 #include <GL/glew.h> 
 #include <GL/glut.h> 
 #include <string>
@@ -37,6 +39,7 @@ vv3 Cuboid::getVertices() {
     vv3 vertices;
     for (int i=0; i<size; i+=3) {
         v3 vertex = v3(points[i], points[i+1], points[i+2]);
+        vertex = qua * vertex;
         vertex += centre;
         vertices.push_back(vertex);
     }
@@ -45,10 +48,7 @@ vv3 Cuboid::getVertices() {
 
 Cuboid::Cuboid(fv points) : 
     scale_(v3(1.0f,1.0f,1.0f)),
-    points_(points),
-    up(0.0f,1.0f,0.0f),
-    right(1.0f,0.0f,0.0f),
-    ahead(0.0f,0.0f,1.0f)
+    points_(points)
 {
 }
 
@@ -76,7 +76,10 @@ void Cuboid::rotateRads(const v3 xyz) {
         trans = glm::rotate(trans, shape.cuboid().ang().y, v3(1.0f,0.0f,0.0f));
         trans = glm::rotate(trans, shape.cuboid().ang().z, v3(0.0f,0.0f,1.0f));
         */
-void Cuboid::rotateRads(float x, float y, float z) {
+void Cuboid::rotateRads(float yaw, float pitch, float roll) {
+    v3 vec(yaw,pitch,roll);
+    glm::fquat q = glm::quat(vec);
+    qua = q * qua;
     // the function that actually does the rotating
     /*
     ang_.x += x; // about up

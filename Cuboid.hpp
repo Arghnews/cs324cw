@@ -7,6 +7,8 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/rotate_vector.hpp>
+#include <glm/gtc/quaternion.hpp>
+#include <glm/gtx/quaternion.hpp>
 #include <string>
 #include <iostream>
 #include <sstream>
@@ -19,11 +21,9 @@ class Cuboid {
         v3 ang_; // x, y, z
         v3 scale_; // 1.0,1.0,1.0
         fv points_;
-        v3 up;
-        v3 right;
-        v3 ahead;
 
     public:
+        glm::fquat qua;
         vv3 getVertices();
         fv points();
         Cuboid(const Cuboid&);

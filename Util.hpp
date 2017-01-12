@@ -14,6 +14,7 @@ typedef std::vector<GLfloat> fv;
 typedef glm::vec3 v3;
 typedef std::pair<float,float> Projection;
 typedef std::vector<v3> vv3;
+typedef glm::mat4 m4;
 
 vv3 static unique(const vv3& vec_in, const bool ignoreSign) {
     vv3 allAxes;
