@@ -175,7 +175,21 @@ Shape::Shape(fv points, fv colours, std::string niceName) :
 }
 
 fv Shape::colours() {
-    return _colours;
+    if (_colliding) {
+        fv red(_colours.size());
+        const int size = _colours.size();
+        const GLfloat r = 0.75f;
+        const GLfloat g = 0.2f;
+        const GLfloat b = 0.2f;
+        for (int i=0; i<size; i+=3) {
+            red[i+0] = r;
+            red[i+1] = g;
+            red[i+2] = b;
+        }
+        return red;
+    } else {
+        return _colours;
+    }   
 }
 
 Shape::~Shape() {

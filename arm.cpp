@@ -65,19 +65,19 @@ void keyboard(unsigned char key, int mouseX, int mouseY) {
                    break;
         case 'W':  
         case 'w':  
-                   s.translate(0,0,step);
+                   s.translate(0,0,-step);
                    break;
 	    case 'S':  
 	    case 's':  
-                   s.translate(0,0,-step);
+                   s.translate(0,0,step);
                    break;
         case 'A':
         case 'a':
-                   s.translate(step,0,0);
+                   s.translate(-step,0,0);
                    break;
 		case 'D':  
 		case 'd':  
-                   s.translate(-step,0,0);
+                   s.translate(step,0,0);
                    break;
 	}
     std::cout << *shapes[0] << "\n";
@@ -224,25 +224,23 @@ void render() {
         // scale, rotate, translate
 
         trans = glm::translate(trans, shape.cuboid().pos());
-        /*
-        trans = glm::rotate(trans, shape.cuboid().ang().x, v3(0.0f,0.0f,1.0f));
+        trans = glm::rotate(trans, shape.cuboid().ang().x, v3(0.0f,1.0f,0.0f));
         trans = glm::rotate(trans, shape.cuboid().ang().y, v3(1.0f,0.0f,0.0f));
-        trans = glm::rotate(trans, shape.cuboid().ang().z, v3(0.0f,1.0f,0.0f));
-        trans = glm::scale(trans, shape.cuboid().scale());  
-        */
+        trans = glm::rotate(trans, shape.cuboid().ang().z, v3(0.0f,0.0f,1.0f));
+        //trans = glm::scale(trans, shape.cuboid().scale());  
         model = model * trans;
 
         glm::mat4 view;
         // Note that we're translating the scene in the reverse direction of where we want to move
         //view = glm::translate(view, v3(0.0f, 0.0f, -3.0f)); 
         view = glm::lookAt(
-                v3(2.0f,2.0f,-2.0f), // eye
+                v3(1.0f,2.0f,1.0f), // eye
                 v3(0.0f,0.0f,0.0f),  // center
                 v3(0.0f,1.0f,0.0f)); // up
 
         glm::mat4 projection;
-        projection = glm::perspective(glm::radians(80.0f), aspectRatio, 0.1f, 100.0f);
-        //projection = glm::ortho(-5.0f,5.0f,-5.0f,5.0f,0.1f, 100.0f);
+        //projection = glm::perspective(glm::radians(80.0f), aspectRatio, 0.1f, 100.0f);
+        projection = glm::ortho(-3.0f,3.0f,-3.0f,3.0f,0.1f, 100.0f);
 
         GLint modelLoc = glGetUniformLocation(shaderProgram, "model");
         glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));

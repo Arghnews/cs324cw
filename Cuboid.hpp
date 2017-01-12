@@ -18,7 +18,6 @@ class Cuboid {
         v3 pos_; // x, y, z of center
         v3 ang_; // x, y, z
         v3 scale_; // 1.0,1.0,1.0
-        //vv3 vertices_;
         fv points_;
 
     public:
