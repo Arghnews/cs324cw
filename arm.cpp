@@ -21,6 +21,7 @@
 #include <thread>
 #include <algorithm>
 #include <cstdlib>
+#include <unordered_map>
 
 #include "crap.hpp"
 #include "Util.hpp"
@@ -298,9 +299,35 @@ void switchShape(int by) {
     }
 }
 
+/*
+class A : public v3 {
+    public:
+        v3 v;
+        A() : v(0.0f,0.0f,1.0f) {
+        }
+};
+
+struct hash_v3 {
+    std::size_t operator() (const A &a ) const {
+        return std::hash<float>()(a.x) ^ std::hash<float>()(a.y) ^ std::hash<float>()(a.z);
+    }
+}; */
+
 int main(int argc, char* argv[]) {
     std::ios_base::sync_with_stdio(false);
-
+    std::unordered_map<A,int,hash_A> m;
+    auto a = v3(0.0f,0.0f,1.0f);
+    m[a] = 2;
+    for (auto i = m.begin() ; i != m.end() ; ++i) {
+        auto& item = *i;
+        std::cout << printVec(item.first.v) << " " <<   << "\n";
+    }
+    
+    auto b = true;
+    if (b) {
+        return 0;
+    }
+    
     int success = init(argc, argv);
     if (success != 0) {
         return success;

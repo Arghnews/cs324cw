@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <chrono>
 #include <iostream>
+#include <unordered_map>
 
 typedef std::vector<GLfloat> fv;
 typedef glm::vec3 v3;
@@ -43,6 +44,9 @@ void static concat(vv3& grower, const vv3& added) {
 }
 
 vv3 static unique(const vv3& vec_in, const bool ignoreSign) {
+
+
+
     const int startSize = vec_in.size();
     vv3 allAxes;
     vv3 uniq;
