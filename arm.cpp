@@ -31,7 +31,7 @@ int init(int argc, char* argv[]);
 void createShapes();
 void render();
 void bindBuffers(ShapeList& shapes);
-void bindBuffers(GLuint VAO, std::vector<GLuint> VBOs, const fv vertexData, const fv colourData);
+void bindBuffers(GLuint VAO, std::vector<GLuint> VBOs, const fv vertexData, const fv* colourData);
 void startLoopGl();
 void collisions();
 void keyboard(unsigned char key, int mouseX, int mouseY);
@@ -119,7 +119,7 @@ void createShapes() {
     int cubes = 50;
     for (int i=0; i<cubes; ++i) {
         std::string name = "Cube" + i;
-        shapes.push_back(new Shape(cubePoints,cubeColours,name));
+        shapes.push_back(new Shape(cubePoints,&cubeColours,&cubeColoursRed,name));
     }
 
     shapes[0]->translate(-1.0f,0.0f,0.0f);
@@ -156,7 +156,7 @@ void display() {
     int sleepTime = std::max((int)(fullFrametime - timeTaken),0);
     bool SPARE_TIME_FOR_WHEN_ILETT_WHINES = true;
     if (SPARE_TIME_FOR_WHEN_ILETT_WHINES) {
-        std::cout << "Spare frame time " << sleepTime*1000 << "ms\n";
+        std::cout << "Spare frame time " << (float)sleepTime/1000.0f << "ms\n";
     }
     std::this_thread::sleep_for(std::chrono::microseconds(sleepTime));
 }
@@ -254,7 +254,7 @@ void bindBuffers(ShapeList& shapes) {
     }
 }
 
-void bindBuffers(GLuint VAO, std::vector<GLuint> VBOs, const fv vertexData, const fv colourData) {
+void bindBuffers(GLuint VAO, std::vector<GLuint> VBOs, const fv vertexData, const fv* colourData) {
     glBindVertexArray(VAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBOs[0]);
     glBufferData(GL_ARRAY_BUFFER, vertexData.size()*sizeof(GLfloat), 
@@ -263,8 +263,8 @@ void bindBuffers(GLuint VAO, std::vector<GLuint> VBOs, const fv vertexData, cons
             3 * sizeof(GLfloat), (GLvoid*)(0*sizeof(GLfloat)));
     glEnableVertexAttribArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, VBOs[1]);
-    glBufferData(GL_ARRAY_BUFFER, colourData.size()*sizeof(GLfloat), 
-            colourData.data(), GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, colourData->size()*sizeof(GLfloat), 
+            colourData->data(), GL_STATIC_DRAW);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 
             3 * sizeof(GLfloat), (GLvoid*)(0*sizeof(GLfloat)));
     glEnableVertexAttribArray(1);

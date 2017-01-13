@@ -133,25 +133,15 @@ std::ostream& operator<<(std::ostream& stream, const Shape& s) {
     return stream << s.name << ": " << s._cuboid;
 }
 
-Shape::Shape(fv points, fv colours, std::string niceName) :
-            _cuboid(points), _colours(colours), name(niceName), VBOs(2)
+Shape::Shape(fv points, const fv* colours, const fv* redColours, std::string niceName) :
+            _cuboid(points), _colours(colours), _redColours(redColours), name(niceName), VBOs(2)
     {
         // only works if vertices in x,y,z r,g,b format
 }
 
-fv Shape::colours() {
+const fv* Shape::colours() const {
     if (_colliding) {
-        fv red(_colours.size());
-        const int size = _colours.size();
-        const GLfloat r = 0.75f;
-        const GLfloat g = 0.2f;
-        const GLfloat b = 0.2f;
-        for (int i=0; i<size; i+=3) {
-            red[i+0] = r;
-            red[i+1] = g;
-            red[i+2] = b;
-        }
-        return red;
+        return _redColours;
     } else {
         return _colours;
     }   
@@ -165,6 +155,7 @@ Shape::Shape(const Shape& s) :
         _colliding(s._colliding),
         _cuboid(s._cuboid),
         _colours(s._colours),
+        _redColours(s._redColours),
         VAO(s.VAO),
         VBOs(s.VBOs)
     {
