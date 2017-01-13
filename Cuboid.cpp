@@ -88,8 +88,8 @@ vv3 Cuboid::getPoints() {
     const v3 centre = pos();
     vv3 points = points_;
     for (auto& point: points) {
-        point = qua * point; // order matters
         point *= scale_;
+        point = qua * point; // order matters
         point += centre;
     }
     return points;

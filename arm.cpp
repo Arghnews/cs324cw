@@ -125,6 +125,7 @@ void createShapes() {
     }
 
     shapes[0]->translate(-1.0f,0.0f,0.0f);
+    shapes[0]->cuboid().scale(v3(3.0f,1.0f,1.0f));
     shapes[1]->translate(1.4f,0.0f,0.0f);
     float ranMul = 20.0f;
     float ranFix = 20.0f;
@@ -134,6 +135,8 @@ void createShapes() {
         float y = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
         float z = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
         // r = (0.0f,1.0f)
+        float t = x + 1.2f;
+        shapes[i]->cuboid().scale(v3(t,1.0f,1.0f));
         x *= ranMul;
         x -= ranFix;
         y *= ranMul;
@@ -240,8 +243,9 @@ void render() {
         m4 trans;
         m4 rotateM = glm::mat4_cast(qua);
         trans = glm::translate(trans, shape.cuboid().pos());
-        //trans = glm::scale(trans, shape.cuboid().scale());  
-        model = trans * rotateM;
+        auto s = glm::scale(m4(), shape.cuboid().scale());  
+        //mat4 ModelMatrix = TranslationMatrix * RotationMatrix * ScaleMatrix;
+        model = trans * rotateM * s;
 
         glm::mat4 view;
         // Note that we're translating the scene in the reverse direction of where we want to move
@@ -304,17 +308,141 @@ void switchShape(int by) {
     }
 }
 
-/*
-class A : public v3 {
+struct AABB
+{
+    v3 center;
+    float halfDimension;
+
+    AABB(v3 center, float halfDimension) :
+        center(center),
+        halfDimension(halfDimension)
+    {
+    }
+
+    bool containsPoint(v3 point) {
+        return (point.x <= center.x+halfDimension &&
+            point.x >= center.x-halfDimension &&
+            point.y <= center.y+halfDimension &&
+            point.y >= center.y-halfDimension &&
+            point.z <= center.z+halfDimension &&
+            point.z >= center.z-halfDimension);
+    }
+
+    bool intersectsAABB(AABB other) {
+        return (other.center.x-other.halfDimension <= center.x+halfDimension &&
+                other.center.x+other.halfDimension >= center.x-halfDimension &&
+                other.center.y-other.halfDimension <= center.y+halfDimension &&
+                other.center.y+other.halfDimension >= center.y-halfDimension &&
+                other.center.z-other.halfDimension <= center.z+halfDimension &&
+                other.center.z+other.halfDimension >= center.z-halfDimension);
+    }
+};
+
+class Octtree {
     public:
-        v3 v;
-        A() : v(0.0f,0.0f,1.0f) {
+        static const int eight = 8;
+        const int node_capacity = 1;
+        AABB boundary;
+        vv3 points;
+        std::vector<Octtree> kids;
+        bool haveSubdivided;
+        // up-left, up-right, up-back-left, up-back-right
+        // down-left, down-right, down-back-left, down-back-right
+        
+        Octtree(const Octtree& o) :
+            node_capacity(o.node_capacity),
+            boundary(o.boundary),
+            points(o.points),
+            kids(o.kids),
+            haveSubdivided(haveSubdivided)
+        {
         }
-}; */
+
+        Octtree(AABB boundary) :
+            boundary(boundary),
+            haveSubdivided(false)
+        {}
+
+        Octtree(v3 center, float halfDimension) :
+            Octtree(AABB(center,halfDimension)) {
+        }
+
+        bool insert(v3 p) {
+            // Ignore objects that do not belong in this quad tree
+            if (!boundary.containsPoint(p)) {
+                return false; // object cannot be added
+            }
+
+            // If there is space in this quad tree, add the object here
+            if (points.size() < node_capacity) {
+                points.push_back(p);
+                return true;
+            }
+
+            // Otherwise, subdivide and then add the point to whichever node will accept it
+            if (!haveSubdivided) {
+                subdivide();
+            }
+
+            for (auto& kid: kids) {
+                if (kid.insert(p)) {
+                    return true;
+                }
+            }
+            // Otherwise, the point cannot be inserted for some unknown reason (this should never happen)
+            return false;
+        }
+
+        vv3 queryRange(AABB range) {
+            // Prepare an array of results
+            vv3 pointsInRange;
+
+            // Automatically abort if the range does not intersect this quad
+            if (!boundary.intersectsAABB(range)) {
+                return pointsInRange; // empty list
+            }
+
+            // Check objects at this quad level
+            for (int p = 0; p < points.size(); p++) {
+                if (range.containsPoint(points[p])) {
+                    pointsInRange.push_back(points[p]);
+                }
+            }
+
+            // Terminate here, if there are no children
+            if (haveSubdivided) {
+                return pointsInRange;
+            }
+
+            for (auto& kid: kids) {
+                concat(pointsInRange, kid.queryRange(range));
+            }
+            // Otherwise, add the points from the children
+
+            return pointsInRange;
+        }
+
+        void subdivide() {
+            if (haveSubdivided) {
+                return;
+            }
+            auto& c = boundary.center;
+            auto h = boundary.halfDimension / 2.0f;
+
+            kids.push_back(Octtree( v3(c.x + h, c.y + h, c.z + h),h ));
+            kids.push_back(Octtree( v3(c.x - h, c.y - h, c.z - h),h ));
+            kids.push_back(Octtree( v3(c.x - h, c.y + h, c.z + h),h ));
+            kids.push_back(Octtree( v3(c.x + h, c.y - h, c.z + h),h ));
+            kids.push_back(Octtree( v3(c.x + h, c.y + h, c.z - h),h ));
+            kids.push_back(Octtree( v3(c.x - h, c.y - h, c.z + h),h ));
+            kids.push_back(Octtree( v3(c.x - h, c.y + h, c.z - h),h ));
+            kids.push_back(Octtree( v3(c.x + h, c.y - h, c.z - h),h ));
+        }
+};
 
 int main(int argc, char* argv[]) {
     //std::ios_base::sync_with_stdio(false);
-    
+
     int success = init(argc, argv);
     if (success != 0) {
         return success;
