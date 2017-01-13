@@ -26,8 +26,8 @@ Cuboid::Cuboid(const Cuboid& c) :
     // copy constructor
 }
 
-fv Cuboid::points() {
-    return points_;
+fv* Cuboid::points() {
+    return &points_;
 }
 
 vv3 Cuboid::getVertices() {

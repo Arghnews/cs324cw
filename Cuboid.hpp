@@ -26,7 +26,7 @@ class Cuboid {
     public:
         fq qua() const;
         vv3 getVertices();
-        fv points();
+        fv* points();
         Cuboid(const Cuboid&);
         Cuboid(fv points);
 

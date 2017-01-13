@@ -31,7 +31,7 @@ int init(int argc, char* argv[]);
 void createShapes();
 void render();
 void bindBuffers(ShapeList& shapes);
-void bindBuffers(GLuint VAO, std::vector<GLuint> VBOs, const fv vertexData, const fv* colourData);
+void bindBuffers(GLuint VAO, std::vector<GLuint> VBOs, const fv* vertexData, const fv* colourData);
 void startLoopGl();
 void collisions();
 void keyboard(unsigned char key, int mouseX, int mouseY);
@@ -242,7 +242,7 @@ void render() {
         GLint projectionLoc = glGetUniformLocation(shaderProgram, "projection");
         glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
-        glDrawArrays(GL_TRIANGLES, 0, shape.points().size());
+        glDrawArrays(GL_TRIANGLES, 0, shape.points()->size());
     }
     glBindVertexArray(0);
     glutSwapBuffers(); 
@@ -254,11 +254,11 @@ void bindBuffers(ShapeList& shapes) {
     }
 }
 
-void bindBuffers(GLuint VAO, std::vector<GLuint> VBOs, const fv vertexData, const fv* colourData) {
+void bindBuffers(GLuint VAO, std::vector<GLuint> VBOs, const fv* vertexData, const fv* colourData) {
     glBindVertexArray(VAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBOs[0]);
-    glBufferData(GL_ARRAY_BUFFER, vertexData.size()*sizeof(GLfloat), 
-            vertexData.data(), GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, vertexData->size()*sizeof(GLfloat), 
+            vertexData->data(), GL_STATIC_DRAW);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 
             3 * sizeof(GLfloat), (GLvoid*)(0*sizeof(GLfloat)));
     glEnableVertexAttribArray(0);

@@ -162,7 +162,7 @@ Shape::Shape(const Shape& s) :
         // copy constructor
 }
 
-fv Shape::points() {
+fv* Shape::points() {
     return _cuboid.points();
 }
 

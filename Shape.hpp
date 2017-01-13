@@ -38,7 +38,7 @@ class Shape {
         void rotateRads(v3 by); // x, y, z, pretty rough atm
         void rotateDegs(float x, float y, float z);
     
-        fv points();
+        fv* points();
         const fv* colours() const;
         std::string name;
         friend std::ostream& operator<<(std::ostream&, const Shape&);
