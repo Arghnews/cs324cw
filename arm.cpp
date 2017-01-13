@@ -118,7 +118,7 @@ void specialInput(int key, int x, int y) {
 }
 
 void createShapes() {
-    int cubes = 50;
+    int cubes = 250;
     for (int i=0; i<cubes; ++i) {
         std::string name = "Cube" + i;
         shapes.push_back(new Shape(&cubePoints,&cubeColours,&cubeColoursRed,name));
@@ -141,6 +141,7 @@ void createShapes() {
         z *= ranMul;
         z -= ranFix;
         shapes[i]->translate(x,y,z);
+        shapes[i]->rotateRads(x,y,z);
     }
 
     for (auto& shape: shapes) {
@@ -166,7 +167,7 @@ void display() {
     render();
 
     long timeTaken = timeNowMicros() - startTime;
-    const float fps = 60.0f;
+    const float fps = 10.0f;
     const float fullFrametime = (1000.0f*1000.0f)/fps;
     int sleepTime = std::max((int)(fullFrametime - timeTaken),0);
     bool SPARE_TIME_FOR_WHEN_ILETT_WHINES = true;
@@ -190,6 +191,7 @@ void collisions() {
 
     // say 1 collides with 4, due to way this is done, should only ever have
     // an entry of "4" in 1's set - always the lower one
+    long startTime = timeNowMicros();
     const int size = shapes.size();
     for (int i=0; i<size; ++i) {
         for (int j=i+1; j<size; ++j) {
@@ -209,6 +211,9 @@ void collisions() {
             }
         }
     }
+    long timeTaken = timeNowMicros() - startTime;
+    std::cout << "Time for hotbed " << (timeTaken/1000) << "ms" << "\n";
+
 
     for (auto& shapeIndex: collidingSet) {
         shapes[shapeIndex]->colliding(true);
@@ -305,28 +310,10 @@ class A : public v3 {
         v3 v;
         A() : v(0.0f,0.0f,1.0f) {
         }
-};
-
-struct hash_v3 {
-    std::size_t operator() (const A &a ) const {
-        return std::hash<float>()(a.x) ^ std::hash<float>()(a.y) ^ std::hash<float>()(a.z);
-    }
 }; */
 
 int main(int argc, char* argv[]) {
-    std::ios_base::sync_with_stdio(false);
-    std::unordered_map<A,int,hash_A> m;
-    auto a = v3(0.0f,0.0f,1.0f);
-    m[a] = 2;
-    for (auto i = m.begin() ; i != m.end() ; ++i) {
-        auto& item = *i;
-        std::cout << printVec(item.first.v) << " " <<   << "\n";
-    }
-    
-    auto b = true;
-    if (b) {
-        return 0;
-    }
+    //std::ios_base::sync_with_stdio(false);
     
     int success = init(argc, argv);
     if (success != 0) {

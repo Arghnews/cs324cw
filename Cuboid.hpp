@@ -26,6 +26,8 @@ class Cuboid {
         fq qua_;
 
     public:
+        v3 scale(v3 v);
+        v3 scale(float x, float y, float z);
         fq qua() const;
         vv3 getPoints();
         vv3 getEdges();
@@ -37,7 +39,7 @@ class Cuboid {
 
         v3 pos() const;
         v3 ang() const;
-        v3 scale() const;
+        v3 scale();
 
         void rotateDegs(float x, float y, float z);
         void rotateRads(float x, float y, float z);
@@ -48,15 +50,6 @@ class Cuboid {
 
         friend std::ostream& operator<<(std::ostream&, const Cuboid&);
 };
-
-#ifndef MY_PRINTVEC
-#define MY_PRINTVEC
-std::string static printVec(const v3 v) {
-    std::stringstream buffer;
-    buffer << "(" << v.x << "," << v.y << "," << v.z << ")";
-    return buffer.str();
-}
-#endif
 
 #endif
 

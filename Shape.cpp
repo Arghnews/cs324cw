@@ -56,7 +56,6 @@ vv3 Shape::getAxes(const vv3& axes1, const vv3& axes2) {
 }
 
 bool Shape::colliding(Shape& s1, Shape& s2) {
-    long startTime = timeNowMicros();
     //auto s1Points = s1.cuboid().getPoints();
     //auto s2Points = s2.cuboid().getPoints();
     auto s1Points = s1.cuboid().getPoints();
@@ -66,9 +65,6 @@ bool Shape::colliding(Shape& s1, Shape& s2) {
 
     vv3 allAxes = getAxes(axes1, axes2);
     allAxes = unique(allAxes, true);
-
-    long timeTaken = timeNowMicros() - startTime;
-    std::cout << "A took " << (float)timeTaken/1000.0f << "ms\n";
 
     auto overlap = [&] (const Projection& p1, const Projection& p2) -> bool {
         return (p1.second >= p2.first) && (p1.first <= p2.second);

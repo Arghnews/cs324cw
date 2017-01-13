@@ -1,14 +1,5 @@
 #include "Util.hpp"
 
-#ifndef MY_PRINTVEC
-#define MY_PRINTVEC
-std::string static printVec(const v3 v) {
-    std::stringstream buffer;
-    buffer << "(" << v.x << "," << v.y << "," << v.z << ")";
-    return buffer.str();
-}
-#endif
-
 std::string fileToString(std::string filename) {
     std::ifstream t(filename); // filename here
     std::stringstream buffer;

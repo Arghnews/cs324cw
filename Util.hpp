@@ -12,6 +12,10 @@
 #include <chrono>
 #include <iostream>
 #include <unordered_map>
+#include <unordered_set>
+#include <string>
+#include <sstream>
+#include <math.h>
 
 typedef std::vector<GLfloat> fv;
 typedef glm::vec3 v3;
@@ -19,6 +23,12 @@ typedef std::pair<float,float> Projection;
 typedef std::vector<v3> vv3;
 typedef glm::mat4 m4;
 typedef glm::fquat fq;
+
+std::string static printVec(const v3 v) {
+    std::stringstream buffer;
+    buffer << "(" << v.x << "," << v.y << "," << v.z << ")";
+    return buffer.str();
+}
 
 /*
 
@@ -43,14 +53,63 @@ void static concat(vv3& grower, const vv3& added) {
     grower.insert( grower.end(), added.begin(), added.end() );
 }
 
+struct hash_v3 {
+    std::size_t operator() (const v3& a ) const {
+        return std::hash<float>()(a.x) ^ std::hash<float>()(a.y) ^ std::hash<float>()(a.z);
+    }
+};
+
 vv3 static unique(const vv3& vec_in, const bool ignoreSign) {
 
+    /*
+    auto& vec = vec_in;
+    const int startSize = (int)std::ceil((float)vec.size() / 2.0f);
+    vv3 uniq(startSize);
+    const int biggerSize = vec.size();
+    std::unordered_set<v3,hash_v3> m(biggerSize);
+    int i = 0;
 
+    if (!ignoreSign) { // default
+        for (const auto v: vec) {
+            const bool contains = m.count(v);
+            if (!contains) {
+                m.insert(v);
+                if (i >= startSize) {
+                    uniq.resize(biggerSize);
+                }
+                uniq[i++] = v;
+            }
+        }
+    } else {
+        for (const auto v: vec) {
+            const auto v_negated = v * -1.0f;
+            const bool contains1 = m.count(v);
+            const bool contains2 = m.count(v_negated);
+            const bool contains = contains1 || contains2;
+            if (!contains) {
+                m.insert(v);
+                m.insert(v_negated);
+                if (i >= startSize) {
+                    uniq.resize(biggerSize);
+                }
+                uniq[i++] = v;
+            }
+        }
+    }
+    long timeTaken = timeNowMicros() - startTime;
+    static int runs = 0;
+    static float timey = 0;
+    timey += timeTaken;
+    runs++;
+    if (runs % 1000 == 0) {
+        std::cout << timey/(float)runs << "us average " << runs << "\n";
+    }
+    */
 
-    const int startSize = vec_in.size();
+    const int start_size = vec_in.size();
     vv3 allAxes;
     vv3 uniq;
-    // quick and easy unique directions
+    // quick and easy uniquesue directions
     for (int i=0; i<vec_in.size(); ++i) {
         const bool has = std::find(uniq.begin(), uniq.end(),
                 vec_in[i]) != uniq.end();
@@ -60,8 +119,7 @@ vv3 static unique(const vv3& vec_in, const bool ignoreSign) {
             uniq.push_back(vec_in[i]);
         }
     }
-    const int endSize = uniq.size();
-    //std::cout << "UNIQUE: " << startSize << "->" << endSize << "\n";
+
     return uniq;
 }
 

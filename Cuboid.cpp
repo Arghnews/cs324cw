@@ -89,6 +89,7 @@ vv3 Cuboid::getPoints() {
     vv3 points = points_;
     for (auto& point: points) {
         point = qua * point; // order matters
+        point *= scale_;
         point += centre;
     }
     return points;
@@ -165,7 +166,15 @@ void Cuboid::translate(float x, float y, float z) {
     pos_.z += z;
 }
 
-v3 Cuboid::scale() const {
+v3 Cuboid::scale(v3 v) {
+    scale_ = v;
+}
+
+v3 Cuboid::scale(float x, float y, float z) {
+    scale(v3(x,y,z));
+}
+
+v3 Cuboid::scale() {
     return scale_;
 }
 
