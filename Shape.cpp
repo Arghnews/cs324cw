@@ -51,7 +51,10 @@ vv3 Shape::getEdges(const vv3& v) {
 }
 
 // returns normalised axes
-vv3 Shape::getAxes(vv3 v1, vv3 v2) {
+vv3 Shape::getAxes(const vv3* v1_in, const vv3* v2_in) {
+    const vv3& v1 = *v1_in;
+    const vv3& v2 = *v2_in;
+
     auto concat = [&] (vv3& grower, const vv3& added) {
         grower.insert( grower.end(), added.begin(), added.end() );
     };
@@ -102,14 +105,14 @@ std::pair<float, float> Shape::project(const v3 axis_in, const vv3 verts) {
 }
 
 bool Shape::colliding(Shape& s1, Shape& s2) {
-    vv3 s1Verts = s1.cuboid().getVertices();
-    vv3 s2Verts = s2.cuboid().getVertices();
-    vv3 allAxes_non_unique = getAxes(s1Verts, s2Verts);
+    long startTime = timeNowMicros();
+    auto s1Verts = s1.cuboid().getVertices();
+    auto s2Verts = s2.cuboid().getVertices();
+    vv3 allAxes_non_unique = getAxes(&s1Verts, &s2Verts);
 
     vv3 allAxes = unique(allAxes_non_unique, true);
-
-    for (auto a: allAxes) {
-    }
+    long timeTaken = timeNowMicros() - startTime;
+    std::cout << "A took " << (float)timeTaken/1000.0f << "ms\n";
 
     auto overlap = [&] (const Projection& p1, const Projection& p2) -> bool {
         return (p1.second >= p2.first) && (p1.first <= p2.second);
@@ -122,7 +125,6 @@ bool Shape::colliding(Shape& s1, Shape& s2) {
             return false;
         }
     }
-
     // if we get here then we know that every axis had overlap on it
     // so we can guarantee an intersection
     return true;

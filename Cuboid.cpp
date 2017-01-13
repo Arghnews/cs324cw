@@ -30,7 +30,7 @@ fv* Cuboid::points() {
     return &points_;
 }
 
-vv3 Cuboid::getVertices() {
+vv3 Cuboid::getVertices() const {
     const v3 centre = pos();
     const v3 a = ang();
     const fv& points = points_;

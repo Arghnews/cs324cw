@@ -9,6 +9,7 @@
 #include <glm/gtx/rotate_vector.hpp>
 #include <vector>
 #include <algorithm>
+#include <chrono>
 
 typedef std::vector<GLfloat> fv;
 typedef glm::vec3 v3;
@@ -23,6 +24,18 @@ typedef glm::fquat fq;
    Compare cubes only to nearby ones, by taking position
 
    */
+
+long static timeNowSeconds() {
+    return std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+}
+
+long static timeNowMillis() {
+    return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+}
+
+long static timeNowMicros() {
+    return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+}
 
 vv3 static unique(const vv3& vec_in, const bool ignoreSign) {
     vv3 allAxes;

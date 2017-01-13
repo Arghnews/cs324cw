@@ -67,18 +67,6 @@ GLuint shaders(std::string vertexFile, std::string fragmentFile) {
     return shaderProgram;
 }
 
-long timeNowSeconds() {
-    return std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-}
-
-long timeNowMillis() {
-    return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-}
-
-long timeNowMicros() {
-    return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-}
-
 GLuint shaders() {
     return shaders("vertex.shader","fragment.shader");
 }

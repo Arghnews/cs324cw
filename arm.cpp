@@ -154,7 +154,7 @@ void display() {
     const float fps = 60.0f;
     const float fullFrametime = (1000.0f*1000.0f)/fps;
     int sleepTime = std::max((int)(fullFrametime - timeTaken),0);
-    bool SPARE_TIME_FOR_WHEN_ILETT_WHINES = true;
+    bool SPARE_TIME_FOR_WHEN_ILETT_WHINES = false;
     if (SPARE_TIME_FOR_WHEN_ILETT_WHINES) {
         std::cout << "Spare frame time " << (float)sleepTime/1000.0f << "ms\n";
     }
@@ -175,8 +175,9 @@ void collisions() {
 
     // say 1 collides with 4, due to way this is done, should only ever have
     // an entry of "4" in 1's set - always the lower one
-    for (int i=0; i<shapes.size(); ++i) {
-        for (int j=i+1; j<shapes.size(); ++j) {
+    const int size = shapes.size();
+    for (int i=0; i<size; ++i) {
+        for (int j=i+1; j<size; ++j) {
             //const bool collidingNow = Cuboid::colliding(shapes[i]->cuboid(),shapes[j]->cuboid());
             const bool collidingNow = Shape::colliding(*(shapes[i]),*(shapes[j]));
             //if (collidingBefore != collidingNow) {
@@ -200,7 +201,6 @@ void collisions() {
     for (auto& shapeIndex: notCollidingSet) {
         shapes[shapeIndex]->colliding(false);
     }
-
 }
 
 void render() {
