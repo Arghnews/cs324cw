@@ -11,6 +11,7 @@
 #include <iostream>
 #include <sstream>
 #include <math.h>
+#include <algorithm>
 
 #include "Cuboid.hpp"
 
@@ -23,7 +24,9 @@ Cuboid::Cuboid(const Cuboid& c) :
     float_data_(c.float_data_),
     points_(c.points_),
     vertices_(c.vertices_),
-    qua_(c.qua_)
+    qua_(c.qua_),
+    maxRadius_(c.maxRadius_),
+    maxDoubleRadius_(c.maxDoubleRadius_)
     {
     // copy constructor
 }
@@ -95,6 +98,14 @@ vv3 Cuboid::getPoints() {
     return points;
 }
 
+float Cuboid::maxDoubleRadius() const {
+    return maxDoubleRadius_;
+}
+
+v3 Cuboid::maxRadius() {
+    return maxRadius_;
+}
+
 Cuboid::Cuboid(const fv* float_data_in) : 
     scale_(v3(1.0f,1.0f,1.0f)),
     float_data_(float_data_in)
@@ -130,6 +141,16 @@ Cuboid::Cuboid(const fv* float_data_in) :
     // still lots of duplicates so....
     
     vertices_ = unique(points_);
+    maxRadius_ = v3(0.0f,0.0f,0.0f);
+    for (auto& vertex: vertices_) {
+        maxRadius_.x = std::max(maxRadius_.x,vertex.x);
+        maxRadius_.y = std::max(maxRadius_.y,vertex.y);
+        maxRadius_.z = std::max(maxRadius_.z,vertex.z);
+    }
+    maxRadius_.x = fabs(maxRadius_.x);
+    maxRadius_.y = fabs(maxRadius_.y);
+    maxRadius_.z = fabs(maxRadius_.z);
+    maxDoubleRadius_ = 2.0f * std::max(std::max(maxRadius_.x,maxRadius_.y),maxRadius_.z);
 }
 
 v3 Cuboid::pos() const {
@@ -168,6 +189,17 @@ void Cuboid::translate(float x, float y, float z) {
 
 v3 Cuboid::scale(v3 v) {
     scale_ = v;
+
+    for (auto& vertex: vertices_) {
+        v3 v = vertex * scale_;
+        maxRadius_.x = std::max(maxRadius_.x,v.x);
+        maxRadius_.y = std::max(maxRadius_.y,v.y);
+        maxRadius_.z = std::max(maxRadius_.z,v.z);
+    }
+    maxRadius_.x = fabs(maxRadius_.x);
+    maxRadius_.y = fabs(maxRadius_.y);
+    maxRadius_.z = fabs(maxRadius_.z);
+    maxDoubleRadius_ = 2.0f * std::max(std::max(maxRadius_.x,maxRadius_.y),maxRadius_.z);
 }
 
 v3 Cuboid::scale(float x, float y, float z) {

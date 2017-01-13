@@ -16,12 +16,16 @@
 #include <sstream>
 #include <math.h>
 
+class Shape;
+
 typedef std::vector<GLfloat> fv;
 typedef glm::vec3 v3;
 typedef std::pair<float,float> Projection;
 typedef std::vector<v3> vv3;
 typedef glm::mat4 m4;
 typedef glm::fquat fq;
+typedef std::pair<v3,Shape*> v3S;
+typedef std::vector<v3S> vv3S;
 
 std::string static printVec(const v3 v) {
     std::stringstream buffer;
@@ -48,7 +52,8 @@ long static timeNowMicros() {
     return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 }
 
-void static concat(vv3& grower, const vv3& added) {
+template <class T>
+void static concat(std::vector<T>& grower, const std::vector<T>& added) {
     grower.insert( grower.end(), added.begin(), added.end() );
 }
 

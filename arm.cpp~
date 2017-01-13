@@ -46,13 +46,12 @@ void switchShape(int);
 
 GLuint shaderProgram;
 std::vector<Shape*> shapes;
-static const float areaSize = 100.0f;
-Octtree bigTree(v3(0.0f,0.0f,0.0f),areaSize);
+Octtree bigTree(v3(0.0f,0.0f,0.0f),50.0f);
 int selectedShape(0); // index of shape to move
 float step = 0.25f; // for movement
 
 void keyboard(unsigned char key, int mouseX, int mouseY) {
-    Shape& shape = getShape();
+    Shape& s = getShape();
     bool stop = false;
     v3 translate;
     v3 rotateV;
@@ -94,16 +93,12 @@ void keyboard(unsigned char key, int mouseX, int mouseY) {
     if (!stop) {
         const v3 zero = v3(0.0f,0.0f,0.0f);
         if (translate != zero) {
-            const int id = shape.id;
-            //std::cout << "Big tree size b4:" << bigTree.size() << "\n";
-            const bool deleted = bigTree.del(shape.cuboid().pos(),&shape);
-            //std::cout << "Big tree size after deletion:" << bigTree.size() << "\n";
-            //std::cout << "Deleted is " << deleted << " true or false "<< "\n";
-            shape.translate(translate);
-            bigTree.insert(shape.cuboid().pos(),&shape);
-            //std::cout << "Big tree size at end" << bigTree.size() << "\n";
+            const int id = s.id;
+            const bool deleted = bigTree.del(shape.cuboid().pos(),&s);
+            std::cout << "Deleted is " << deleted << "\n";
+            s.translate(translate);
         } else if (rotateV != zero) {
-            shape.rotateDegs(rotateV);
+            s.rotateDegs(rotateV);
         }
         glutPostRedisplay();
     } else {
@@ -113,15 +108,15 @@ void keyboard(unsigned char key, int mouseX, int mouseY) {
 
 void specialInput(int key, int x, int y) {
 
-    v3 translate;
-    Shape& shape = getShape();
+    Shape& s = getShape();
     bool stop = false;
+    /*
     switch(key) {
         case GLUT_KEY_UP:
-            translate = v3(0,step,0);
+            s.translate(0,step,0);
             break;    
         case GLUT_KEY_DOWN:
-            translate = v3(0,-step,0);
+            s.translate(0,-step,0);
             break;
         case GLUT_KEY_LEFT:
             switchShape(-1);
@@ -129,19 +124,8 @@ void specialInput(int key, int x, int y) {
         case GLUT_KEY_RIGHT:
             switchShape(1);
             break;
-    }
+    } */
     if (!stop) {
-        const v3 zero = v3(0.0f,0.0f,0.0f);
-        if (translate != zero) {
-            const int id = shape.id;
-            //std::cout << "Big tree size b4:" << bigTree.size() << "\n";
-            const bool deleted = bigTree.del(shape.cuboid().pos(),&shape);
-            //std::cout << "Big tree size after deletion:" << bigTree.size() << "\n";
-            //std::cout << "Deleted is " << deleted << " true or false "<< "\n";
-            shape.translate(translate);
-            bigTree.insert(shape.cuboid().pos(),&shape);
-            //std::cout << "Big tree size at end" << bigTree.size() << "\n";
-        }
         glutPostRedisplay();
     } else {
         cleanupAndExit();
@@ -149,18 +133,23 @@ void specialInput(int key, int x, int y) {
 }
 
 void createShapes() {
-    int cubes = 300;
+    int cubes = 2;
     for (int i=0; i<cubes; ++i) {
         std::string name = "Cube" + i;
         shapes.push_back(new Shape(&cubePoints,&cubeColours,&cubeColoursRed,name,i));
     }
 
     shapes[0]->translate(-5.0f,0.0f,0.0f);
-    shapes[0]->cuboid().scale(v3(3.0f,1.0f,1.0f));
+    shapes[0]->cuboid().scale(v3(1.0f,1.0f,1.0f));
     shapes[1]->translate(1.4f,0.0f,0.0f);
 
-    float ranMul = areaSize/3.0f;
-    float ranFix = areaSize/2.0f;
+    for (int i=0; i<shapes.size(); ++i) {
+        bigTree.insert(shapes[i]->cuboid().pos(),shapes[i]);
+    }
+
+    /*
+    float ranMul = 20.0f;
+    float ranFix = 20.0f;
     srand (static_cast <unsigned> (timeNowMicros()));
     for (int i=2; i<shapes.size(); ++i) {
         float x = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
@@ -178,10 +167,7 @@ void createShapes() {
         shapes[i]->translate(x,y,z);
         shapes[i]->rotateRads(x,y,z);
     }
-
-    for (int i=0; i<shapes.size(); ++i) {
-        bigTree.insert(shapes[i]->cuboid().pos(),shapes[i]);
-    }
+    */
 
     for (auto& shape: shapes) {
         glGenVertexArrays(1, &(shape->VAO));
@@ -196,10 +182,11 @@ void display() {
 
     startLoopGl();
 
-    long s = timeNowMicros();
+    for (auto shape: shapes) {
+        //shape->rotateRads(glm::radians(1.0f),0.0f,0.0f);
+    }
+
     collisions();
-    long t = timeNowMicros();
-    std::cout << "Time taken " << (float)(t-s)/1000.0f << "ms\n";
 
     bindBuffers(shapes);
     render();
@@ -210,7 +197,6 @@ void display() {
     int sleepTime = std::max((int)(fullFrametime - timeTaken),0);
     bool SPARE_TIME_FOR_WHEN_ILETT_WHINES = true;
     if (SPARE_TIME_FOR_WHEN_ILETT_WHINES) {
-        std::cout << "Time taken for frame " << (float)timeTaken/1000.0f << "ms" << "\n";
         std::cout << "Spare frame time " << (float)sleepTime/1000.0f << "ms\n";
     }
     std::this_thread::sleep_for(std::chrono::microseconds(sleepTime));
@@ -233,19 +219,14 @@ void collisions() {
 
     for (auto& s: shapes) {
         Shape& shape = *s;
-        const int my_id = shape.id;
         const v3 pos = shape.cuboid().pos();
         // just use one for now, will change so that shapes
         // store their max dimensions
-        const float halfDimensions = shape.cuboid().maxDoubleRadius();
+        const float halfDimensions = 2.5f;
         vv3S shapes_nearby = bigTree.queryRange(pos, halfDimensions);
-
         for (auto& s_n: shapes_nearby) {
             auto& nearby_shape = *s_n.second;
             const bool collidingNow = Shape::colliding(shape, nearby_shape);
-            if (&shape == &nearby_shape) {
-                continue;
-            }
             if (collidingNow) {
                 // collision
                 collidingSet.insert(shape.id);
@@ -260,12 +241,42 @@ void collisions() {
     }
 
     for (auto& id: collidingSet) {
+        std::cout << "Shape " << id << " colliding\n";
         shapes[id]->colliding(true);
     }
     for (auto& id: notCollidingSet) {
+        std::cout << "Shape " << id << " NOT colliding\n";
         shapes[id]->colliding(false);
     }
     std::cout << "Colset size vs nonCol " << collidingSet.size() << " " << notCollidingSet.size() << "\n";
+    // say 1 collides with 4, due to way this is done, should only ever have
+    // an entry of "4" in 1's set - always the lower one
+    //
+    /*
+    long startTime = timeNowMicros();
+    const int size = shapes.size();
+    for (int i=0; i<size; ++i) {
+        for (int j=i+1; j<size; ++j) {
+            //const bool collidingNow = Cuboid::colliding(shapes[i]->cuboid(),shapes[j]->cuboid());
+            const bool collidingNow = Shape::colliding(*(shapes[i]),*(shapes[j]));
+            //if (collidingBefore != collidingNow) {
+            // have changed collision state
+            if (collidingNow) {
+                // collision
+                collidingSet.insert(i);
+                collidingSet.insert(j);
+                notCollidingSet.erase(i);
+                notCollidingSet.erase(j);
+                collidingPairs.insert(std::make_pair(i,j));
+            } else {
+                // no collision
+            }
+        }
+    }
+    long timeTaken = timeNowMicros() - startTime;
+    std::cout << "Time for hotbed " << (timeTaken/1000) << "ms" << "\n";
+    */
+
 }
 
 void render() {
@@ -285,8 +296,7 @@ void render() {
         m4 trans;
         m4 rotateM = glm::mat4_cast(qua);
         trans = glm::translate(trans, shape.cuboid().pos());
-        m4 s;
-        s = glm::scale(m4(), shape.cuboid().scale());  
+        auto s = glm::scale(m4(), shape.cuboid().scale());  
         //mat4 ModelMatrix = TranslationMatrix * RotationMatrix * ScaleMatrix;
         model = trans * rotateM * s;
 

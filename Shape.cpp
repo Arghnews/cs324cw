@@ -105,8 +105,8 @@ std::ostream& operator<<(std::ostream& stream, const Shape& s) {
     return stream << s.name << ": " << s._cuboid;
 }
 
-Shape::Shape(const fv* float_data, const fv* colours, const fv* redColours, std::string niceName) :
-            _cuboid(float_data), _colours(colours), _redColours(redColours), name(niceName), VBOs(2)
+Shape::Shape(const fv* float_data, const fv* colours, const fv* redColours, std::string niceName, int id) :
+            _cuboid(float_data), _colours(colours), _redColours(redColours), name(niceName), id(id), VBOs(2)
     {
         // only works if vertices in x,y,z r,g,b format
 }
@@ -128,6 +128,7 @@ Shape::Shape(const Shape& s) :
         _cuboid(s._cuboid),
         _colours(s._colours),
         _redColours(s._redColours),
+        id(s.id),
         VAO(s.VAO),
         VBOs(s.VBOs)
     {
@@ -156,6 +157,10 @@ void Shape::translate(float x, float y, float z) {
 
 void Shape::translate(v3 by) {
     _cuboid.translate(by);
+}
+
+void Shape::rotateDegs(const v3 v) {
+    rotateDegs(v.x,v.y,v.z);
 }
 
 void Shape::rotateDegs(float x, float y, float z) {

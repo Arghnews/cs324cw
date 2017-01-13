@@ -21,12 +21,13 @@ class Shape {
         const fv* _redColours;
         
     public:
+        const int id;
         bool static colliding(Shape&, Shape&);
         ~Shape();
         Shape(const Shape&);
         GLuint VAO;
         std::vector<GLuint> VBOs;
-        Shape(const fv* float_data, const fv* colours, const fv* redColours, std::string niceName);
+        Shape(const fv* float_data, const fv* colours, const fv* redColours, std::string niceName, int id);
         bool colliding(bool isColliding);
         bool colliding() const;
         Cuboid& cuboid();
@@ -35,6 +36,7 @@ class Shape {
         void rotateRads(float x, float y, float z);
         void rotateRads(v3 by); // x, y, z, pretty rough atm
         void rotateDegs(float x, float y, float z);
+        void rotateDegs(const v3 v);
     
         const fv* float_data();
         const fv* colours() const;

@@ -17,6 +17,8 @@
 // USING RADIANS
 class Cuboid {
     private:
+        float maxDoubleRadius_;
+        v3 maxRadius_;
         v3 pos_; // x, y, z of center
         v3 ang_; // x, y, z
         v3 scale_; // 1.0,1.0,1.0
@@ -26,6 +28,8 @@ class Cuboid {
         fq qua_;
 
     public:
+        float maxDoubleRadius() const;
+        v3 maxRadius();
         v3 scale(v3 v);
         v3 scale(float x, float y, float z);
         fq qua() const;
