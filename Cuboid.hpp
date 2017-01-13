@@ -20,15 +20,18 @@ class Cuboid {
         v3 pos_; // x, y, z of center
         v3 ang_; // x, y, z
         v3 scale_; // 1.0,1.0,1.0
-        fv points_;
+        const fv* float_data_; // graphical -> 108
+        vv3 points_; // 4 for each face -> 24, dups
+        vv3 vertices_; // logical -> 8, uniq
         fq qua_;
 
     public:
         fq qua() const;
-        vv3 getVertices() const;
-        fv* points();
+        vv3 getPoints();
+        vv3 getEdges();
+        const fv* float_data();
         Cuboid(const Cuboid&);
-        Cuboid(fv points);
+        Cuboid(const fv* data_in);
 
         bool static colliding(const Cuboid& c1, const Cuboid& c2);
 

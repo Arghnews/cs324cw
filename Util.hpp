@@ -10,6 +10,7 @@
 #include <vector>
 #include <algorithm>
 #include <chrono>
+#include <iostream>
 
 typedef std::vector<GLfloat> fv;
 typedef glm::vec3 v3;
@@ -37,7 +38,12 @@ long static timeNowMicros() {
     return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 }
 
+void static concat(vv3& grower, const vv3& added) {
+    grower.insert( grower.end(), added.begin(), added.end() );
+}
+
 vv3 static unique(const vv3& vec_in, const bool ignoreSign) {
+    const int startSize = vec_in.size();
     vv3 allAxes;
     vv3 uniq;
     // quick and easy unique directions
@@ -50,6 +56,8 @@ vv3 static unique(const vv3& vec_in, const bool ignoreSign) {
             uniq.push_back(vec_in[i]);
         }
     }
+    const int endSize = uniq.size();
+    //std::cout << "UNIQUE: " << startSize << "->" << endSize << "\n";
     return uniq;
 }
 

@@ -20,6 +20,7 @@
 #include <chrono>
 #include <thread>
 #include <algorithm>
+#include <cstdlib>
 
 #include "crap.hpp"
 #include "Util.hpp"
@@ -119,16 +120,29 @@ void createShapes() {
     int cubes = 50;
     for (int i=0; i<cubes; ++i) {
         std::string name = "Cube" + i;
-        shapes.push_back(new Shape(cubePoints,&cubeColours,&cubeColoursRed,name));
+        shapes.push_back(new Shape(&cubePoints,&cubeColours,&cubeColoursRed,name));
     }
 
     shapes[0]->translate(-1.0f,0.0f,0.0f);
     shapes[1]->translate(1.4f,0.0f,0.0f);
-    for (int i=2; i<cubePositions.size() && i<shapes.size(); ++i) {
-        shapes[i]->translate(cubePositions[i]);
+    float ranMul = 20.0f;
+    float ranFix = 20.0f;
+    srand (static_cast <unsigned> (timeNowMicros()));
+    for (int i=2; i<shapes.size(); ++i) {
+        float x = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+        float y = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+        float z = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+        // r = (0.0f,1.0f)
+        x *= ranMul;
+        x -= ranFix;
+        y *= ranMul;
+        y -= ranFix;
+        z *= ranMul;
+        z -= ranFix;
+        shapes[i]->translate(x,y,z);
     }
 
-    for (auto shape: shapes) {
+    for (auto& shape: shapes) {
         glGenVertexArrays(1, &(shape->VAO));
         glGenBuffers(1, &(shape->VBOs[0])); // vertex
         glGenBuffers(1, &(shape->VBOs[1])); // colour
@@ -154,7 +168,7 @@ void display() {
     const float fps = 60.0f;
     const float fullFrametime = (1000.0f*1000.0f)/fps;
     int sleepTime = std::max((int)(fullFrametime - timeTaken),0);
-    bool SPARE_TIME_FOR_WHEN_ILETT_WHINES = false;
+    bool SPARE_TIME_FOR_WHEN_ILETT_WHINES = true;
     if (SPARE_TIME_FOR_WHEN_ILETT_WHINES) {
         std::cout << "Spare frame time " << (float)sleepTime/1000.0f << "ms\n";
     }
@@ -242,7 +256,7 @@ void render() {
         GLint projectionLoc = glGetUniformLocation(shaderProgram, "projection");
         glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
-        glDrawArrays(GL_TRIANGLES, 0, shape.points()->size());
+        glDrawArrays(GL_TRIANGLES, 0, shape.float_data()->size());
     }
     glBindVertexArray(0);
     glutSwapBuffers(); 
@@ -250,7 +264,7 @@ void render() {
 
 void bindBuffers(ShapeList& shapes) {
     for (auto& shape: shapes) {
-        bindBuffers(shape->VAO, shape->VBOs, shape->points(), shape->colours());
+        bindBuffers(shape->VAO, shape->VBOs, shape->float_data(), shape->colours());
     }
 }
 
@@ -285,6 +299,8 @@ void switchShape(int by) {
 }
 
 int main(int argc, char* argv[]) {
+    std::ios_base::sync_with_stdio(false);
+
     int success = init(argc, argv);
     if (success != 0) {
         return success;

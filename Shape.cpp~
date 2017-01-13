@@ -24,19 +24,44 @@ void db() {
     db("");
 }
 
+vv3 Shape::getEdges(const vv3& v) {
+    vv3 e;
+    // 36 vertices ->
+    // since it's straight from the gl
+    // every 3 points make up a triangle
+    // every 2 triangles make a face
+    //
+    // now changed, should get 24 points that make up cub
+    const int size = v.size();
+    const int stride = 4;
+    for (int i=0; i<size; i+=stride) {
+        vv3 face(4);
+        face[i] = v[i+0];
+        face[i] = v[i+1];
+        face[i] = v[i+2];
+        face[i] = v[i+3];
+        for (int i=0; i<sqSize; ++i) {
+            e.push_back((square[i] - square[(i+1)%size]));
+        }
+    }
+    // 3 axis
+    return e;
+}
+
 // returns normalised axes
-vv3 Shape::getAxes(const vv3& axes1, const vv3& axes2) {
-    //const vv3& points1 = *v1_in;
-    //const vv3& points2 = *v2_in;
+vv3 Shape::getAxes(const vv3* v1_in, const vv3* v2_in) {
+    const vv3& points1 = *v1_in;
+    const vv3& points2 = *v2_in;
 
     // shape 1 and 2's vertices
     // edges are axes
     vv3 axes;
+    const vv3 axes1 = unique(getEdges(points1),true);
     for (auto& a: axes1) {
     }
+    const vv3 axes2 = unique(getEdges(points2),true);
     for (auto& a: axes2) {
     }
-    //std::cout << "Number of axes from 1 and 2:" << axes1.size() << ", " << axes2.size() << "\n";
     vv3 axes3;
     auto i = 0;
     for (const auto& axis1: axes1) {
@@ -55,18 +80,33 @@ vv3 Shape::getAxes(const vv3& axes1, const vv3& axes2) {
     return axes;
 }
 
+std::pair<float, float> Shape::project(const v3 axis_in, const vv3 verts) {
+    const v3 axis = glm::normalize(axis_in);
+    float min = glm::dot(axis,verts[0]);
+    float max = min;
+    for (int i = 1; i < verts.size(); i++) {
+        // NOTE: the axis must be normalized to get accurate projections
+        float p = glm::dot(axis,verts[i]);
+        if (p < min) {
+            min = p;
+        }
+        if (p > max) {
+            max = p;
+        }
+    }
+    Projection proj = std::make_pair(min, max);
+    return proj;
+}
+
 bool Shape::colliding(Shape& s1, Shape& s2) {
     long startTime = timeNowMicros();
     //auto s1Points = s1.cuboid().getPoints();
     //auto s2Points = s2.cuboid().getPoints();
     auto s1Points = s1.cuboid().getPoints();
     auto s2Points = s2.cuboid().getPoints();
-    const vv3 axes1 = unique(s1.cuboid().getEdges(),true);
-    const vv3 axes2 = unique(s2.cuboid().getEdges(),true);
+    vv3 allAxes_non_unique = getAxes(&s1Points, &s2Points);
 
-    vv3 allAxes = getAxes(axes1, axes2);
-    allAxes = unique(allAxes, true);
-
+    vv3 allAxes = unique(allAxes_non_unique, true);
     long timeTaken = timeNowMicros() - startTime;
     std::cout << "A took " << (float)timeTaken/1000.0f << "ms\n";
 
@@ -84,24 +124,6 @@ bool Shape::colliding(Shape& s1, Shape& s2) {
     // if we get here then we know that every axis had overlap on it
     // so we can guarantee an intersection
     return true;
-}
-
-std::pair<float, float> Shape::project(const v3 axis_in, const vv3& verts) {
-    const v3 axis = glm::normalize(axis_in);
-    float min = glm::dot(axis,verts[0]);
-    float max = min;
-    for (int i = 1; i < verts.size(); i++) {
-        // NOTE: the axis must be normalized to get accurate projections
-        float p = glm::dot(axis,verts[i]);
-        if (p < min) {
-            min = p;
-        }
-        if (p > max) {
-            max = p;
-        }
-    }
-    Projection proj = std::make_pair(min, max);
-    return proj;
 }
 
 std::ostream& operator<<(std::ostream& stream, const Shape& s) {
