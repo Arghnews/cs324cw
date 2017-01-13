@@ -23,7 +23,27 @@ Octtree::Octtree(v3 center, float halfDimension) :
     Octtree(AABB(center,halfDimension)) {
     }
 
-bool Octtree::insert(v3 p) {
+bool Octtree::deletePoint(const v3 p) {
+    auto it = std::find(points.begin(), points.end(), p);
+    if (it != points.end()) {
+        // swap the one to be removed with the last element
+        // and remove the item at the end of the container
+        // to prevent moving all items after '5' by one
+        std::swap(*it, points.back());
+        points.pop_back();
+        return true;
+    } else {
+        for (auto& kid: kids) {
+            const bool removed = kid.deletePoint(p);
+            if (removed) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+bool Octtree::insert(const v3 p) {
     // Ignore objects that do not belong in this quad tree
     if (!boundary.containsPoint(p)) {
         return false; // object cannot be added

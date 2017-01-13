@@ -21,7 +21,8 @@ class Octtree {
         Octtree(const Octtree& o);
         Octtree(AABB boundary);
         Octtree(v3 center, float halfDimension);
-        bool insert(v3 p);
+        bool insert(const v3 p);
+        bool deletePoint(const v3 p);
         vv3 queryRange(AABB range);
         void subdivide();
 };

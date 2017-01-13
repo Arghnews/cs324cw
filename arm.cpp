@@ -46,6 +46,7 @@ void switchShape(int);
 
 GLuint shaderProgram;
 std::vector<Shape*> shapes;
+Octtree bigTree(v3(0.0f,0.0f,0.0f),50.0f);
 int selectedShape(0); // index of shape to move
 float step = 0.25f; // for movement
 
@@ -120,15 +121,16 @@ void specialInput(int key, int x, int y) {
 }
 
 void createShapes() {
-    int cubes = 250;
+    int cubes = 2;
     for (int i=0; i<cubes; ++i) {
         std::string name = "Cube" + i;
         shapes.push_back(new Shape(&cubePoints,&cubeColours,&cubeColoursRed,name));
     }
 
-    shapes[0]->translate(-1.0f,0.0f,0.0f);
-    shapes[0]->cuboid().scale(v3(3.0f,1.0f,1.0f));
+    shapes[0]->translate(-5.0f,0.0f,0.0f);
+    shapes[0]->cuboid().scale(v3(1.0f,1.0f,1.0f));
     shapes[1]->translate(1.4f,0.0f,0.0f);
+    /*
     float ranMul = 20.0f;
     float ranFix = 20.0f;
     srand (static_cast <unsigned> (timeNowMicros()));
@@ -147,6 +149,11 @@ void createShapes() {
         z -= ranFix;
         shapes[i]->translate(x,y,z);
         shapes[i]->rotateRads(x,y,z);
+    }
+    */
+
+    for (auto& shape: shapes) {
+        bigTree.insert(shape->cuboid().pos());
     }
 
     for (auto& shape: shapes) {
@@ -187,13 +194,27 @@ void idle() {
 }
 
 void collisions() {
+
+    auto& s1 = *shapes[0];
+    auto& s2 = *shapes[1];
+
+    AABB range1(s1.cuboid().pos(), 3.0f);
+    AABB range2(s2.cuboid().pos(), 3.0f);
+
+    auto vs = bigTree.queryRange(range2);
+    int i =0;
+    for (auto v:vs) {
+        i++;
+        std::cout << printVec(v) << " " << i << "\n";
+    }
+    exit(0);
+
     std::set<int> collidingSet;
     std::set<int> notCollidingSet;
     for (int i=0; i<shapes.size(); ++i) {
         notCollidingSet.insert(i);
     }
     std::set<std::pair<int,int>> collidingPairs;
-
     // say 1 collides with 4, due to way this is done, should only ever have
     // an entry of "4" in 1's set - always the lower one
     long startTime = timeNowMicros();
