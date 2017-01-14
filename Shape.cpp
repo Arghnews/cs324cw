@@ -22,11 +22,6 @@ void db(std::string s) {
 
 vv3 Shape::getEdges(const vv3& v) {
     vv3 e;
-    // 36 vertices ->
-    // since it's straight from the gl
-    // every 3 points make up a triangle
-    // every 2 triangles make a face
-    //
     const int size = v.size();
     for (int i=0; i<size; i+=4) {
         vv3 face(4);
@@ -39,7 +34,6 @@ vv3 Shape::getEdges(const vv3& v) {
             e.push_back((face[j] - face[(j+1)%faceSize]));
         }
     }
-    // 3 axis
     return e;
 }
 
@@ -84,13 +78,12 @@ bool Shape::colliding(Shape& s1, Shape& s2) {
     return true;
 }
 
-std::ostream& operator<<(std::ostream& stream, const Shape& s) {
-    //return stream << "Pos" << printVec(c.pos_) << ", ang:" << printVec(c.ang_) << ", size" << printVec(c.size_);
-    return stream << s.name << ": " << s._cuboid;
+void Shape::translate(v3 by) {
+    _cuboid.translate(by);
 }
 
-Shape::Shape(const fv* points, const fv* colours, const fv* red, std::string niceName) :
-    Shape(points,colours,red,niceName,v3(1.0f,1.0f,1.0f)) {
+void Shape::rotateRads(v3 by) {
+    _cuboid.rotateRads(by);
 }
 
 std::pair<float, float> Shape::project(const v3& axis_in, const vv3* verts_in) {
@@ -112,11 +105,6 @@ std::pair<float, float> Shape::project(const v3& axis_in, const vv3* verts_in) {
     return proj;
 }
 
-Shape::Shape(const fv* points, const fv* colours, const fv* red, std::string niceName, v3 scale) :
-    _cuboid(*points,scale), _colours(colours), red(red), name(niceName), VBOs(2)
-    {
-}
-
 GLuint Shape::colourVBO() {
     if (_colliding) {
         return VBOs[1];
@@ -136,15 +124,10 @@ const fv* Shape::colours() {
 Shape::~Shape() {
 }
 
-Shape::Shape(const Shape& s) :
-        name(s.name),
-        _colliding(s._colliding),
-        _cuboid(s._cuboid),
-        _colours(s._colours),
-        VAO(s.VAO),
-        VBOs(s.VBOs)
+Shape::Shape(const fv* points, const fv* colours, const fv* red, 
+        int niceName, v3 scale, v3 motionLimiter, v3 movementLimiter) :
+    _cuboid(*points,scale,motionLimiter,movementLimiter), _colours(colours), red(red), name(niceName), VBOs(2)
     {
-        // copy constructor
 }
 
 const fv* Shape::points() {
@@ -153,6 +136,11 @@ const fv* Shape::points() {
 
 bool Shape::colliding(bool isColliding) {
     _colliding = isColliding;
+}
+
+std::ostream& operator<<(std::ostream& stream, const Shape& s) {
+    //return stream << "Pos" << printVec(c.pos_) << ", ang:" << printVec(c.ang_) << ", size" << printVec(c.size_);
+    return stream << s.name << ": " << s._cuboid;
 }
 
 bool Shape::colliding() const {
@@ -165,10 +153,6 @@ Cuboid& Shape::cuboid() {
 
 void Shape::translate(float x, float y, float z) {
     translate(v3(x,y,z));
-}
-
-void Shape::translate(v3 by) {
-    _cuboid.translate(by);
 }
 
 void Shape::rotateDegs(const v3 a) {
@@ -185,9 +169,5 @@ void Shape::rotateDegs(float x, float y, float z) {
 
 void Shape::rotateRads(float x, float y, float z) {
     rotateRads(v3(x,y,z));
-}
-
-void Shape::rotateRads(v3 by) {
-    _cuboid.rotateRads(by);
 }
 

@@ -46,7 +46,6 @@ void translateShape(Shape* s, const v3& translate);
 
 GLuint shaderProgram;
 std::vector<Shape*> shapes;
-int selectedShape(0); // index of shape to move
 float step = 0.25f; // for movement
 
 static const float areaSize = 100.0f;
@@ -143,12 +142,19 @@ void translateShape(Shape* shape, const v3& translate) {
     bigTree.insert(shape->cuboid().pos(),shape);
 }
 
+static int selectedShape = 1;
+
 void createShapes() {
 
-    static const int numbShapes = 3;
+    static const int numbShapes = 200;
     
-    shapes.push_back(new Shape(&cubePointsBottom,&cubeColours,&cubeColoursRed,"Cube1",v3(1.0f,4.0f,1.0f)));
-    shapes.push_back(new Shape(&cubePointsCentered,&cubeColours,&cubeColoursRed,"Cube2",v3(2.0f,1.0f,1.0f)));
+    static const int base = 0;
+    static const int arm = 1;
+    
+    shapes.push_back(new Shape(&cubePointsCentered,&cubeColours,&cubeColoursRed,base,
+            v3(5.0f,1.0f,5.0f),v3(0.0f,1.0f,0.0f),zeroV));
+    shapes.push_back(new Shape(&cubePointsCentered,&cubeColours,&cubeColoursRed,arm,
+            v3(2.0f,1.0f,1.0f),v3(1.0f,1.0f,1.0f),oneV));
 
     translateShape(shapes[0],v3(-1.0f,0.0f,0.0f));
     translateShape(shapes[1],v3(3.0f,0.0f,0.0f));
@@ -169,7 +175,7 @@ void createShapes() {
         z *= ranMul;
         z -= ranFix;
 
-        shapes.push_back(new Shape(&cubePointsCentered,&cubeColours,&cubeColoursRed,"Cube"+i,scale));
+        shapes.push_back(new Shape(&cubePointsCentered,&cubeColours,&cubeColoursRed,i,scale,oneV,oneV));
 
         translateShape(shapes.back(),v3(x,y,z));
         rotateShape(shapes.back(),v3(x,y,z));
@@ -307,7 +313,7 @@ void render() {
         // Note that we're translating the scene in the reverse direction of where we want to move
         //view = glm::translate(view, v3(0.0f, 0.0f, -3.0f)); 
         view = glm::lookAt(
-                v3(1.5f,3.0f,1.0f), // eye
+                v3(1.5f,7.0f,3.0f), // eye
                 v3(0.0f,0.0f,0.0f),  // center
                 v3(0.0f,1.0f,0.0f)); // up
 

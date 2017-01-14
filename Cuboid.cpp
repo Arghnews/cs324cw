@@ -25,6 +25,8 @@ Cuboid::Cuboid(const Cuboid& c) :
     vertices_(c.vertices_),
     uniqEdges_(c.uniqEdges_),
     points_(c.points_),
+    motionLimiter_(c.motionLimiter_),
+    movementLimiter_(c.movementLimiter_),
     furthestVertex_(c.furthestVertex_)
     {
     // copy constructor
@@ -77,9 +79,11 @@ vv3 Cuboid::calcEdges(const vv3& v) {
     return e;
 }
 
-Cuboid::Cuboid(fv points, v3 scale) :
+Cuboid::Cuboid(fv points, v3 scale, v3 motionLimiter, v3 movementLimiter) :
     points_(points),
-    scale_(scale)
+    scale_(scale),
+    motionLimiter_(motionLimiter),
+    movementLimiter_(movementLimiter)
 {
     const int size = points_.size(); // 3d
     for (int i=0; i<size; i+=18) {
@@ -130,18 +134,15 @@ void Cuboid::recalcEdges() {
     uniqEdges_ = unique(edges_,true);
 }
 
-Cuboid::Cuboid(fv points) : 
-    Cuboid(points, v3(1.0f,1.0f,1.0f))
-{
-}
-
 void Cuboid::translate(v3 by) {
-    pos_ += by;
+    // fma(a,b,c) -> a*b + c
+    pos_ = glm::fma(by,movementLimiter_,pos());
     recalcEdges();
 }
 
 void Cuboid::rotateRads(float yaw, float pitch, float roll) {
     v3 vec(yaw,pitch,roll);
+    vec *= motionLimiter_;
     glm::fquat q = glm::quat(vec);
     qua = q * qua;
     recalcEdges();

@@ -23,6 +23,7 @@ typedef std::pair<v3, Shape*> v3S;
 typedef std::vector<v3S> vv3S;
 
 static const v3 zeroV(0.0f,0.0f,0.0f);
+static const v3 oneV(1.0f,1.0f,1.0f);
 
 template <class T>
 void static concat(std::vector<T>& grower, const std::vector<T>& added) {

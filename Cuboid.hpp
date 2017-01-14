@@ -29,6 +29,8 @@ class Cuboid {
         float furthestVertex_; // from center
         float calcFurthestVertex();
         v3 half_xyz_;
+        const v3 motionLimiter_; // 3 edges
+        const v3 movementLimiter_; // 3 edges
 
     public:
         v3 half_xyz();
@@ -41,8 +43,7 @@ class Cuboid {
         vv3 getVertices();
         const fv* points();
         Cuboid(const Cuboid&);
-        Cuboid(fv points);
-        Cuboid(fv points, v3 scale);
+        Cuboid(fv points, v3 scale=oneV, v3 motionLimiter=oneV, v3 movementLimiter=oneV);
 
         bool static colliding(const Cuboid& c1, const Cuboid& c2);
 

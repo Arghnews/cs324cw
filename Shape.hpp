@@ -24,12 +24,12 @@ class Shape {
         vv3 static getEdges(const vv3& v);
         bool static colliding(Shape&, Shape&);
         ~Shape();
-        Shape(const Shape&);
         GLuint VAO;
         GLuint colourVBO();
         std::vector<GLuint> VBOs;
-        Shape(const fv* points, const fv* colours, const fv* red, std::string niceName);
-        Shape(const fv* points, const fv* colours, const fv* red, std::string niceName, v3 scale);
+        Shape(const fv* points, const fv* colours, const fv* red, int name,
+                v3 scale=oneV, v3 motionLimiter=oneV, v3 movementLimiter=oneV);
+        //Shape(const Shape&);
         bool colliding(bool isColliding);
         bool colliding() const;
         Cuboid& cuboid();
@@ -42,7 +42,7 @@ class Shape {
     
         const fv* points();
         const fv* colours();
-        std::string name;
+        int name;
         friend std::ostream& operator<<(std::ostream&, const Shape&);
 
 };
