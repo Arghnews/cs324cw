@@ -20,10 +20,6 @@ void db(std::string s) {
     i++;
 }
 
-void db() {
-    db("");
-}
-
 vv3 Shape::getEdges(const vv3& v) {
     vv3 e;
     // 36 vertices ->
@@ -47,26 +43,16 @@ vv3 Shape::getEdges(const vv3& v) {
     return e;
 }
 
+void db() {
+    db("");
+}
+
 // returns normalised axes
 vv3 Shape::getAxes(vv3 v1, vv3 v2) {
-    // shape 1 and 2's vertices
-    // edges are axes
     vv3 axes;
-    std::cout << "HI\n";
-    const vv3 axes1 = unique(getEdges(v1),true);
-    std::cout << "axes for cube 1: " << axes1.size() << "\n";
-    for (auto& a: axes1) {
-        std::cout << printVec(a) << "\n";
-    }
-    const vv3 axes2 = unique(getEdges(v2),true);
-    std::cout << "axes for cube 2: " << axes2.size() << "\n";
-    for (auto& a: axes2) {
-        std::cout << printVec(a) << "\n";
-    }
-
-    std::cout << "Size of axes 1 and then 2: " << axes1.size() << ", " << axes2.size() << "\n";
+    const vv3 axes1 = v1;
+    const vv3 axes2 = v2;
     vv3 axes3;
-    auto i = 0;
     for (const auto& axis1: axes1) {
         for (const auto& axis2: axes2) {
             const auto t = glm::normalize(glm::cross(axis1,axis2));
@@ -75,18 +61,41 @@ vv3 Shape::getAxes(vv3 v1, vv3 v2) {
             }
         }
     }
-    std::cout << "Size of axes 3 " << axes3.size() << "\n";
     concat(axes, axes1);
     concat(axes, axes2);
     concat(axes, axes3);
-
-    std::cout << "Size of total axes before unique " << axes.size() << "\n";
-    axes = unique(axes,true);
-    std::cout << "Size of total axes after unique " << axes.size() << "\n";
     return axes;
 }
 
-std::pair<float, float> Shape::project(const v3 axis_in, const vv3 verts) {
+bool Shape::colliding(Shape& s1, Shape& s2) {
+    vv3 s1Verts = s1.cuboid().getUniqueEdges();
+    vv3 s2Verts = s2.cuboid().getUniqueEdges();
+    vv3 allAxes = getAxes(s1Verts, s2Verts);
+    auto overlap = [&] (const Projection& p1, const Projection& p2) -> bool {
+        return (p1.second >= p2.first) && (p1.first <= p2.second);
+    };
+    for (const auto& axis: allAxes) {
+        Projection projection1 = project(axis, s1.cuboid().getVertices());
+        Projection projection2 = project(axis, s2.cuboid().getVertices());
+        if (!overlap(projection1,projection2)) {
+            return false;
+        }
+    }
+    return true;
+}
+
+std::ostream& operator<<(std::ostream& stream, const Shape& s) {
+    //return stream << "Pos" << printVec(c.pos_) << ", ang:" << printVec(c.ang_) << ", size" << printVec(c.size_);
+    return stream << s.name << ": " << s._cuboid;
+}
+
+Shape::Shape(const fv* points, const fv* colours, const fv* red, std::string niceName) :
+            Shape(points,colours,red,niceName,v3(1.0f,1.0f,1.0f)) {
+}
+
+std::pair<float, float> Shape::project(const v3 axis_in, const vv3 verts_in) {
+    //const auto& verts = *verts_in;
+    const auto verts = verts_in;
     const v3 axis = glm::normalize(axis_in);
     float min = glm::dot(axis,verts[0]);
     float max = min;
@@ -102,47 +111,6 @@ std::pair<float, float> Shape::project(const v3 axis_in, const vv3 verts) {
     }
     Projection proj = std::make_pair(min, max);
     return proj;
-}
-
-bool Shape::colliding(Shape& s1, Shape& s2) {
-    vv3 s1Verts = s1.cuboid().getVertices();
-    vv3 s2Verts = s2.cuboid().getVertices();
-    std::cout << "Number of verts shape1:" << s1Verts.size() << " " << s2Verts.size() << "\n";
-
-    vv3 allAxes = getAxes(s1Verts, s2Verts);
-
-    std::cout << "All axes to test for shapes " << allAxes.size() << "\n";
-    for (auto a: allAxes) {
-        //std::cout << printVec(a) << "\n";
-    }
-    std::cout << "-----" << "\n";
-    std::cout << "-----" << "\n";
-
-    auto overlap = [&] (const Projection& p1, const Projection& p2) -> bool {
-        return (p1.second >= p2.first) && (p1.first <= p2.second);
-    };
-
-    for (const auto& axis: allAxes) {
-        Projection projection1 = project(axis, s1Verts);
-        Projection projection2 = project(axis, s2Verts);
-        if (!overlap(projection1,projection2)) {
-            return false;
-        }
-    }
-
-    // if we get here then we know that every axis had overlap on it
-    // so we can guarantee an intersection
-    std::cout << "Colliding!!!!\n";
-    return true;
-}
-
-std::ostream& operator<<(std::ostream& stream, const Shape& s) {
-    //return stream << "Pos" << printVec(c.pos_) << ", ang:" << printVec(c.ang_) << ", size" << printVec(c.size_);
-    return stream << s.name << ": " << s._cuboid;
-}
-
-Shape::Shape(const fv* points, const fv* colours, const fv* red, std::string niceName) :
-            Shape(points,colours,red,niceName,v3(1.0f,1.0f,1.0f)) {
 }
 
 Shape::Shape(const fv* points, const fv* colours, const fv* red, std::string niceName, v3 scale) :

@@ -20,30 +20,61 @@ Cuboid::Cuboid(const Cuboid& c) :
     pos_(c.pos_),
     ang_(c.ang_),
     scale_(c.scale_),
+    actualPoints_(c.actualPoints_),
+    edges_(c.edges_),
+    uniqEdges_(c.uniqEdges_),
     points_(c.points_)
     {
     // copy constructor
 }
 
-
 const fv* Cuboid::points() {
     return &points_;
 }
 
+// --- TAKE NOTE ---
+// In an ideal world this would be stored
+// and can just return it on a change
 vv3 Cuboid::getVertices() {
     const v3 centre = pos();
-    const v3 a = ang();
-
     const int verticesSize = actualPoints_.size();
     vv3 vertices(verticesSize);
     for (int i=0; i<verticesSize; ++i) {
         v3 vertex = actualPoints_[i];
         vertex = qua * vertex;
-        vertex *= scale_;
+        //vertex *= scale_;
         vertex += centre;
         vertices[i] = vertex;
     }
     return vertices;
+}
+
+vv3* Cuboid::actualPoints() {
+    return &actualPoints_;
+}
+
+vv3 Cuboid::getUniqueEdges() {
+    return uniqEdges_;
+}
+
+vv3 Cuboid::calcEdges(const vv3& v) {
+    vv3 e;
+    const int size = v.size();
+    for (int i=0; i<size; i+=4) {
+        vv3 face(4);
+        face[0] = v[i+0];
+        face[1] = v[i+1];
+        face[2] = v[i+2];
+        face[3] = v[i+3];
+        const int faceSize = face.size();
+        for (int j=0; j<faceSize; ++j) {
+            e.push_back((face[j] - face[(j+1)%faceSize]));
+        }
+    }
+    if (size != 24) {
+        exit(0);
+    }
+    return e;
 }
 
 Cuboid::Cuboid(fv points, v3 scale) :
@@ -62,11 +93,32 @@ Cuboid::Cuboid(fv points, v3 scale) :
         square = unique(square);
         concat(actualPoints_, square);
     }
+    recalcEdges();
+}
+
+void Cuboid::recalcEdges() {
+    vv3 verts24 = getVertices();
+    vv3 edges24 = calcEdges(verts24);
+    edges_ = edges24;
+    uniqEdges_ = unique(edges_,true);
 }
 
 Cuboid::Cuboid(fv points) : 
     Cuboid(points, v3(1.0f,1.0f,1.0f))
 {
+}
+
+void Cuboid::translate(v3 by) {
+    pos_ += by;
+    recalcEdges();
+}
+
+void Cuboid::rotateRads(float yaw, float pitch, float roll) {
+    v3 vec(yaw,pitch,roll);
+    glm::fquat q = glm::quat(vec);
+    qua = q * qua;
+    recalcEdges();
+    // the function that actually does the rotating
 }
 
 v3 Cuboid::pos() const {
@@ -88,26 +140,9 @@ void Cuboid::rotateDegs(float x, float y, float z) {
 void Cuboid::rotateRads(const v3 xyz) {
     rotateRads(xyz.x, xyz.y, xyz.z);
 }
-/*
-        trans = glm::rotate(trans, shape.cuboid().ang().x, v3(0.0f,1.0f,0.0f));
-        trans = glm::rotate(trans, shape.cuboid().ang().y, v3(1.0f,0.0f,0.0f));
-        trans = glm::rotate(trans, shape.cuboid().ang().z, v3(0.0f,0.0f,1.0f));
-        */
-void Cuboid::rotateRads(float yaw, float pitch, float roll) {
-    v3 vec(yaw,pitch,roll);
-    glm::fquat q = glm::quat(vec);
-    qua = q * qua;
-    // the function that actually does the rotating
-}
-
-void Cuboid::translate(v3 by) {
-    pos_ += by;
-}
 
 void Cuboid::translate(float x, float y, float z) {
-    pos_.x += x;
-    pos_.y += y;
-    pos_.z += z;
+    translate(v3(x,y,z));
 }
 
 v3 Cuboid::scale() const {

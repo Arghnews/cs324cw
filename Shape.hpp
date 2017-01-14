@@ -14,7 +14,6 @@ class Shape {
     private:
         //void static concat(vv3& grower, const vv3& added);
         std::pair<float, float> static project(const v3 axis, const vv3 verts);
-        vv3 static getEdges(const vv3& v);
         vv3 static getAxes(vv3 v1,vv3 v2);
         bool _colliding;
         Cuboid _cuboid;
@@ -23,6 +22,7 @@ class Shape {
         //std::shared_ptr<fv> vertPointer;
         
     public:
+        vv3 static getEdges(const vv3& v);
         bool static colliding(Shape&, Shape&);
         ~Shape();
         Shape(const Shape&);

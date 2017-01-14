@@ -82,7 +82,6 @@ void keyboard(unsigned char key, int mouseX, int mouseY) {
                    s.translate(step,0,0);
                    break;
 	}
-    std::cout << *shapes[0] << "\n";
     // currently seg faults, to fix
     if (!stop) {
         glutPostRedisplay();
@@ -120,21 +119,23 @@ void createShapes() {
     shapes.push_back(new Shape(&cubePoints,&cubeColours,&cubeColoursRed,"Cube1",v3(1.0f,1.0f,1.0f)));
     shapes.push_back(new Shape(&cubePoints,&cubeColours,&cubeColoursRed,"Cube2"));
     
-    int n = 10;
-
-    for (int i=0;i<n;++i) {
-        shapes.push_back(new Shape(&cubePoints,&cubeColours,&cubeColoursRed,"Cube"+i));
-    }
+    int numbShapes = 2;
 
     shapes[0]->translate(-1.0f,0.0f,0.0f);
     shapes[1]->translate(1.4f,0.0f,0.0f);
+
+    /*
+    for (int i=0;i<numbShapes;++i) {
+        shapes.push_back(new Shape(&cubePoints,&cubeColours,&cubeColoursRed,"Cube"+i));
+    }
+
 
     float areaSize = 10.0f;
 
     float ranMul = areaSize/3.0f;
     float ranFix = areaSize/2.0f;
     srand (static_cast <unsigned> (timeNowMicros()));
-    for (int i=2; i<shapes.size(); ++i) {
+    for (int i=2; i<numbShapes; ++i) {
         float x = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
         float y = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
         float z = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
@@ -149,6 +150,7 @@ void createShapes() {
         shapes[i]->translate(x,y,z);
         shapes[i]->rotateRads(x,y,z);
         }
+        */
 
     for (auto shape: shapes) {
         glGenVertexArrays(1, &(shape->VAO));
@@ -235,9 +237,11 @@ void collisions() {
 
     for (auto& shapeIndex: collidingSet) {
         shapes[shapeIndex]->colliding(true);
+        std::cout << "Shape " << shapeIndex << " colliding\n";
     }
     for (auto& shapeIndex: notCollidingSet) {
         shapes[shapeIndex]->colliding(false);
+        std::cout << "Shape " << shapeIndex << " not colliding\n";
     }
 
 }

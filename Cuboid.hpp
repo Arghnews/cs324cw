@@ -20,10 +20,16 @@ class Cuboid {
         v3 pos_; // x, y, z of center
         v3 ang_; // x, y, z
         const v3 scale_; // 1.0,1.0,1.0
-        fv points_;
-        vv3 actualPoints_;
+        fv points_; // 108 floats
+        vv3 actualPoints_; // 24 vertices
+        vv3 edges_; // 24 edges, between vertices
+        vv3 uniqEdges_; // 3 edges
+        vv3 static calcEdges(const vv3& v);
 
     public:
+        vv3* actualPoints();
+        vv3 getUniqueEdges(); // sign insensitive unique edges
+        void recalcEdges();
         glm::fquat qua;
         vv3 getVertices();
         const fv* points();
