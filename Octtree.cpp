@@ -2,6 +2,7 @@
 #include <glm/glm.hpp>
 #include <vector>
 #include <utility>
+#include <stdexcept>
 #include "Util.hpp"
 #include "AABB.hpp"
 #include "Octtree.hpp"
@@ -12,7 +13,7 @@ Octtree::Octtree(const Octtree& o) :
     points(o.points),
     kids(o.kids),
     size_(o.size_),
-    haveSubdivided(haveSubdivided)
+    haveSubdivided(o.haveSubdivided)
 {
 }
 
@@ -111,7 +112,7 @@ vv3S Octtree::queryRange(AABB range) {
     }
 
     // Terminate here, if there are no children
-    if (haveSubdivided) {
+    if (!haveSubdivided) {
         return pointsInRange;
     }
 
@@ -124,9 +125,11 @@ vv3S Octtree::queryRange(AABB range) {
 }
 
 void Octtree::subdivide() {
+
     if (haveSubdivided) {
-        //return;
+        throw std::runtime_error("Error: shouldn't be calling subdivide on something that has already done so");
     }
+    haveSubdividied = true;
     auto& c = boundary.center;
     auto h = boundary.halfDimension / 2.0f;
 
