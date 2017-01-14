@@ -34,19 +34,42 @@ std::string static printVec(const v3 v) {
     return buffer.str();
 }
 
-vv3 static unique(const vv3& vec_in, const bool ignoreSign) {
-    vv3 allAxes;
+bool static areSame(float a, float b) {
+    static const float EPSILON = 0.001f;
+    return fabs(a - b) < EPSILON;
+}
+
+bool static areSame(const v3& a,const v3& b) {
+    return areSame(a.x,b.x)&&areSame(a.y,b.y)&&areSame(a.z,b.z);
+}
+
+vv3 static unique(const vv3 vec_in, const bool ignoreSign) {
+    std::cout << "In size " << vec_in.size() << "\n";
     vv3 uniq;
     // quick and easy unique directions
     for (int i=0; i<vec_in.size(); ++i) {
-        const bool has = std::find(uniq.begin(), uniq.end(),
-                vec_in[i]) != uniq.end();
-        const bool hasFlipped = ignoreSign && std::find(uniq.begin(), uniq.end(),
-                vec_in[i]*-1.0f) != uniq.end();
-        if (!has && !hasFlipped) {
-            uniq.push_back(vec_in[i]);
+        const auto& elem = vec_in[i];
+        bool has = false;
+
+        for (auto& u: uniq) {
+            if (!ignoreSign) {
+                if (areSame(u,elem)) {
+                    has = true;
+                    break;
+                }
+            } else {
+                // want to ignore sign
+                if (areSame(u,elem) || areSame(u,elem*-1.0f)) {
+                    has = true;
+                    break;
+                }
+            }
+        }
+        if (!has) {
+            uniq.push_back(elem);
         }
     }
+    std::cout << "Out size " << uniq.size() << "\n";
     return uniq;
 }
 

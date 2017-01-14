@@ -31,7 +31,7 @@ int init(int argc, char* argv[]);
 void createShapes();
 void render();
 void bindBuffers(ShapeList& shapes);
-void bindBuffers(GLuint VAO, std::vector<GLuint> VBOs, const fv vertexData, const fv colourData);
+void bindBuffers(GLuint VAO, std::vector<GLuint> VBOs, const fv* vertexData, const fv* colourData);
 void startLoopGl();
 void collisions();
 void keyboard(unsigned char key, int mouseX, int mouseY);
@@ -116,19 +116,39 @@ void specialInput(int key, int x, int y) {
 }
 
 void createShapes() {
-    shapes.push_back(new Shape(cubePoints,cubeColours,"Cube1"));
-    shapes.push_back(new Shape(cubePoints,cubeColours,"Cube2"));
-    /*
-    shapes.push_back(new Shape(1.0f,1.0f,1.0f,cube,"Cube3"));
-    shapes.push_back(new Shape(1.0f,1.0f,1.0f,cube,"Cube4"));
-    shapes.push_back(new Shape(1.0f,1.0f,1.0f,cube,"Cube5"));
-    */
+    
+    shapes.push_back(new Shape(&cubePoints,&cubeColours,&cubeColoursRed,"Cube1",v3(1.0f,1.0f,1.0f)));
+    shapes.push_back(new Shape(&cubePoints,&cubeColours,&cubeColoursRed,"Cube2"));
+    
+    int n = 10;
+
+    for (int i=0;i<n;++i) {
+        shapes.push_back(new Shape(&cubePoints,&cubeColours,&cubeColoursRed,"Cube"+i));
+    }
 
     shapes[0]->translate(-1.0f,0.0f,0.0f);
     shapes[1]->translate(1.4f,0.0f,0.0f);
-    for (int i=2; i<cubePositions.size() && i<shapes.size(); ++i) {
-        shapes[i]->translate(cubePositions[i]);
-    }
+
+    float areaSize = 10.0f;
+
+    float ranMul = areaSize/3.0f;
+    float ranFix = areaSize/2.0f;
+    srand (static_cast <unsigned> (timeNowMicros()));
+    for (int i=2; i<shapes.size(); ++i) {
+        float x = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+        float y = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+        float z = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+        //float t = x + 1.2f;
+        //shapes[i]->cuboid().scale(v3(t,1.0f,1.0f));
+        x *= ranMul;
+        x -= ranFix;
+        y *= ranMul;
+        y -= ranFix;
+        z *= ranMul;
+        z -= ranFix;
+        shapes[i]->translate(x,y,z);
+        shapes[i]->rotateRads(x,y,z);
+        }
 
     for (auto shape: shapes) {
         glGenVertexArrays(1, &(shape->VAO));
@@ -138,33 +158,48 @@ void createShapes() {
 }
 
 void display() {
-    
+
+    static long frame = 0l;
+    static long totalTimeTaken = 0l;
+    static long timeTakenInterval = 0l;
+    ++frame;
+
     long startTime = timeNowMicros();
 
     startLoopGl();
 
-    for (auto shape: shapes) {
-        //shape->rotateRads(glm::radians(1.0f),0.0f,0.0f);
-    }
-
+    long s = timeNowMicros();
     collisions();
+    long t = timeNowMicros();
+    std::cout << "Time taken " << (float)(t-s)/1000.0f << "ms\n";
 
     bindBuffers(shapes);
     render();
 
     long timeTaken = timeNowMicros() - startTime;
-    const float fps = 60.0f;
+    const float fps = 30.0f;
     const float fullFrametime = (1000.0f*1000.0f)/fps;
     int sleepTime = std::max((int)(fullFrametime - timeTaken),0);
-    /*bool SPARE_TIME_FOR_WHEN_ILETT_WHINES = false;
+    bool SPARE_TIME_FOR_WHEN_ILETT_WHINES = false;
     if (SPARE_TIME_FOR_WHEN_ILETT_WHINES) {
-        std::cout << "Spare frame time " << sleepTime*1000 << "ms\n";
-    }*/
+        std::cout << "Time taken for frame " << (float)timeTaken/1000.0f << "ms" << "\n";
+        std::cout << "Spare frame time " << (float)sleepTime/1000.0f << "ms\n";
+    }
+
+    totalTimeTaken += timeTaken;
+    timeTakenInterval += timeTaken;
+    static const int interval = 30;
+    if (frame % interval == 0) {
+        const double averageFrametimeMs = (double)(timeTakenInterval / interval) / 1000.0;
+        timeTakenInterval = 0l;
+        std::cout << "Average frametime for last " << interval << " frames is " << averageFrametimeMs << "ms" << "\n";
+    }
     std::this_thread::sleep_for(std::chrono::microseconds(sleepTime));
+
 }
 
 void idle() {
-	glutPostRedisplay();
+    glutPostRedisplay();
 }
 
 void collisions() {
@@ -225,14 +260,14 @@ void render() {
         m4 rotateM = glm::mat4_cast(qua);
 
         trans = glm::translate(trans, shape.cuboid().pos());
-        //trans = glm::scale(trans, shape.cuboid().scale());  
+        trans = glm::scale(trans, shape.cuboid().scale());  
         model = trans * rotateM;
 
         glm::mat4 view;
         // Note that we're translating the scene in the reverse direction of where we want to move
         //view = glm::translate(view, v3(0.0f, 0.0f, -3.0f)); 
         view = glm::lookAt(
-                v3(0.0001f,2.5f,0.0001f), // eye
+                v3(1.5f,3.0f,1.0f), // eye
                 v3(0.0f,0.0f,0.0f),  // center
                 v3(0.0f,1.0f,0.0f)); // up
 
@@ -247,7 +282,7 @@ void render() {
         GLint projectionLoc = glGetUniformLocation(shaderProgram, "projection");
         glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
-        glDrawArrays(GL_TRIANGLES, 0, shape.points().size());
+        glDrawArrays(GL_TRIANGLES, 0, shape.points()->size());
     }
     glBindVertexArray(0);
     glutSwapBuffers(); 
@@ -259,17 +294,17 @@ void bindBuffers(ShapeList& shapes) {
     }
 }
 
-void bindBuffers(GLuint VAO, std::vector<GLuint> VBOs, const fv vertexData, const fv colourData) {
+void bindBuffers(GLuint VAO, std::vector<GLuint> VBOs, const fv* vertexData, const fv* colourData) {
     glBindVertexArray(VAO);
     glBindBuffer(GL_ARRAY_BUFFER, VBOs[0]);
-    glBufferData(GL_ARRAY_BUFFER, vertexData.size()*sizeof(GLfloat), 
-            vertexData.data(), GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, vertexData->size()*sizeof(GLfloat), 
+            vertexData->data(), GL_STATIC_DRAW);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 
             3 * sizeof(GLfloat), (GLvoid*)(0*sizeof(GLfloat)));
     glEnableVertexAttribArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, VBOs[1]);
-    glBufferData(GL_ARRAY_BUFFER, colourData.size()*sizeof(GLfloat), 
-            colourData.data(), GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, colourData->size()*sizeof(GLfloat), 
+            colourData->data(), GL_STATIC_DRAW);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 
             3 * sizeof(GLfloat), (GLvoid*)(0*sizeof(GLfloat)));
     glEnableVertexAttribArray(1);

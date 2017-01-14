@@ -18,7 +18,8 @@ class Shape {
         vv3 static getAxes(vv3 v1,vv3 v2);
         bool _colliding;
         Cuboid _cuboid;
-        fv _colours;
+        const fv* _colours;
+        const fv* red;
         //std::shared_ptr<fv> vertPointer;
         
     public:
@@ -27,7 +28,8 @@ class Shape {
         Shape(const Shape&);
         GLuint VAO;
         std::vector<GLuint> VBOs;
-        Shape(fv points, fv colours, std::string niceName);
+        Shape(const fv* points, const fv* colours, const fv* red, std::string niceName);
+        Shape(const fv* points, const fv* colours, const fv* red, std::string niceName, v3 scale);
         bool colliding(bool isColliding);
         bool colliding() const;
         Cuboid& cuboid();
@@ -37,8 +39,8 @@ class Shape {
         void rotateRads(v3 by); // x, y, z, pretty rough atm
         void rotateDegs(float x, float y, float z);
     
-        fv points();
-        fv colours();
+        const fv* points();
+        const fv* colours();
         std::string name;
         friend std::ostream& operator<<(std::ostream&, const Shape&);
 

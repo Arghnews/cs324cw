@@ -19,15 +19,17 @@ class Cuboid {
     private:
         v3 pos_; // x, y, z of center
         v3 ang_; // x, y, z
-        v3 scale_; // 1.0,1.0,1.0
+        const v3 scale_; // 1.0,1.0,1.0
         fv points_;
+        vv3 actualPoints_;
 
     public:
         glm::fquat qua;
         vv3 getVertices();
-        fv points();
+        const fv* points();
         Cuboid(const Cuboid&);
         Cuboid(fv points);
+        Cuboid(fv points, v3 scale);
 
         bool static colliding(const Cuboid& c1, const Cuboid& c2);
 

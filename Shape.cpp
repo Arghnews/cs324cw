@@ -32,19 +32,16 @@ vv3 Shape::getEdges(const vv3& v) {
     // every 2 triangles make a face
     //
     const int size = v.size();
-    for (int i=0; i<size; i+=6) {
-        vv3 square;
-        square.push_back(v[i+0]);
-        square.push_back(v[i+1]);
-        square.push_back(v[i+2]);
-        square.push_back(v[i+3]);
-        square.push_back(v[i+4]);
-        square.push_back(v[i+5]);
-        square = unique(square);
-        const int sqSize = square.size();
-        for (int i=0; i<sqSize; ++i) {
-            e.push_back((square[i] - square[(i+1)%sqSize]));
-        }   
+    for (int i=0; i<size; i+=4) {
+        vv3 face(4);
+        face[0] = v[i+0];
+        face[1] = v[i+1];
+        face[2] = v[i+2];
+        face[3] = v[i+3];
+        const int faceSize = face.size();
+        for (int j=0; j<faceSize; ++j) {
+            e.push_back((face[j] - face[(j+1)%faceSize]));
+        }
     }
     // 3 axis
     return e;
@@ -52,10 +49,6 @@ vv3 Shape::getEdges(const vv3& v) {
 
 // returns normalised axes
 vv3 Shape::getAxes(vv3 v1, vv3 v2) {
-    auto concat = [&] (vv3& grower, const vv3& added) {
-        grower.insert( grower.end(), added.begin(), added.end() );
-    };
-
     // shape 1 and 2's vertices
     // edges are axes
     vv3 axes;
@@ -88,7 +81,7 @@ vv3 Shape::getAxes(vv3 v1, vv3 v2) {
     concat(axes, axes3);
 
     std::cout << "Size of total axes before unique " << axes.size() << "\n";
-    axes = unique(axes);
+    axes = unique(axes,true);
     std::cout << "Size of total axes after unique " << axes.size() << "\n";
     return axes;
 }
@@ -115,14 +108,12 @@ bool Shape::colliding(Shape& s1, Shape& s2) {
     vv3 s1Verts = s1.cuboid().getVertices();
     vv3 s2Verts = s2.cuboid().getVertices();
     std::cout << "Number of verts shape1:" << s1Verts.size() << " " << s2Verts.size() << "\n";
-    vv3 allAxes_non_unique = getAxes(s1Verts, s2Verts);
 
-    vv3 allAxes = unique(allAxes_non_unique, true);
+    vv3 allAxes = getAxes(s1Verts, s2Verts);
 
-    std::cout << "Number of axes " << allAxes_non_unique.size() << " -> " << allAxes.size() << "\n";
-    std::cout << "All axes to test for shapes " << s1 << "," << s2 << "\n";
+    std::cout << "All axes to test for shapes " << allAxes.size() << "\n";
     for (auto a: allAxes) {
-        std::cout << printVec(a) << "\n";
+        //std::cout << printVec(a) << "\n";
     }
     std::cout << "-----" << "\n";
     std::cout << "-----" << "\n";
@@ -150,24 +141,18 @@ std::ostream& operator<<(std::ostream& stream, const Shape& s) {
     return stream << s.name << ": " << s._cuboid;
 }
 
-Shape::Shape(fv points, fv colours, std::string niceName) :
-            _cuboid(points), _colours(colours), name(niceName), VBOs(2)
+Shape::Shape(const fv* points, const fv* colours, const fv* red, std::string niceName) :
+            Shape(points,colours,red,niceName,v3(1.0f,1.0f,1.0f)) {
+}
+
+Shape::Shape(const fv* points, const fv* colours, const fv* red, std::string niceName, v3 scale) :
+            _cuboid(*points,scale), _colours(colours), red(red), name(niceName), VBOs(2)
     {
         // only works if vertices in x,y,z r,g,b format
 }
 
-fv Shape::colours() {
+const fv* Shape::colours() {
     if (_colliding) {
-        fv red(_colours.size());
-        const int size = _colours.size();
-        const GLfloat r = 0.75f;
-        const GLfloat g = 0.2f;
-        const GLfloat b = 0.2f;
-        for (int i=0; i<size; i+=3) {
-            red[i+0] = r;
-            red[i+1] = g;
-            red[i+2] = b;
-        }
         return red;
     } else {
         return _colours;
@@ -188,7 +173,7 @@ Shape::Shape(const Shape& s) :
         // copy constructor
 }
 
-fv Shape::points() {
+const fv* Shape::points() {
     return _cuboid.points();
 }
 

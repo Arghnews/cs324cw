@@ -26,29 +26,46 @@ Cuboid::Cuboid(const Cuboid& c) :
 }
 
 
-fv Cuboid::points() {
-    return points_;
+const fv* Cuboid::points() {
+    return &points_;
 }
 
 vv3 Cuboid::getVertices() {
     const v3 centre = pos();
     const v3 a = ang();
-    const fv& points = points_;
-    const int size = points.size(); // 108 points -> 36 vertices
 
-    vv3 vertices;
-    for (int i=0; i<size; i+=3) {
-        v3 vertex = v3(points[i], points[i+1], points[i+2]);
+    const int verticesSize = actualPoints_.size();
+    vv3 vertices(verticesSize);
+    for (int i=0; i<verticesSize; ++i) {
+        v3 vertex = actualPoints_[i];
         vertex = qua * vertex;
+        vertex *= scale_;
         vertex += centre;
-        vertices.push_back(vertex);
+        vertices[i] = vertex;
     }
     return vertices;
 }
 
+Cuboid::Cuboid(fv points, v3 scale) :
+    points_(points),
+    scale_(scale)
+{
+    const int size = points_.size(); // 3d
+    for (int i=0; i<size; i+=18) {
+        vv3 square;
+        square.push_back(v3(points_[i+0], points_[i+1], points_[i+2]));
+        square.push_back(v3(points_[i+3], points_[i+4], points_[i+5]));
+        square.push_back(v3(points_[i+6], points_[i+7], points_[i+8]));
+        square.push_back(v3(points_[i+9], points_[i+10], points_[i+11]));
+        square.push_back(v3(points_[i+12], points_[i+13], points_[i+14]));
+        square.push_back(v3(points_[i+15], points_[i+16], points_[i+17]));
+        square = unique(square);
+        concat(actualPoints_, square);
+    }
+}
+
 Cuboid::Cuboid(fv points) : 
-    scale_(v3(1.0f,1.0f,1.0f)),
-    points_(points)
+    Cuboid(points, v3(1.0f,1.0f,1.0f))
 {
 }
 
@@ -81,15 +98,6 @@ void Cuboid::rotateRads(float yaw, float pitch, float roll) {
     glm::fquat q = glm::quat(vec);
     qua = q * qua;
     // the function that actually does the rotating
-    /*
-    ang_.x += x; // about up
-    //ang_.x = fmod(ang_.x,M_PI);
-    ang_.y += y;
-    //ang_.y = fmod(ang_.y,M_PI);
-    ang_.z += z;
-    //ang_.z = fmod(ang_.z,M_PI);
-    //
-    */
 }
 
 void Cuboid::translate(v3 by) {
@@ -109,113 +117,3 @@ v3 Cuboid::scale() const {
 std::ostream& operator<<(std::ostream& stream, const Cuboid& c) {
     //return stream << "Pos" << printVec(c.pos()) << ", ang:" << printVec(c.ang()) << ", size" << printVec(c.size());
 }
-
-/*
-
-// USING RADIANS
-
-Cuboid::Cuboid(const Cuboid& c) :
-    pos_(c.pos_),
-    ang_(c.ang_),
-    hsize_(c.hsize_),
-    scale_(c.scale_)
-    {
-    // copy constructor
-}
-
-vv3 Cuboid::getVertices() {
-    vv3 vertices;
-    const v3 centre = pos();
-    const v3 d = hsize();
-    const v3 a = ang();
-    vertices.push_back(d); // x,y,z
-    vertices.push_back(-d); // -x,-y,-z
-
-    vertices.push_back(v3(-d.x,d.y,d.z)); // -x,y,z
-    vertices.push_back(v3(d.x,-d.y,d.z)); // x,-y,z
-    vertices.push_back(v3(d.x,d.y,-d.z)); // x,y,-z
-
-    vertices.push_back(v3(-d.x,-d.y,d.z)); // -x,-y,z
-    vertices.push_back(v3(d.x,-d.y,-d.z)); // x,-y,-z
-    vertices.push_back(v3(-d.x,d.y,-d.z)); // -x,y,-z
-
-    for (auto& v: vertices) {
-        v = glm::rotate(v, a.x, v3(0.0f,0.0f,1.0f)); // rotate in x
-        v = glm::rotate(v, a.y, v3(1.0f,0.0f,0.0f)); // in y
-        v = glm::rotate(v, a.z, v3(0.0f,1.0f,0.0f)); // in z
-        v += centre;
-    }
-    return vertices;
-}
-
-Cuboid::Cuboid(
-        float h, float w, float d) :
-    hsize_(h/2.0f,w/2.0f,d/2.0f),
-    scale_(v3(1.0f,1.0f,1.0f))
-        {
-    }
-
-v3 Cuboid::pos() const {
-    return pos_;
-}
-
-v3 Cuboid::ang() const {
-    return ang_;
-}
-
-v3 Cuboid::size() const {
-    return 2.0f * hsize();
-}
-
-v3 Cuboid::hsize() const {
-    return hsize_ * scale_;
-}
-
-void Cuboid::rotateDegs(float x, float y, float z) {
-    rotateRads(
-            (x*M_PI)/180.0f,
-            (y*M_PI)/180.0f,
-            (z*M_PI)/180.0f
-            );
-}
-
-void Cuboid::rotateRads(const v3 xyz) {
-    rotateRads(xyz.x, xyz.y, xyz.z);
-}
-
-void Cuboid::rotateRads(float x, float y, float z) {
-    ang_.x += x;
-    //ang_.x = fmod(ang_.x,M_PI);
-    ang_.y += y;
-    //ang_.y = fmod(ang_.y,M_PI);
-    ang_.z += z;
-    //ang_.z = fmod(ang_.z,M_PI);
-}
-
-void Cuboid::translate(v3 by) {
-    pos_ += by;
-}
-
-void Cuboid::translate(float x, float y, float z) {
-    pos_.x += x;
-    pos_.y += y;
-    pos_.z += z;
-}
-
-v3 Cuboid::scale() const {
-    return scale_;
-}
-
-void Cuboid::setScale(v3 to) {
-    scale_ = to;
-}
-
-void Cuboid::setScale(float x, float y, float z) {
-    setScale(v3(x,y,z));
-}
-
-std::ostream& operator<<(std::ostream& stream, const Cuboid& c) {
-    return stream << "Pos" << printVec(c.pos()) << ", ang:" << printVec(c.ang()) << ", size" << printVec(c.size());
-}
-
-*/
