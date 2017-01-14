@@ -43,8 +43,8 @@ vv3 Cuboid::getVertices() {
     vv3 vertices(verticesSize);
     for (int i=0; i<verticesSize; ++i) {
         v3 vertex = actualPoints_[i];
+        vertex *= scale_; // must be before rotate
         vertex = qua * vertex;
-        vertex *= scale_;
         vertex += centre;
         vertices[i] = vertex;
     }
@@ -73,9 +73,7 @@ vv3 Cuboid::calcEdges(const vv3& v) {
             e.push_back((face[j] - face[(j+1)%faceSize]));
         }
     }
-    if (size != 24) {
-        exit(0);
-    }
+    assert (size==24 && "Should have 24 vertices");
     return e;
 }
 

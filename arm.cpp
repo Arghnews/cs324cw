@@ -49,9 +49,8 @@ std::vector<Shape*> shapes;
 int selectedShape(0); // index of shape to move
 float step = 0.25f; // for movement
 
-static const float areaSize = 250.0f;
+static const float areaSize = 100.0f;
 Octtree bigTree(v3(0.0f,0.0f,0.0f),areaSize);
-static const int numbShapes = 2000;
 
 void keyboard(unsigned char key, int mouseX, int mouseY) {
     Shape& s = getShape();
@@ -139,18 +138,20 @@ void rotateShape(Shape* s, const v3& rotateBy) {
 
 void translateShape(Shape* shape, const v3& translate) {
     const bool deleted = bigTree.del(shape->cuboid().pos(),shape);
-    assert(deleted);
+    //assert(deleted);
     shape->translate(translate);
     bigTree.insert(shape->cuboid().pos(),shape);
 }
 
 void createShapes() {
-    
-    shapes.push_back(new Shape(&cubePoints,&cubeColours,&cubeColoursRed,"Cube1",v3(1.0f,1.0f,1.0f)));
-    shapes.push_back(new Shape(&cubePoints,&cubeColours,&cubeColoursRed,"Cube2"));
 
-    shapes[0]->translate(-1.0f,0.0f,0.0f);
-    shapes[1]->translate(1.4f,0.0f,0.0f);
+    static const int numbShapes = 3;
+    
+    shapes.push_back(new Shape(&cubePointsBottom,&cubeColours,&cubeColoursRed,"Cube1",v3(1.0f,4.0f,1.0f)));
+    shapes.push_back(new Shape(&cubePointsCentered,&cubeColours,&cubeColoursRed,"Cube2",v3(2.0f,1.0f,1.0f)));
+
+    translateShape(shapes[0],v3(-1.0f,0.0f,0.0f));
+    translateShape(shapes[1],v3(3.0f,0.0f,0.0f));
 
     float ranMul = areaSize/3.0f;
     float ranFix = areaSize/2.0f;
@@ -168,14 +169,14 @@ void createShapes() {
         z *= ranMul;
         z -= ranFix;
 
-        shapes.push_back(new Shape(&cubePoints,&cubeColours,&cubeColoursRed,"Cube"+i,scale));
+        shapes.push_back(new Shape(&cubePointsCentered,&cubeColours,&cubeColoursRed,"Cube"+i,scale));
 
-        shapes[i]->translate(x,y,z);
-        shapes[i]->rotateRads(x,y,z);
+        translateShape(shapes.back(),v3(x,y,z));
+        rotateShape(shapes.back(),v3(x,y,z));
     }
 
-    for (int i=0; i<shapes.size(); ++i) {
-        bigTree.insert(shapes[i]->cuboid().pos(),shapes[i]);
+    for (auto& s: shapes) {
+        bigTree.insert(s->cuboid().pos(),s);
     }
 
     for (auto shape: shapes) {
@@ -183,6 +184,7 @@ void createShapes() {
         glGenBuffers(1, &(shape->VBOs[0])); // vertex
         glGenBuffers(1, &(shape->VBOs[1])); // colour
     }
+
 }
 
 void display() {
@@ -277,30 +279,6 @@ void collisions() {
     for (auto& shapePtr: notCollidingSet) {
         shapePtr->colliding(false);
     }
-
-    /*
-    // say 1 collides with 4, due to way this is done, should only ever have
-    // an entry of "4" in 1's set - always the lower one
-    for (int i=0; i<shapes.size(); ++i) {
-        for (int j=i+1; j<shapes.size(); ++j) {
-            //const bool collidingNow = Cuboid::colliding(shapes[i]->cuboid(),shapes[j]->cuboid());
-            const bool collidingNow = Shape::colliding(*(shapes[i]),*(shapes[j]));
-            //if (collidingBefore != collidingNow) {
-            // have changed collision state
-            if (collidingNow) {
-                // collision
-                collidingSet.insert(i);
-                collidingSet.insert(j);
-                notCollidingSet.erase(i);
-                notCollidingSet.erase(j);
-                collidingPairs.insert(std::make_pair(i,j));
-            } else {
-                // no collision
-            }
-            //}
-        }
-    }
-    */
 }
 
 void render() {
@@ -319,10 +297,11 @@ void render() {
         m4 model;
         m4 trans;
         m4 rotateM = glm::mat4_cast(qua);
+        m4 scale;
 
         trans = glm::translate(trans, shape.cuboid().pos());
-        trans = glm::scale(trans, shape.cuboid().scale());  
-        model = trans * rotateM;
+        scale = glm::scale(scale, shape.cuboid().scale());  
+        model = trans * rotateM * scale;
 
         glm::mat4 view;
         // Note that we're translating the scene in the reverse direction of where we want to move
