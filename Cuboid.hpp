@@ -26,8 +26,11 @@ class Cuboid {
         vv3 edges_; // 24 edges, between vertices
         vv3 uniqEdges_; // 3 edges
         vv3 static calcEdges(const vv3& v);
+        float furthestVertex_;
+        float calcFurthestVertex();
 
     public:
+        float furthestVertex();
         vv3* actualPoints();
         const vv3* uniqueVertices(); // 8
         vv3 getUniqueEdges(); // sign insensitive unique edges

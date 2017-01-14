@@ -24,7 +24,8 @@ Cuboid::Cuboid(const Cuboid& c) :
     edges_(c.edges_),
     vertices_(c.vertices_),
     uniqEdges_(c.uniqEdges_),
-    points_(c.points_)
+    points_(c.points_),
+    furthestVertex_(c.furthestVertex_)
     {
     // copy constructor
 }
@@ -95,6 +96,19 @@ Cuboid::Cuboid(fv points, v3 scale) :
         concat(actualPoints_, square);
     }
     recalcEdges();
+
+}
+
+float Cuboid::furthestVertex() {
+    return furthestVertex_;
+}
+
+float Cuboid::calcFurthestVertex() {
+    float d = 0.0f;
+    for (auto& v: vertices_) {
+        d = std::max(d, glm::length(v));
+    }
+    return d;
 }
 
 const vv3* Cuboid::uniqueVertices() {
@@ -108,6 +122,7 @@ void Cuboid::recalcEdges() {
     vv3 edges24 = calcEdges(verts24);
     edges_ = edges24;
     uniqEdges_ = unique(edges_,true);
+    furthestVertex_ = calcFurthestVertex();
 }
 
 Cuboid::Cuboid(fv points) : 
