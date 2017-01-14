@@ -96,7 +96,14 @@ Cuboid::Cuboid(fv points, v3 scale) :
         concat(actualPoints_, square);
     }
     recalcEdges();
+    half_xyz_ = v3();
+    for (const auto& v: vertices_) {
+        half_xyz_ = glm::max(half_xyz_,glm::abs(v));
+    }
+}
 
+v3 Cuboid::half_xyz() {
+    return half_xyz_;
 }
 
 float Cuboid::furthestVertex() {
@@ -118,7 +125,6 @@ const vv3* Cuboid::uniqueVertices() {
 void Cuboid::recalcEdges() {
     vv3 verts24 = getVertices();
     vertices_ = unique(verts24);
-    assert(vertices_.size() == 8 && "8 unique verts");
     vv3 edges24 = calcEdges(verts24);
     edges_ = edges24;
     uniqEdges_ = unique(edges_,true);

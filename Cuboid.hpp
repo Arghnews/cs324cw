@@ -28,8 +28,10 @@ class Cuboid {
         vv3 static calcEdges(const vv3& v);
         float furthestVertex_;
         float calcFurthestVertex();
+        v3 half_xyz_;
 
     public:
+        v3 half_xyz();
         float furthestVertex();
         vv3* actualPoints();
         const vv3* uniqueVertices(); // 8
