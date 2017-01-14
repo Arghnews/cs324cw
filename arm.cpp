@@ -149,14 +149,14 @@ void specialInput(int key, int x, int y) {
 }
 
 void createShapes() {
-    int cubes = 300;
+    int cubes = 1000;
     for (int i=0; i<cubes; ++i) {
         std::string name = "Cube" + i;
         shapes.push_back(new Shape(&cubePoints,&cubeColours,&cubeColoursRed,name,i));
     }
 
     shapes[0]->translate(-5.0f,0.0f,0.0f);
-    shapes[0]->cuboid().scale(v3(3.0f,1.0f,1.0f));
+    //shapes[0]->cuboid().scale(v3(3.0f,1.0f,1.0f));
     shapes[1]->translate(1.4f,0.0f,0.0f);
 
     float ranMul = areaSize/3.0f;
@@ -168,7 +168,7 @@ void createShapes() {
         float z = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
         // r = (0.0f,1.0f)
         float t = x + 1.2f;
-        shapes[i]->cuboid().scale(v3(t,1.0f,1.0f));
+        //shapes[i]->cuboid().scale(v3(t,1.0f,1.0f));
         x *= ranMul;
         x -= ranFix;
         y *= ranMul;
@@ -191,6 +191,11 @@ void createShapes() {
 }
 
 void display() {
+
+    static long frame = 0l;
+    static long totalTimeTaken = 0l;
+    static long timeTakenInterval = 0l;
+    ++frame;
     
     long startTime = timeNowMicros();
 
@@ -199,7 +204,7 @@ void display() {
     long s = timeNowMicros();
     collisions();
     long t = timeNowMicros();
-    std::cout << "Time taken " << (float)(t-s)/1000.0f << "ms\n";
+    //std::cout << "Time taken " << (float)(t-s)/1000.0f << "ms\n";
 
     bindBuffers(shapes);
     render();
@@ -208,10 +213,19 @@ void display() {
     const float fps = 30.0f;
     const float fullFrametime = (1000.0f*1000.0f)/fps;
     int sleepTime = std::max((int)(fullFrametime - timeTaken),0);
-    bool SPARE_TIME_FOR_WHEN_ILETT_WHINES = true;
+    bool SPARE_TIME_FOR_WHEN_ILETT_WHINES = false;
     if (SPARE_TIME_FOR_WHEN_ILETT_WHINES) {
         std::cout << "Time taken for frame " << (float)timeTaken/1000.0f << "ms" << "\n";
         std::cout << "Spare frame time " << (float)sleepTime/1000.0f << "ms\n";
+    }
+
+    totalTimeTaken += timeTaken;
+    timeTakenInterval += timeTaken;
+    static const int interval = 30;
+    if (frame % interval == 0) {
+        const double averageFrametimeMs = (double)(timeTakenInterval / interval) / 1000.0;
+        timeTakenInterval = 0l;
+        std::cout << "Average frametime for last " << interval << " frames is " << averageFrametimeMs << "ms" << "\n";
     }
     std::this_thread::sleep_for(std::chrono::microseconds(sleepTime));
 }
@@ -238,7 +252,7 @@ void collisions() {
         // just use one for now, will change so that shapes
         // store their max dimensions
         const float halfDimensions = shape.cuboid().maxDoubleRadius();
-        vv3S shapes_nearby = bigTree.queryRange(pos, halfDimensions);
+        vv3S shapes_nearby = bigTree.queryRange(pos, halfDimensions*2.0f);
 
         for (auto& s_n: shapes_nearby) {
             auto& nearby_shape = *s_n.second;
@@ -265,7 +279,7 @@ void collisions() {
     for (auto& id: notCollidingSet) {
         shapes[id]->colliding(false);
     }
-    std::cout << "Colset size vs nonCol " << collidingSet.size() << " " << notCollidingSet.size() << "\n";
+    //std::cout << "Colset size vs nonCol " << collidingSet.size() << " " << notCollidingSet.size() << "\n";
 }
 
 void render() {
@@ -286,9 +300,9 @@ void render() {
         m4 rotateM = glm::mat4_cast(qua);
         trans = glm::translate(trans, shape.cuboid().pos());
         m4 s;
-        s = glm::scale(m4(), shape.cuboid().scale());  
+        //s = glm::scale(m4(), shape.cuboid().scale());  
         //mat4 ModelMatrix = TranslationMatrix * RotationMatrix * ScaleMatrix;
-        model = trans * rotateM * s;
+        model = trans * rotateM;
 
         glm::mat4 view;
         // Note that we're translating the scene in the reverse direction of where we want to move

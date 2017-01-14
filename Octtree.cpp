@@ -27,6 +27,8 @@ Octtree::Octtree(v3 center, float halfDimension) :
 {
     }
 
+
+
 int Octtree::size() {
     int acc = size_;
     for (auto& kid: kids) {
