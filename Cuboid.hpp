@@ -45,15 +45,6 @@ class Cuboid {
         friend std::ostream& operator<<(std::ostream&, const Cuboid&);
 };
 
-#ifndef MY_PRINTVEC
-#define MY_PRINTVEC
-std::string static printVec(const v3 v) {
-    std::stringstream buffer;
-    buffer << "(" << v.x << "," << v.y << "," << v.z << ")";
-    return buffer.str();
-}
-#endif
-
 #endif
 
 /*

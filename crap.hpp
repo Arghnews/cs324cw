@@ -1,14 +1,5 @@
 #include "Util.hpp"
 
-#ifndef MY_PRINTVEC
-#define MY_PRINTVEC
-std::string static printVec(const v3 v) {
-    std::stringstream buffer;
-    buffer << "(" << v.x << "," << v.y << "," << v.z << ")";
-    return buffer.str();
-}
-#endif
-
 std::string fileToString(std::string filename) {
     std::ifstream t(filename); // filename here
     std::stringstream buffer;
@@ -65,18 +56,6 @@ GLuint shaders(std::string vertexFile, std::string fragmentFile) {
 	glDeleteShader(vertexShader);
 	glDeleteShader(fragmentShader);
     return shaderProgram;
-}
-
-long timeNowSeconds() {
-    return std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-}
-
-long timeNowMillis() {
-    return std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-}
-
-long timeNowMicros() {
-    return std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
 }
 
 GLuint shaders() {
