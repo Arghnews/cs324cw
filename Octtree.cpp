@@ -27,8 +27,6 @@ Octtree::Octtree(v3 center, float halfDimension) :
 {
     }
 
-
-
 int Octtree::size() {
     int acc = size_;
     for (auto& kid: kids) {
@@ -42,21 +40,25 @@ bool Octtree::del(v3 v, Shape* s) {
 }
 
 bool Octtree::del(v3S p) {
-    auto it = std::find(points.begin(), points.end(), p);
-    if (it != points.end()) {
-        // swap the one to be removed with the last element
-        // and remove the item at the end of the container
-        // to prevent moving all items after '5' by one
-        std::swap(*it, points.back());
-        points.pop_back();
-        size_--;
-        return true;
-    } else {
-        for (auto& kid: kids) {
-            const bool removed = kid.del(p);
-            if (removed) {
-                return true;
-            }
+    //auto it = std::find(points.begin(), points.end(), p);
+    //if (it != points.end()) {
+    for (auto& t: points) {
+        auto& point = t.first;
+        auto& sPtr = t.second;
+        if (areSame(p.first,point) && sPtr == p.second) {
+            // swap the one to be removed with the last element
+            // and remove the item at the end of the container
+            // to prevent moving all items after '5' by one
+            std::swap(t, points.back());
+            points.pop_back();
+            size_--;
+            return true;
+        }
+    }
+    for (auto& kid: kids) {
+        const bool removed = kid.del(p);
+        if (removed) {
+            return true;
         }
     }
     return false;

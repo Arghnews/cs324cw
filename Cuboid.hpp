@@ -26,7 +26,7 @@ class Cuboid {
         vv3 edges_; // 24 edges, between vertices
         vv3 uniqEdges_; // 3 edges
         vv3 static calcEdges(const vv3& v);
-        float furthestVertex_;
+        float furthestVertex_; // from center
         float calcFurthestVertex();
         v3 half_xyz_;
 

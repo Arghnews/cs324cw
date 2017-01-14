@@ -12,15 +12,17 @@
 #include <sstream>
 #include <iostream>
 
+class Shape;
+
 typedef std::vector<GLfloat> fv;
 typedef glm::vec3 v3;
 typedef std::pair<float,float> Projection;
 typedef std::vector<v3> vv3;
 typedef glm::mat4 m4;
-class Shape;
 typedef std::pair<v3, Shape*> v3S;
 typedef std::vector<v3S> vv3S;
 
+static const v3 zeroV(0.0f,0.0f,0.0f);
 
 template <class T>
 void static concat(std::vector<T>& grower, const std::vector<T>& added) {

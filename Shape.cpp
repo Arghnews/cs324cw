@@ -117,6 +117,14 @@ Shape::Shape(const fv* points, const fv* colours, const fv* red, std::string nic
     {
 }
 
+GLuint Shape::colourVBO() {
+    if (_colliding) {
+        return VBOs[1];
+    } else {
+        return VBOs[0];
+    }
+}
+
 const fv* Shape::colours() {
     if (_colliding) {
         return red;
@@ -161,6 +169,10 @@ void Shape::translate(float x, float y, float z) {
 
 void Shape::translate(v3 by) {
     _cuboid.translate(by);
+}
+
+void Shape::rotateDegs(const v3 a) {
+    rotateDegs(a.x,a.y,a.z);
 }
 
 void Shape::rotateDegs(float x, float y, float z) {

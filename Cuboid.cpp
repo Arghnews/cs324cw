@@ -96,10 +96,12 @@ Cuboid::Cuboid(fv points, v3 scale) :
         concat(actualPoints_, square);
     }
     recalcEdges();
+    furthestVertex_ = calcFurthestVertex();
     half_xyz_ = v3();
     for (const auto& v: vertices_) {
         half_xyz_ = glm::max(half_xyz_,glm::abs(v));
     }
+    half_xyz_ /= 2.0f;
 }
 
 v3 Cuboid::half_xyz() {
@@ -128,7 +130,6 @@ void Cuboid::recalcEdges() {
     vv3 edges24 = calcEdges(verts24);
     edges_ = edges24;
     uniqEdges_ = unique(edges_,true);
-    furthestVertex_ = calcFurthestVertex();
 }
 
 Cuboid::Cuboid(fv points) : 

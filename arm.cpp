@@ -24,6 +24,8 @@
 #include "crap.hpp"
 #include "Util.hpp"
 #include "Shape.hpp"
+#include "Octtree.hpp"
+#include "AABB.hpp"
 
 typedef std::vector<Shape*> ShapeList;
 
@@ -39,51 +41,64 @@ void specialInput(int key, int x, int y);
 void cleanupAndExit();
 Shape& getShape();
 void switchShape(int);
+void rotateShape(Shape* s, const v3& rotateBy);
+void translateShape(Shape* s, const v3& translate);
 
 GLuint shaderProgram;
 std::vector<Shape*> shapes;
 int selectedShape(0); // index of shape to move
 float step = 0.25f; // for movement
 
+static const float areaSize = 250.0f;
+Octtree bigTree(v3(0.0f,0.0f,0.0f),areaSize);
+static const int numbShapes = 2000;
+
 void keyboard(unsigned char key, int mouseX, int mouseY) {
     Shape& s = getShape();
     bool stop = false;
-	switch (key) {
-        case 'r':  s.rotateDegs(10.0f,0.0f,0.0f);
+
+    v3 translate(zeroV);
+    v3 rotateV(zeroV);
+    switch (key) {
+        case 'r':  rotateV = v3(10.0f,0.0f,0.0f);
                    break;
-        case 'R':  s.rotateDegs(-10.0f,0.0f,0.0f);
+        case 'R':  rotateV = v3(-10.0f,0.0f,0.0f);
                    break;
-        case 'y':  s.rotateDegs(0.0f,10.0f,0.0f);
+        case 'y':  rotateV = v3(0.0f,10.0f,0.0f);
                    break;
-        case 'Y':  s.rotateDegs(0.0f,-10.0f,0.0f);
+        case 'Y':  rotateV = v3(0.0f,-10.0f,0.0f);
                    break;
-        case 'z':  s.rotateDegs(0.0f,0.0f,10.0f);
+        case 'z':  rotateV = v3(0.0f,0.0f,10.0f);
                    break;
-        case 'Z':  s.rotateDegs(0.0f,0.0f,-10.0f);
+        case 'Z':  rotateV = v3(0.0f,0.0f,-10.0f);
                    break;
-                
+
         case 'Q':
         case 'q':  stop = true; 
                    break;
         case 'W':  
         case 'w':  
-                   s.translate(0,0,-step);
+                   translate = v3(0,0,-step);
                    break;
-	    case 'S':  
-	    case 's':  
-                   s.translate(0,0,step);
+        case 'S':  
+        case 's':  
+                   translate = v3(0,0,step);
                    break;
         case 'A':
         case 'a':
-                   s.translate(-step,0,0);
+                   translate = v3(-step,0,0);
                    break;
-		case 'D':  
-		case 'd':  
-                   s.translate(step,0,0);
+        case 'D':  
+        case 'd':  
+                   translate = v3(step,0,0);
                    break;
-	}
-    // currently seg faults, to fix
+    }
     if (!stop) {
+        if (translate != zeroV) {
+            translateShape(&s, translate);
+        } else if (rotateV != zeroV) {
+            rotateShape(&s, rotateV);
+        }
         glutPostRedisplay();
     } else {
         cleanupAndExit();
@@ -93,12 +108,13 @@ void keyboard(unsigned char key, int mouseX, int mouseY) {
 void specialInput(int key, int x, int y) {
     Shape& s = getShape();
     bool stop = false;
+    v3 translate;
     switch(key) {
         case GLUT_KEY_UP:
-            s.translate(0,step,0);
+            translate = v3(0,step,0);
             break;    
         case GLUT_KEY_DOWN:
-            s.translate(0,-step,0);
+            translate = v3(0,-step,0);
             break;
         case GLUT_KEY_LEFT:
             switchShape(-1);
@@ -108,23 +124,33 @@ void specialInput(int key, int x, int y) {
             break;
     }
     if (!stop) {
+        if (translate != zeroV) {
+            translateShape(&s, translate);
+        }
         glutPostRedisplay();
     } else {
         cleanupAndExit();
     }
 }
 
+void rotateShape(Shape* s, const v3& rotateBy) {
+    s->rotateDegs(rotateBy);
+}
+
+void translateShape(Shape* shape, const v3& translate) {
+    const bool deleted = bigTree.del(shape->cuboid().pos(),shape);
+    assert(deleted);
+    shape->translate(translate);
+    bigTree.insert(shape->cuboid().pos(),shape);
+}
+
 void createShapes() {
     
     shapes.push_back(new Shape(&cubePoints,&cubeColours,&cubeColoursRed,"Cube1",v3(1.0f,1.0f,1.0f)));
     shapes.push_back(new Shape(&cubePoints,&cubeColours,&cubeColoursRed,"Cube2"));
-    
-    int numbShapes = 100;
 
     shapes[0]->translate(-1.0f,0.0f,0.0f);
     shapes[1]->translate(1.4f,0.0f,0.0f);
-
-    float areaSize = 50.0f;
 
     float ranMul = areaSize/3.0f;
     float ranFix = areaSize/2.0f;
@@ -135,16 +161,22 @@ void createShapes() {
         float z = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
         float t = x + 1.2f;
         auto scale = v3(t,1.0f,1.0f);
-        shapes.push_back(new Shape(&cubePoints,&cubeColours,&cubeColoursRed,"Cube"+i,scale));
         x *= ranMul;
         x -= ranFix;
         y *= ranMul;
         y -= ranFix;
         z *= ranMul;
         z -= ranFix;
+
+        shapes.push_back(new Shape(&cubePoints,&cubeColours,&cubeColoursRed,"Cube"+i,scale));
+
         shapes[i]->translate(x,y,z);
         shapes[i]->rotateRads(x,y,z);
-        }
+    }
+
+    for (int i=0; i<shapes.size(); ++i) {
+        bigTree.insert(shapes[i]->cuboid().pos(),shapes[i]);
+    }
 
     for (auto shape: shapes) {
         glGenVertexArrays(1, &(shape->VAO));
@@ -167,10 +199,13 @@ void display() {
     long s = timeNowMicros();
     collisions();
     long t = timeNowMicros();
-    std::cout << "Time taken " << (float)(t-s)/1000.0f << "ms\n";
+    std::cout << "Time taken for collision " << (float)(t-s)/1000.0f << "ms\n";
 
+    long p = timeNowMicros();
     bindBuffers(shapes);
     render();
+    long q = timeNowMicros();
+    std::cout << "For rendering " << (float)(q-p)/1000.0f << "ms\n";
 
     long timeTaken = timeNowMicros() - startTime;
     const float fps = 30.0f;
@@ -199,13 +234,51 @@ void idle() {
 }
 
 void collisions() {
-    std::set<int> collidingSet;
-    std::set<int> notCollidingSet;
-    for (int i=0; i<shapes.size(); ++i) {
-        notCollidingSet.insert(i);
+    std::set<Shape*> collidingSet;
+    std::set<Shape*> notCollidingSet;
+    for (const auto& s: shapes) {
+        notCollidingSet.insert(s);
     }
-    std::set<std::pair<int,int>> collidingPairs;
+    std::set<std::pair<Shape*,Shape*>> collidingPairs;
 
+    const int size = shapes.size();
+    for (int i=0; i<size; ++i) {
+        Shape& shape = *shapes[i];
+        const v3 pos = shape.cuboid().pos();
+        //just use one for now, will change so that shapes
+        // store their max dimensions
+        const float halfDimensions = shape.cuboid().furthestVertex()*2.0f;
+        vv3S shapes_nearby = bigTree.queryRange(pos, halfDimensions);
+
+        for (auto& s_n: shapes_nearby) {
+            auto& nearby_shape = *s_n.second;
+
+            if (&shape == &nearby_shape) {
+                continue;
+            }
+
+            const bool collidingNow = Shape::colliding(shape, nearby_shape);
+            if (collidingNow) {
+                // collision
+                collidingSet.insert(&shape);
+                collidingSet.insert(&nearby_shape);
+                notCollidingSet.erase(&shape);
+                notCollidingSet.erase(&nearby_shape);
+                collidingPairs.insert(std::make_pair(&shape,&nearby_shape));
+            } else {
+                // no collision
+            }
+        }
+    }
+
+    for (auto& shapePtr: collidingSet) {
+        shapePtr->colliding(true);
+    }
+    for (auto& shapePtr: notCollidingSet) {
+        shapePtr->colliding(false);
+    }
+
+    /*
     // say 1 collides with 4, due to way this is done, should only ever have
     // an entry of "4" in 1's set - always the lower one
     for (int i=0; i<shapes.size(); ++i) {
@@ -227,14 +300,7 @@ void collisions() {
             //}
         }
     }
-
-    for (auto& shapeIndex: collidingSet) {
-        shapes[shapeIndex]->colliding(true);
-    }
-    for (auto& shapeIndex: notCollidingSet) {
-        shapes[shapeIndex]->colliding(false);
-    }
-
+    */
 }
 
 void render() {

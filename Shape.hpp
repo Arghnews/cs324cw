@@ -19,7 +19,6 @@ class Shape {
         Cuboid _cuboid;
         const fv* _colours;
         const fv* red;
-        //std::shared_ptr<fv> vertPointer;
         
     public:
         vv3 static getEdges(const vv3& v);
@@ -27,6 +26,7 @@ class Shape {
         ~Shape();
         Shape(const Shape&);
         GLuint VAO;
+        GLuint colourVBO();
         std::vector<GLuint> VBOs;
         Shape(const fv* points, const fv* colours, const fv* red, std::string niceName);
         Shape(const fv* points, const fv* colours, const fv* red, std::string niceName, v3 scale);
@@ -37,6 +37,7 @@ class Shape {
         void translate(v3 by);
         void rotateRads(float x, float y, float z);
         void rotateRads(v3 by); // x, y, z, pretty rough atm
+        void rotateDegs(const v3 by);
         void rotateDegs(float x, float y, float z);
     
         const fv* points();
