@@ -75,8 +75,8 @@ bool Shape::colliding(Shape& s1, Shape& s2) {
         return (p1.second >= p2.first) && (p1.first <= p2.second);
     };
     for (const auto& axis: allAxes) {
-        Projection projection1 = project(axis, s1.cuboid().getVertices());
-        Projection projection2 = project(axis, s2.cuboid().getVertices());
+        Projection projection1 = project(axis, s1.cuboid().uniqueVertices());
+        Projection projection2 = project(axis, s2.cuboid().uniqueVertices());
         if (!overlap(projection1,projection2)) {
             return false;
         }
@@ -90,12 +90,11 @@ std::ostream& operator<<(std::ostream& stream, const Shape& s) {
 }
 
 Shape::Shape(const fv* points, const fv* colours, const fv* red, std::string niceName) :
-            Shape(points,colours,red,niceName,v3(1.0f,1.0f,1.0f)) {
+    Shape(points,colours,red,niceName,v3(1.0f,1.0f,1.0f)) {
 }
 
-std::pair<float, float> Shape::project(const v3 axis_in, const vv3 verts_in) {
-    //const auto& verts = *verts_in;
-    const auto verts = verts_in;
+std::pair<float, float> Shape::project(const v3& axis_in, const vv3* verts_in) {
+    const auto& verts = *verts_in;
     const v3 axis = glm::normalize(axis_in);
     float min = glm::dot(axis,verts[0]);
     float max = min;
@@ -114,9 +113,8 @@ std::pair<float, float> Shape::project(const v3 axis_in, const vv3 verts_in) {
 }
 
 Shape::Shape(const fv* points, const fv* colours, const fv* red, std::string niceName, v3 scale) :
-            _cuboid(*points,scale), _colours(colours), red(red), name(niceName), VBOs(2)
+    _cuboid(*points,scale), _colours(colours), red(red), name(niceName), VBOs(2)
     {
-        // only works if vertices in x,y,z r,g,b format
 }
 
 const fv* Shape::colours() {

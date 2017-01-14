@@ -44,7 +44,6 @@ bool static areSame(const v3& a,const v3& b) {
 }
 
 vv3 static unique(const vv3 vec_in, const bool ignoreSign) {
-    std::cout << "In size " << vec_in.size() << "\n";
     vv3 uniq;
     // quick and easy unique directions
     for (int i=0; i<vec_in.size(); ++i) {
@@ -69,7 +68,6 @@ vv3 static unique(const vv3 vec_in, const bool ignoreSign) {
             uniq.push_back(elem);
         }
     }
-    std::cout << "Out size " << uniq.size() << "\n";
     return uniq;
 }
 

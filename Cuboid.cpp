@@ -22,6 +22,7 @@ Cuboid::Cuboid(const Cuboid& c) :
     scale_(c.scale_),
     actualPoints_(c.actualPoints_),
     edges_(c.edges_),
+    vertices_(c.vertices_),
     uniqEdges_(c.uniqEdges_),
     points_(c.points_)
     {
@@ -42,7 +43,7 @@ vv3 Cuboid::getVertices() {
     for (int i=0; i<verticesSize; ++i) {
         v3 vertex = actualPoints_[i];
         vertex = qua * vertex;
-        //vertex *= scale_;
+        vertex *= scale_;
         vertex += centre;
         vertices[i] = vertex;
     }
@@ -96,8 +97,14 @@ Cuboid::Cuboid(fv points, v3 scale) :
     recalcEdges();
 }
 
+const vv3* Cuboid::uniqueVertices() {
+    return &vertices_;
+}
+
 void Cuboid::recalcEdges() {
     vv3 verts24 = getVertices();
+    vertices_ = unique(verts24);
+    assert(vertices_.size() == 8 && "8 unique verts");
     vv3 edges24 = calcEdges(verts24);
     edges_ = edges24;
     uniqEdges_ = unique(edges_,true);

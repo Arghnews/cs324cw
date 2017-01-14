@@ -119,18 +119,12 @@ void createShapes() {
     shapes.push_back(new Shape(&cubePoints,&cubeColours,&cubeColoursRed,"Cube1",v3(1.0f,1.0f,1.0f)));
     shapes.push_back(new Shape(&cubePoints,&cubeColours,&cubeColoursRed,"Cube2"));
     
-    int numbShapes = 2;
+    int numbShapes = 100;
 
     shapes[0]->translate(-1.0f,0.0f,0.0f);
     shapes[1]->translate(1.4f,0.0f,0.0f);
 
-    /*
-    for (int i=0;i<numbShapes;++i) {
-        shapes.push_back(new Shape(&cubePoints,&cubeColours,&cubeColoursRed,"Cube"+i));
-    }
-
-
-    float areaSize = 10.0f;
+    float areaSize = 50.0f;
 
     float ranMul = areaSize/3.0f;
     float ranFix = areaSize/2.0f;
@@ -139,8 +133,9 @@ void createShapes() {
         float x = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
         float y = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
         float z = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-        //float t = x + 1.2f;
-        //shapes[i]->cuboid().scale(v3(t,1.0f,1.0f));
+        float t = x + 1.2f;
+        auto scale = v3(t,1.0f,1.0f);
+        shapes.push_back(new Shape(&cubePoints,&cubeColours,&cubeColoursRed,"Cube"+i,scale));
         x *= ranMul;
         x -= ranFix;
         y *= ranMul;
@@ -150,7 +145,6 @@ void createShapes() {
         shapes[i]->translate(x,y,z);
         shapes[i]->rotateRads(x,y,z);
         }
-        */
 
     for (auto shape: shapes) {
         glGenVertexArrays(1, &(shape->VAO));
@@ -221,7 +215,6 @@ void collisions() {
             //if (collidingBefore != collidingNow) {
             // have changed collision state
             if (collidingNow) {
-                std::cout << "COLLIDING \n";
                 // collision
                 collidingSet.insert(i);
                 collidingSet.insert(j);
@@ -237,11 +230,9 @@ void collisions() {
 
     for (auto& shapeIndex: collidingSet) {
         shapes[shapeIndex]->colliding(true);
-        std::cout << "Shape " << shapeIndex << " colliding\n";
     }
     for (auto& shapeIndex: notCollidingSet) {
         shapes[shapeIndex]->colliding(false);
-        std::cout << "Shape " << shapeIndex << " not colliding\n";
     }
 
 }

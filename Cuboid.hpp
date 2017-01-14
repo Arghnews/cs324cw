@@ -22,12 +22,14 @@ class Cuboid {
         const v3 scale_; // 1.0,1.0,1.0
         fv points_; // 108 floats
         vv3 actualPoints_; // 24 vertices
+        vv3 vertices_; // 8 vertices unique
         vv3 edges_; // 24 edges, between vertices
         vv3 uniqEdges_; // 3 edges
         vv3 static calcEdges(const vv3& v);
 
     public:
         vv3* actualPoints();
+        const vv3* uniqueVertices(); // 8
         vv3 getUniqueEdges(); // sign insensitive unique edges
         void recalcEdges();
         glm::fquat qua;
