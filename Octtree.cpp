@@ -87,6 +87,7 @@ bool Octtree::insert(v3S p) {
             return true;
         }
     }
+    throw std::runtime_error("Error: could not insert into tree?");
     // Otherwise, the point cannot be inserted for some unknown reason (this should never happen)
     return false;
 }
@@ -129,7 +130,7 @@ void Octtree::subdivide() {
     if (haveSubdivided) {
         throw std::runtime_error("Error: shouldn't be calling subdivide on something that has already done so");
     }
-    haveSubdividied = true;
+    haveSubdivided = true;
     auto& c = boundary.center;
     auto h = boundary.halfDimension / 2.0f;
 
