@@ -92,19 +92,19 @@ void keyboard(unsigned char key, int mouseX, int mouseY) {
 	}
     // currently seg faults, to fix
     if (!stop) {
-        const v3 zero = v3(0.0f,0.0f,0.0f);
+        static const v3 zero = v3(0.0f,0.0f,0.0f);
+        const int id = shape.id;
+        //std::cout << "Big tree size b4:" << bigTree.size() << "\n";
+        const bool deleted = bigTree.del(shape.cuboid().pos(),&shape);
+        //std::cout << "Big tree size after deletion:" << bigTree.size() << "\n";
+        //std::cout << "Deleted is " << deleted << " true or false "<< "\n";
         if (translate != zero) {
-            const int id = shape.id;
-            //std::cout << "Big tree size b4:" << bigTree.size() << "\n";
-            const bool deleted = bigTree.del(shape.cuboid().pos(),&shape);
-            //std::cout << "Big tree size after deletion:" << bigTree.size() << "\n";
-            //std::cout << "Deleted is " << deleted << " true or false "<< "\n";
             shape.translate(translate);
-            bigTree.insert(shape.cuboid().pos(),&shape);
-            //std::cout << "Big tree size at end" << bigTree.size() << "\n";
         } else if (rotateV != zero) {
             shape.rotateDegs(rotateV);
         }
+        bigTree.insert(shape.cuboid().pos(),&shape);
+        //std::cout << "Big tree size at end" << bigTree.size() << "\n";
         glutPostRedisplay();
     } else {
         cleanupAndExit();
