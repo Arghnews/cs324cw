@@ -32,8 +32,10 @@ class Cuboid {
         const v3 motionLimiter_; // 3 edges
         const v3 movementLimiter_; // 3 edges
         v3 topCenter_; // what it says
+        v3 lastTopCenter_; // what it says
 
     public:
+        v3 lastTopCenter();
         v3 topCenter();
         void rotateQua(const fq& qua);
         fq orient();

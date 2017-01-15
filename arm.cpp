@@ -20,12 +20,14 @@
 #include <chrono>
 #include <thread>
 #include <algorithm>
+#include <iterator>
 
 #include "crap.hpp"
 #include "Util.hpp"
 #include "Shape.hpp"
 #include "Octtree.hpp"
 #include "AABB.hpp"
+
 
 int init(int argc, char* argv[]);
 void createShapes();
@@ -39,6 +41,7 @@ void specialInput(int key, int x, int y);
 void cleanupAndExit();
 Shape& getShape();
 void switchShape(int);
+void processMovements();
 void rotateShape(Shape* s, const v3& rotateBy);
 void rotateShape(Shape* s, const fq& qua);
 void translateShape(Shape* s, const v3& translate);
@@ -46,12 +49,34 @@ void extraShapes();
 
 struct Movement {
     enum Transform { rotateRads, rotateQua, translate };
-    const fq qua;
-    const v3 vec;
+    fq qua;
+    v3 vec;
     Shape* s;
-    const Transform t;
+    Transform t; // biggest first for better packing (maybe)
+    // if all aligned doesn't matter
     bool moved = false;
     bool undone = false;
+    friend std::ostream& operator<<(std::ostream& stream, const Movement& m) {
+        return stream << "Movement on " << m.s << " of type " << m.t;
+    }
+    Movement(const Movement& m) : 
+        s(m.s),
+        t(m.t),
+        vec(m.vec),
+        qua(m.qua),
+        moved(m.moved),
+        undone(m.undone) {}
+    Movement& operator=(const Movement& m) {
+        if (this != &m) {
+            qua = m.qua;
+            vec = m.vec;
+            s = m.s;
+            t = m.t;
+            moved = m.moved;
+            undone = m.undone;
+        }
+        return *this;
+    }
     Movement(Shape* s, Transform t, v3 vec) : s(s), t(t), vec(vec) {}
     Movement(Shape* s, Transform t, fq qua) : s(s), t(t), qua(qua) {}
     void move() {
@@ -94,8 +119,8 @@ static bool allowedCollide = true;
 static const int numbShapes = 2;
 static int selectedShape = 1;
 static const int base = 0;
-static const int arm = 1;
-static const int shoulder = 2;
+static const int shoulder = 1;
+static const int arm = 2;
 
 GLuint shaderProgram;
 Shapes shapes;
@@ -104,36 +129,21 @@ float step = 0.25f; // for movement
 static const float areaSize = 100.0f;
 Octtree bigTree(v3(0.0f,0.0f,0.0f),areaSize);
 
+/*
 class Movements : public std::vector<Movement> {
     Shapes* shapes;
     public:
         Movements(Shapes* shapes) : shapes(shapes) {}
         void push_back(const Movement& val) {
-            /*
-            if (val.s->id == arm) {
-                Shape& shape_arm = *val.s;
-                Shape& shape_shoulder = *(*shapes)[shoulder];
-                std::cout << "AA\n";
-                std::cout << "BB\n";
-                if (val.t == Movement::Transform::rotateRads) {
-                    // need rotate move shoulder too
-                    Movement m(&shape_shoulder, Movement::Transform::rotateRads, val.vec);
-                    std::vector<Movement>::push_back(m);
-                    const v3 center = shape_arm.cuboid().pos();
-                    const v3 xyz = v3(0.0f,2.0f*shape_arm.cuboid().half_xyz(),0.0f);
-                    const v3 armTop = center + xyz;
-                    // now need to orient/rotate armTop by rotation amount
-                    // and then take shoulderCenter to find amount to be translated by
-                    const fq qua = shape_arm.cuboid().orient();
-                    //rotated_point = origin + (orientation_quaternion * (point-origin));
-                    const v3 shoulderCenter = shape_shoulder.cuboid().pos();
-                }
-                */
+
             std::vector<Movement>::push_back(val);
         }
 };
+*/
 
-Movements movements(&shapes);
+typedef std::vector<Movement> Movements;
+//Movements movements(&shapes);
+Movements movements;
 
 void createShapes() {
 
@@ -165,10 +175,20 @@ void createShapes() {
 
     v3 bottom_upRightTop = v3(0.0f, 1.0f, 0.0f);
 
-    shapes[arm] = (new Shape(&cubePointsBottom,&cubeColours,&cubeColoursRed,arm,bottom_upRightTop,
+    shapes[shoulder] = (new Shape(&cubePointsBottom,&cubeColours,&cubeColoursRed,shoulder,bottom_upRightTop,
             v3(1.0f,2.0f,1.0f),v3(1.0f,1.0f,1.0f),oneV));
+    shapes[arm] = (new Shape(&cubePointsBottom,&cubeColours,&cubeColoursRed,arm,bottom_upRightTop,
+            v3(1.0f,1.5f,1.0f),v3(1.0f,1.0f,1.0f),oneV));
+    v3 shoulderHeight = 0.01f + 2.0f * v3(0.0f,shapes[shoulder]->cuboid().half_xyz().y,0.0f);
+    std::cout << "Correct shoulderHeight " << printVec(shoulderHeight) << "\n";
+    v3 topCenter = shapes[shoulder]->cuboid().topCenter();
+    std::cout << "top center position " << printVec(topCenter) << "\n";
+    translateShape(shapes[arm],shoulderHeight);
 
-    extraShapes();
+    //v3 rotatedBy(90.0f,0.0f,0.0f);
+    //rotateShape(shapes[arm], rotatedBy);
+
+    //extraShapes();
 
     for (auto& s: shapes) {
         auto& shape = s.second;
@@ -350,7 +370,7 @@ void display() {
     if (frame % interval == 0) {
         const double averageFrametimeMs = (double)(timeTakenInterval / interval) / 1000.0;
         timeTakenInterval = 0l;
-        std::cout << "Average frametime for last " << interval << " frames is " << averageFrametimeMs << "ms" << "\n";
+        //std::cout << "Average frametime for last " << interval << " frames is " << averageFrametimeMs << "ms" << "\n";
     }
     std::this_thread::sleep_for(std::chrono::microseconds(sleepTime));
 
@@ -360,12 +380,46 @@ void idle() {
     glutPostRedisplay();
 }
 
-void collisions() {
-    
-    for (auto& m: movements) {
+void processMovements() {
+    // Quick and dirty vector inserts for now,
+    // Later can change to Vector of vectors or something
+    for (int i=0; i<movements.size(); ++i) {
+        Movement& m = movements[i];
         m.move();
-    }
+        auto& shape = *m.s;
+        if (m.s->id == shoulder) {
+            // When moving arm, should move shoulder too
+            if (shapes.count(shoulder) == 0 || shapes.count(arm) == 0) {
+                std::cout << "No shoulder/arm in map!!!\n";
+                std::cout << "Exiting now, change this (in processMovements in arm.cpp)\n";
+                exit(0);
+            }
+            Shape& shape_arm = *shapes[arm];
+            Shape& shape_shoulder = *shapes[shoulder];
 
+            if (m.t == Movement::Transform::rotateRads) {
+                // when the shoulder rotates, the arm should be translated to the shoulder's
+                // new top center position
+                // assumes the movement has just happened
+
+                const v3 lastCenter = shape_shoulder.cuboid().lastTopCenter();
+                const v3 center = shape_shoulder.cuboid().topCenter();
+                const v3 translation = center - lastCenter;
+                Movement mTrans(&shape_arm, Movement::Transform::translate, translation);
+                Movements::iterator iter = movements.begin();
+                movements.insert(movements.begin()+i+1, mTrans);
+
+                Movement mRotate = Movement(&shape_arm, Movement::Transform::rotateRads, m.vec);
+                movements.insert(movements.begin()+i+2, mRotate);
+            }
+        }
+    }
+}
+
+void collisions() {
+
+    processMovements();
+    
     std::set<int> collidingSet;
     std::set<int> notCollidingSet;
     for (const auto& s: shapes) {

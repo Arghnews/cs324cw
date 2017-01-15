@@ -88,6 +88,7 @@ vv3 Cuboid::calcEdges(const vv3& v) {
 Cuboid::Cuboid(fv points, v3 topCenter, v3 scale, v3 motionLimiter, v3 movementLimiter) :
     points_(points),
     topCenter_(topCenter * scale), // note scale != scale_
+    lastTopCenter_(topCenter_), // note scale != scale_
     scale_(scale),
     motionLimiter_(motionLimiter),
     movementLimiter_(movementLimiter)
@@ -146,6 +147,10 @@ void Cuboid::recalcEdges() {
     uniqEdges_ = unique(edges_,true);
 }
 
+v3 Cuboid::lastTopCenter() {
+    return lastTopCenter_;
+}
+
 v3 Cuboid::topCenter() {
     return topCenter_;
 }
@@ -153,14 +158,18 @@ v3 Cuboid::topCenter() {
 void Cuboid::translate(v3 by) {
     // fma(a,b,c) -> a*b + c
     lastPos_ = pos_; // line below line below depends on this
-    //pos_ = glm::fma(by,movementLimiter_,pos());
-    const v3 moveBy = by * movementLimiter_;
-    pos_ += moveBy;
-    topCenter_ += moveBy;
+    pos_ = glm::fma(by,movementLimiter_,pos());
+    //const v3 moveBy = by * movementLimiter_;
+    //pos_ += moveBy;
+    //topCenter_ += moveBy;
     recalcEdges();
 }
 
 void Cuboid::rotateQua(const fq& rotateBy) {
+    std::cout << "rotate by quaternion is currently unsupported!\n";
+    std::cout << "I'm in Cuboid.cpp in rotateQua! I never thought I'd use this\n";
+    std::cout << "Exiting now...\n";
+    exit(0);
     lastQua_ = qua_;
     qua_ = rotateBy * qua_;
     recalcEdges();
@@ -168,10 +177,12 @@ void Cuboid::rotateQua(const fq& rotateBy) {
 
 void Cuboid::rotateRads(float yaw, float pitch, float roll) {
     lastQua_ = qua_;
+    lastTopCenter_ = topCenter_;
     v3 vec(yaw,pitch,roll);
     vec *= motionLimiter_;
     glm::fquat q = glm::quat(vec);
     qua_ = q * qua_;
+    topCenter_ = q * topCenter_;
     recalcEdges();
     // the function that actually does the rotating
 }
