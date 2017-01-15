@@ -15,8 +15,8 @@
 #include "Shape.hpp"
 
 Shape::Shape(const fv* points, const fv* colours, const fv* red, 
-        int id, v3 scale, v3 motionLimiter, v3 movementLimiter) :
-    _cuboid(*points,scale,motionLimiter,movementLimiter), _colours(colours), 
+        int id, v3 topCenter, v3 scale, v3 motionLimiter, v3 movementLimiter) :
+    _cuboid(*points,topCenter,scale,motionLimiter,movementLimiter), _colours(colours), 
     red(red), id(id), VBOs(2)
     {
 }

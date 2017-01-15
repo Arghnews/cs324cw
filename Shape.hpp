@@ -29,7 +29,7 @@ class Shape {
         GLuint VAO;
         GLuint colourVBO();
         std::vector<GLuint> VBOs;
-        Shape(const fv* points, const fv* colours, const fv* red, int id,
+        Shape(const fv* points, const fv* colours, const fv* red, int id, v3 topCenter,
                 v3 scale=oneV, v3 motionLimiter=oneV, v3 movementLimiter=oneV);
         //Shape(const Shape&);
         bool colliding(bool isColliding);

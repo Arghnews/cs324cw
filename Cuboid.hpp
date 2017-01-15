@@ -31,8 +31,10 @@ class Cuboid {
         v3 half_xyz_;
         const v3 motionLimiter_; // 3 edges
         const v3 movementLimiter_; // 3 edges
+        v3 topCenter_; // what it says
 
     public:
+        v3 topCenter();
         void rotateQua(const fq& qua);
         fq orient();
         void orient(fq q);
@@ -54,7 +56,7 @@ class Cuboid {
         fq qua_;
         vv3 getVertices();
         const fv* points();
-        Cuboid(fv points, v3 scale=oneV, v3 motionLimiter=oneV, v3 movementLimiter=oneV);
+        Cuboid(fv points, v3 topCenter, v3 scale=oneV, v3 motionLimiter=oneV, v3 movementLimiter=oneV);
 
         bool static colliding(const Cuboid& c1, const Cuboid& c2);
 

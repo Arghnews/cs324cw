@@ -85,8 +85,9 @@ vv3 Cuboid::calcEdges(const vv3& v) {
     return e;
 }
 
-Cuboid::Cuboid(fv points, v3 scale, v3 motionLimiter, v3 movementLimiter) :
+Cuboid::Cuboid(fv points, v3 topCenter, v3 scale, v3 motionLimiter, v3 movementLimiter) :
     points_(points),
+    topCenter_(topCenter * scale), // note scale != scale_
     scale_(scale),
     motionLimiter_(motionLimiter),
     movementLimiter_(movementLimiter)
@@ -145,10 +146,17 @@ void Cuboid::recalcEdges() {
     uniqEdges_ = unique(edges_,true);
 }
 
+v3 Cuboid::topCenter() {
+    return topCenter_;
+}
+
 void Cuboid::translate(v3 by) {
     // fma(a,b,c) -> a*b + c
-    lastPos_ = pos_;
-    pos_ = glm::fma(by,movementLimiter_,pos());
+    lastPos_ = pos_; // line below line below depends on this
+    //pos_ = glm::fma(by,movementLimiter_,pos());
+    const v3 moveBy = by * movementLimiter_;
+    pos_ += moveBy;
+    topCenter_ += moveBy;
     recalcEdges();
 }
 

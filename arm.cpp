@@ -158,8 +158,14 @@ void createShapes() {
     translateShape(shapes[shoulder],baseHeight);
     translateShape(shapes[shoulder],armHeight);
     */
+    
+    //Shape(const fv* points, const fv* colours, const fv* red, int id, v3 topCenter,
+    //        v3 scale=oneV, v3 motionLimiter=oneV, v3 movementLimiter=oneV
+    //        );
 
-    shapes[arm] = (new Shape(&cubePointsBottom,&cubeColours,&cubeColoursRed,arm,
+    v3 bottom_upRightTop = v3(0.0f, 1.0f, 0.0f);
+
+    shapes[arm] = (new Shape(&cubePointsBottom,&cubeColours,&cubeColoursRed,arm,bottom_upRightTop,
             v3(1.0f,2.0f,1.0f),v3(1.0f,1.0f,1.0f),oneV));
 
     extraShapes();
