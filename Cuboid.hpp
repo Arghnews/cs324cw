@@ -33,16 +33,27 @@ class Cuboid {
         const v3 movementLimiter_; // 3 edges
 
     public:
+        void rotateQua(const fq& qua);
+        fq orient();
+        void orient(fq q);
+        std::pair<v3,fq> getLast();
+        void setLast(std::pair<v3,fq>);
+        void setLast(v3 v, fq f);
+        std::pair<v3,fq> backOne();
+        fq lastQua_;
+        v3 lastPos_;
+        fq lastQua();
+        v3 lastPos();
+        void moveBack(); // moves back to last position
         v3 half_xyz();
         float furthestVertex();
         vv3* actualPoints();
         const vv3* uniqueVertices(); // 8
         vv3 getUniqueEdges(); // sign insensitive unique edges
         void recalcEdges();
-        glm::fquat qua;
+        fq qua_;
         vv3 getVertices();
         const fv* points();
-        Cuboid(const Cuboid&);
         Cuboid(fv points, v3 scale=oneV, v3 motionLimiter=oneV, v3 movementLimiter=oneV);
 
         bool static colliding(const Cuboid& c1, const Cuboid& c2);

@@ -11,25 +11,23 @@
 #include <iostream>
 #include <sstream>
 #include <math.h>
+#include <utility>
 
 #include "Cuboid.hpp"
 
 // USING RADIANS
 
-Cuboid::Cuboid(const Cuboid& c) :
-    pos_(c.pos_),
-    ang_(c.ang_),
-    scale_(c.scale_),
-    actualPoints_(c.actualPoints_),
-    edges_(c.edges_),
-    vertices_(c.vertices_),
-    uniqEdges_(c.uniqEdges_),
-    points_(c.points_),
-    motionLimiter_(c.motionLimiter_),
-    movementLimiter_(c.movementLimiter_),
-    furthestVertex_(c.furthestVertex_)
-    {
-    // copy constructor
+std::pair<v3,fq> Cuboid::getLast() {
+    return std::make_pair(lastPos_,lastQua_);
+}
+
+void Cuboid::setLast(v3 v, fq f) {
+    setLast(std::make_pair(v,f));
+}
+
+void Cuboid::setLast(std::pair<v3,fq> p) {
+    lastPos_ = p.first;
+    lastQua_ = p.second;
 }
 
 const fv* Cuboid::points() {
@@ -46,7 +44,7 @@ vv3 Cuboid::getVertices() {
     for (int i=0; i<verticesSize; ++i) {
         v3 vertex = actualPoints_[i];
         vertex *= scale_; // must be before rotate
-        vertex = qua * vertex;
+        vertex = qua_ * vertex;
         vertex += centre;
         vertices[i] = vertex;
     }
@@ -59,6 +57,14 @@ vv3* Cuboid::actualPoints() {
 
 vv3 Cuboid::getUniqueEdges() {
     return uniqEdges_;
+}
+
+void Cuboid::orient(fq q) {
+    qua_ = q;
+}
+
+fq Cuboid::orient() {
+    return qua_;
 }
 
 vv3 Cuboid::calcEdges(const vv3& v) {
@@ -104,6 +110,11 @@ Cuboid::Cuboid(fv points, v3 scale, v3 motionLimiter, v3 movementLimiter) :
         half_xyz_ = glm::max(half_xyz_,glm::abs(v));
     }
     half_xyz_ /= 2.0f;
+
+    pos_ = zeroV;
+    qua_ = fq(); // identity
+    lastPos_ = pos_;
+    lastQua_ = qua_;
 }
 
 v3 Cuboid::half_xyz() {
@@ -136,15 +147,23 @@ void Cuboid::recalcEdges() {
 
 void Cuboid::translate(v3 by) {
     // fma(a,b,c) -> a*b + c
+    lastPos_ = pos_;
     pos_ = glm::fma(by,movementLimiter_,pos());
     recalcEdges();
 }
 
+void Cuboid::rotateQua(const fq& rotateBy) {
+    lastQua_ = qua_;
+    qua_ = rotateBy * qua_;
+    recalcEdges();
+}
+
 void Cuboid::rotateRads(float yaw, float pitch, float roll) {
+    lastQua_ = qua_;
     v3 vec(yaw,pitch,roll);
     vec *= motionLimiter_;
     glm::fquat q = glm::quat(vec);
-    qua = q * qua;
+    qua_ = q * qua_;
     recalcEdges();
     // the function that actually does the rotating
 }
@@ -180,3 +199,20 @@ v3 Cuboid::scale() const {
 std::ostream& operator<<(std::ostream& stream, const Cuboid& c) {
     //return stream << "Pos" << printVec(c.pos()) << ", ang:" << printVec(c.ang()) << ", size" << printVec(c.size());
 }
+
+/*Cuboid::Cuboid(const Cuboid& c) :
+    pos_(c.pos_),
+    ang_(c.ang_),
+    scale_(c.scale_),
+    actualPoints_(c.actualPoints_),
+    edges_(c.edges_),
+    vertices_(c.vertices_),
+    uniqEdges_(c.uniqEdges_),
+    points_(c.points_),
+    motionLimiter_(c.motionLimiter_),
+    movementLimiter_(c.movementLimiter_),
+    furthestVertex_(c.furthestVertex_)
+    {
+    // copy constructor
+}*/
+

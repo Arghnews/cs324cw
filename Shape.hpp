@@ -21,13 +21,15 @@ class Shape {
         const fv* red;
         
     public:
+        void rotateQua(const fq& qua);
+        const int id;
         vv3 static getEdges(const vv3& v);
         bool static colliding(Shape&, Shape&);
         ~Shape();
         GLuint VAO;
         GLuint colourVBO();
         std::vector<GLuint> VBOs;
-        Shape(const fv* points, const fv* colours, const fv* red, int name,
+        Shape(const fv* points, const fv* colours, const fv* red, int id,
                 v3 scale=oneV, v3 motionLimiter=oneV, v3 movementLimiter=oneV);
         //Shape(const Shape&);
         bool colliding(bool isColliding);

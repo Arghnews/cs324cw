@@ -13,6 +13,7 @@
 #include <iostream>
 
 class Shape;
+struct Movement;
 
 typedef std::vector<GLfloat> fv;
 typedef glm::vec3 v3;
@@ -21,15 +22,18 @@ typedef std::vector<v3> vv3;
 typedef glm::mat4 m4;
 typedef std::pair<v3, Shape*> v3S;
 typedef std::vector<v3S> vv3S;
+typedef glm::fquat fq;
+typedef std::vector<Shape*> ShapeList;
+typedef std::vector<Movement> Movements;
 
 static const v3 zeroV(0.0f,0.0f,0.0f);
 static const v3 oneV(1.0f,1.0f,1.0f);
+static const float EPSILON = 0.001f;
 
 template <class T>
 void static concat(std::vector<T>& grower, const std::vector<T>& added) {
     grower.insert( grower.end(), added.begin(), added.end() );
 }
-
 
 std::string static printVec(const v3 v) {
     std::stringstream buffer;
@@ -38,7 +42,6 @@ std::string static printVec(const v3 v) {
 }
 
 bool static areSame(float a, float b) {
-    static const float EPSILON = 0.001f;
     return fabs(a - b) < EPSILON;
 }
 

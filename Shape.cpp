@@ -14,10 +14,23 @@
 
 #include "Shape.hpp"
 
-void db(std::string s) {
-    static int i = 0;
-    std::cout << "DEBUG" << i << " " << s << "\n";
-    i++;
+Shape::Shape(const fv* points, const fv* colours, const fv* red, 
+        int id, v3 scale, v3 motionLimiter, v3 movementLimiter) :
+    _cuboid(*points,scale,motionLimiter,movementLimiter), _colours(colours), 
+    red(red), id(id), VBOs(2)
+    {
+}
+
+void Shape::translate(v3 by) {
+    _cuboid.translate(by);
+}
+
+void Shape::rotateRads(v3 by) {
+    _cuboid.rotateRads(by);
+}
+
+void Shape::rotateQua(const fq& qua) {
+    _cuboid.rotateQua(qua);
 }
 
 vv3 Shape::getEdges(const vv3& v) {
@@ -35,10 +48,6 @@ vv3 Shape::getEdges(const vv3& v) {
         }
     }
     return e;
-}
-
-void db() {
-    db("");
 }
 
 // returns normalised axes
@@ -78,14 +87,6 @@ bool Shape::colliding(Shape& s1, Shape& s2) {
     return true;
 }
 
-void Shape::translate(v3 by) {
-    _cuboid.translate(by);
-}
-
-void Shape::rotateRads(v3 by) {
-    _cuboid.rotateRads(by);
-}
-
 std::pair<float, float> Shape::project(const v3& axis_in, const vv3* verts_in) {
     const auto& verts = *verts_in;
     const v3 axis = glm::normalize(axis_in);
@@ -122,12 +123,6 @@ const fv* Shape::colours() {
 }
 
 Shape::~Shape() {
-}
-
-Shape::Shape(const fv* points, const fv* colours, const fv* red, 
-        int niceName, v3 scale, v3 motionLimiter, v3 movementLimiter) :
-    _cuboid(*points,scale,motionLimiter,movementLimiter), _colours(colours), red(red), name(niceName), VBOs(2)
-    {
 }
 
 const fv* Shape::points() {
