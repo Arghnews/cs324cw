@@ -30,7 +30,7 @@
 int init(int argc, char* argv[]);
 void createShapes();
 void render();
-void bindBuffers(ShapeList& shapes);
+void bindBuffers(Shapes& shapes);
 void bindBuffers(GLuint VAO, std::vector<GLuint> VBOs, const fv* vertexData, const fv* colourData);
 void startLoopGl();
 void collisions();
@@ -42,15 +42,7 @@ void switchShape(int);
 void rotateShape(Shape* s, const v3& rotateBy);
 void rotateShape(Shape* s, const fq& qua);
 void translateShape(Shape* s, const v3& translate);
-
-
-GLuint shaderProgram;
-std::vector<Shape*> shapes;
-float step = 0.25f; // for movement
-
-static const float areaSize = 100.0f;
-Octtree bigTree(v3(0.0f,0.0f,0.0f),areaSize);
-Movements movements;
+void extraShapes();
 
 struct Movement {
     enum Transform { rotateRads, rotateQua, translate };
@@ -97,8 +89,88 @@ struct Movement {
     }
 };
 
+static bool allowedCollide = true;
+
+static const int numbShapes = 3;
+static int selectedShape = 2;
+static const int base = 0;
+static const int arm = 1;
+static const int shoulder = 2;
+
+GLuint shaderProgram;
+Shapes shapes;
+float step = 0.25f; // for movement
+
+static const float areaSize = 100.0f;
+Octtree bigTree(v3(0.0f,0.0f,0.0f),areaSize);
+
+class Movements : public std::vector<Movement> {
+    Shapes* shapes;
+    public:
+        Movements(Shapes* shapes) : shapes(shapes) {}
+        void push_back(const Movement& val) {
+            if (val.s->id == arm) {
+                Shape& shape_arm = *val.s;
+                Shape& shape_shoulder = *(*shapes)[shoulder];
+                if (val.t == Movement::Transform::rotateRads) {
+                    // need rotate move shoulder too
+                    Movement m(&shape_shoulder, Movement::Transform::rotateRads, val.vec);
+                    std::vector<Movement>::push_back(m);
+                    /*
+                    const v3 center = shape_arm.cuboid().pos();
+                    const v3 xyz = v3(0.0f,2.0f*shape_arm.cuboid().half_xyz(),0.0f);
+                    const v3 armTop = center + xyz;
+                    // now need to orient/rotate armTop by rotation amount
+                    // and then take shoulderCenter to find amount to be translated by
+                    const fq qua = shape_arm.cuboid().orient();
+                    //rotated_point = origin + (orientation_quaternion * (point-origin));
+                    const v3 shoulderCenter = shape_shoulder.cuboid().pos();
+                    */
+                }
+                
+            }
+            std::vector<Movement>::push_back(val);
+        }
+};
+
+Movements movements(&shapes);
+
+void createShapes() {
+
+    //Shape(const fv* points, const fv* colours, const fv* red, int id,
+    //        v3 scale=oneV, v3 motionLimiter=oneV, v3 movementLimiter=oneV);
+    shapes.push_back(new Shape(&cubePointsCentered,&cubeColours,&cubeColoursRed,base,
+            v3(5.0f,1.0f,5.0f),v3(0.0f,1.0f,0.0f),zeroV));
+    shapes.push_back(new Shape(&cubePointsBottom,&cubeColours,&cubeColoursRed,arm,
+            v3(1.0f,2.0f,1.0f),v3(1.0f,1.0f,1.0f),oneV));
+    shapes.push_back(new Shape(&cubePointsBottom,&cubeColours,&cubeColoursRed,shoulder,
+            v3(1.0f,2.0f,1.0f),v3(1.0f,1.0f,1.0f),oneV));
+
+    translateShape(shapes[base],v3(0.0f,0.0f,0.0f));
+
+    v3 baseHeight = 0.01f + 2.0f * v3(0.0f,shapes[base]->cuboid().half_xyz().y,0.0f);
+
+    translateShape(shapes[arm],baseHeight);
+
+    v3 armHeight = 0.01f + 2.0f * v3(0.0f,shapes[arm]->cuboid().half_xyz().y,0.0f);
+
+    translateShape(shapes[shoulder],baseHeight);
+    translateShape(shapes[shoulder],armHeight);
+
+    for (auto& s: shapes) {
+        bigTree.insert(s->cuboid().pos(),s);
+    }
+
+    for (auto shape: shapes) {
+        glGenVertexArrays(1, &(shape->VAO));
+        glGenBuffers(1, &(shape->VBOs[0])); // vertex
+        glGenBuffers(1, &(shape->VBOs[1])); // colour
+    }
+
+}
+
 void keyboard(unsigned char key, int mouseX, int mouseY) {
-    Shape& s = getShape();
+    Shape& shape = getShape();
     bool stop = false;
 
     v3 translate(zeroV);
@@ -139,10 +211,10 @@ void keyboard(unsigned char key, int mouseX, int mouseY) {
     }
     if (!stop) {
         if (translate != zeroV) {
-            Movement m(&s, Movement::Transform::translate, translate);
+            Movement m(&shape, Movement::Transform::translate, translate);
             movements.push_back(m);
         } else if (rotateV != zeroV) {
-            Movement m(&s, Movement::Transform::rotateRads, rotateV);
+            Movement m(&shape, Movement::Transform::rotateRads, rotateV);
             movements.push_back(m);
         }
         glutPostRedisplay();
@@ -195,26 +267,11 @@ void translateShape(Shape* shape, const v3& translate) {
     bigTree.insert(shape->cuboid().pos(),shape);
 }
 
-static const int numbShapes = 5;
-static int selectedShape = 1;
-static const int base = 0;
-static const int arm = 1;
-
-void createShapes() {
-
-    
-    shapes.push_back(new Shape(&cubePointsCentered,&cubeColours,&cubeColoursRed,base,
-            v3(5.0f,1.0f,5.0f),v3(0.0f,1.0f,0.0f),zeroV));
-    shapes.push_back(new Shape(&cubePointsCentered,&cubeColours,&cubeColoursRed,arm,
-            v3(2.0f,1.0f,1.0f),v3(1.0f,1.0f,1.0f),oneV));
-
-    translateShape(shapes[0],v3(-1.0f,0.0f,0.0f));
-    translateShape(shapes[1],v3(3.0f,2.0f,0.0f));
-
+void extraShapes() {
     float ranMul = areaSize/3.0f;
     float ranFix = areaSize/2.0f;
     srand (static_cast <unsigned> (timeNowMicros()));
-    for (int i=2; i<numbShapes; ++i) {
+    for (int i = shapes.size(); i<numbShapes; ++i) {
         float x = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
         float y = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
         float z = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
@@ -232,17 +289,6 @@ void createShapes() {
         translateShape(shapes.back(),v3(x,y,z));
         rotateShape(shapes.back(),v3(x,y,z));
     }
-
-    for (auto& s: shapes) {
-        bigTree.insert(s->cuboid().pos(),s);
-    }
-
-    for (auto shape: shapes) {
-        glGenVertexArrays(1, &(shape->VAO));
-        glGenBuffers(1, &(shape->VBOs[0])); // vertex
-        glGenBuffers(1, &(shape->VBOs[1])); // colour
-    }
-
 }
 
 void display() {
@@ -340,7 +386,7 @@ void collisions() {
         Movement& m = movements[i];
         const Shape& shape = *m.s;
         const int id = shape.id;
-        bool allowedToCollide = false;
+        bool allowedToCollide = allowedCollide;
         auto col = collidingSet.find(id) != collidingSet.end();
         if (col && !allowedToCollide) {
             m.undo();
@@ -404,7 +450,7 @@ void render() {
     glutSwapBuffers(); 
 }
 
-void bindBuffers(ShapeList& shapes) {
+void bindBuffers(Shapes& shapes) {
     for (auto& shape: shapes) {
         bindBuffers(shape->VAO, shape->VBOs, shape->points(), shape->colours());
     }
