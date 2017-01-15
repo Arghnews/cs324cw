@@ -18,7 +18,7 @@
 class Cuboid {
     private:
         v3 pos_; // x, y, z of center
-        v3 ang_; // x, y, z
+        v3 ypr_; // x, y, z
         const v3 scale_; // 1.0,1.0,1.0
         fv points_; // 108 floats
         vv3 actualPoints_; // 24 vertices
@@ -29,12 +29,15 @@ class Cuboid {
         float furthestVertex_; // from center
         float calcFurthestVertex();
         v3 half_xyz_;
-        const v3 motionLimiter_; // 3 edges
-        const v3 movementLimiter_; // 3 edges
         v3 topCenter_; // what it says
         v3 lastTopCenter_; // what it says
+        v3 ypr_min;
+        v3 ypr_max;
 
     public:
+        Cuboid(fv points, v3 topCenter, v3 scale, v3 translationMultiplier, v3 ypr_min, v3 ypr_max);
+        v3 yaw_pitch_roll();
+        v3 translationMultiplier; // movement multiplier
         v3 lastTopCenter();
         v3 topCenter();
         void rotateQua(const fq& qua);
@@ -58,7 +61,6 @@ class Cuboid {
         fq qua_;
         vv3 getVertices();
         const fv* points();
-        Cuboid(fv points, v3 topCenter, v3 scale=oneV, v3 motionLimiter=oneV, v3 movementLimiter=oneV);
 
         bool static colliding(const Cuboid& c1, const Cuboid& c2);
 
@@ -66,9 +68,9 @@ class Cuboid {
         v3 ang() const;
         v3 scale() const;
 
-        void rotateDegs(float x, float y, float z);
-        void rotateRads(float x, float y, float z);
-        void rotateRads(const v3 xyz);
+        bool rotateDegs(float x, float y, float z);
+        bool rotateRads(float x, float y, float z);
+        bool rotateRads(const v3 xyz);
 
         void translate(v3 by);
         void translate(float x, float y, float z);
@@ -77,51 +79,3 @@ class Cuboid {
 };
 
 #endif
-
-/*
-// USING RADIANS
-class Cuboid {
-    private:
-        v3 pos_; // x, y, z of center
-        v3 ang_; // x, y, z
-        v3 hsize_; // h, w, d * 1/2
-        v3 scale_; // 1.0,1.0,1.0
-
-    public:
-        vv3 getVertices();
-        Cuboid(const Cuboid&);
-        Cuboid(float h, float w, float d);
-
-        bool static colliding(const Cuboid& c1, const Cuboid& c2);
-
-        v3 pos() const;
-        v3 ang() const;
-        v3 size() const;
-        v3 hsize() const;
-        v3 scale() const;
-
-        void rotateDegs(float x, float y, float z);
-        void rotateRads(float x, float y, float z);
-        void rotateRads(const v3 xyz);
-
-        void translate(v3 by);
-        void translate(float x, float y, float z);
-        
-        void setScale(float x, float y, float z);
-        void setScale(v3 to);
-
-        friend std::ostream& operator<<(std::ostream&, const Cuboid&);
-
-};
-
-#ifndef MY_PRINTVEC
-#define MY_PRINTVEC
-std::string static printVec(const v3 v) {
-    std::stringstream buffer;
-    buffer << "(" << v.x << "," << v.y << "," << v.z << ")";
-    return buffer.str();
-}
-#endif
-
-#endif
-*/

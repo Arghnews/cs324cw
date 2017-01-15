@@ -21,6 +21,7 @@
 #include <thread>
 #include <algorithm>
 #include <iterator>
+#include <set>
 
 #include "crap.hpp"
 #include "Util.hpp"
@@ -59,6 +60,7 @@ struct Movement {
     friend std::ostream& operator<<(std::ostream& stream, const Movement& m) {
         return stream << "Movement on " << m.s << " of type " << m.t;
     }
+
     Movement(const Movement& m) : 
         s(m.s),
         t(m.t),
@@ -79,9 +81,9 @@ struct Movement {
     }
     Movement(Shape* s, Transform t, v3 vec) : s(s), t(t), vec(vec) {}
     Movement(Shape* s, Transform t, fq qua) : s(s), t(t), qua(qua) {}
-    void move() {
+    bool move() {
         if (t == Movement::Transform::rotateRads) {
-            rotateShape(s,vec);
+            return rotateShape(s,vec);
             moved = true;
         } else if (t == Movement::Transform::rotateQua) {
             rotateShape(s,qua);
@@ -129,18 +131,6 @@ float step = 0.25f; // for movement
 static const float areaSize = 100.0f;
 Octtree bigTree(v3(0.0f,0.0f,0.0f),areaSize);
 
-/*
-class Movements : public std::vector<Movement> {
-    Shapes* shapes;
-    public:
-        Movements(Shapes* shapes) : shapes(shapes) {}
-        void push_back(const Movement& val) {
-
-            std::vector<Movement>::push_back(val);
-        }
-};
-*/
-
 typedef std::vector<Movement> Movements;
 //Movements movements(&shapes);
 Movements movements;
@@ -149,7 +139,7 @@ void createShapes() {
 
     /*
     //Shape(const fv* points, const fv* colours, const fv* red, int id,
-    //        v3 scale=oneV, v3 motionLimiter=oneV, v3 movementLimiter=oneV);
+    //        v3 scale=oneV, v3 motionLimiter=oneV, v3 translationMultiplier=oneV);
     shapes.push_back(new Shape(&cubePointsCentered,&cubeColours,&cubeColoursPurple,base,
             v3(5.0f,1.0f,5.0f),v3(0.0f,1.0f,0.0f),zeroV));
     shapes.push_back(new Shape(&cubePointsBottom,&cubeColours,&cubeColoursPurple,arm,
@@ -169,21 +159,35 @@ void createShapes() {
     translateShape(shapes[shoulder],armHeight);
     */
     
-    //Shape(const fv* points, const fv* colours, const fv* red, int id, v3 topCenter,
-    //        v3 scale=oneV, v3 motionLimiter=oneV, v3 movementLimiter=oneV
-    //        );
+    /*
+    Shape(const fv* points, 
+            const fv* colours, const fv* purple, const fv* green, 
+            int id, v3 topCenter, std::set<Id> canCollideWith, 
+            v3 scale=oneV, v3 translationMultiplier=oneV, v3 ypr_min=V3_MAX_NEGATIVE, v3 ypr_max=V3_MAX_POSITIVE);
+    */
 
     v3 bottom_upRightTop = v3(0.0f, 1.0f, 0.0f);
+    v3 center_upRightTop = v3(0.0f, 0.0f, 0.0f);
 
-    shapes[base] = (new Shape(&cubePointsCentered,&cubeColours,&cubeColoursPurple,&cubeColoursGreen,base,zeroV,
-            v3(5.0f,1.0f,5.0f),v3(0.0f,1.0f,0.0f),zeroV));
-    shapes[shoulder] = (new Shape(&cubePointsBottom,&cubeColours,&cubeColoursPurple,&cubeColoursGreen,shoulder,bottom_upRightTop,
-            v3(1.0f,2.0f,1.0f),v3(1.0f,1.0f,1.0f),oneV));
-    shapes[arm] = (new Shape(&cubePointsBottom,&cubeColours,&cubeColoursPurple,&cubeColoursGreen,arm,bottom_upRightTop,
-            v3(1.0f,1.5f,1.0f),v3(1.0f,1.0f,1.0f),oneV));
+    std::set<Id> canCollideWith = {base, shoulder, arm};
 
-    v3 baseHeight = 0.01f + v3(0.0f,shapes[base]->cuboid().half_xyz().y,0.0f);
-    v3 shoulderHeight = 0.01f + 2.0f * v3(0.0f,shapes[shoulder]->cuboid().half_xyz().y,0.0f);
+    shapes[base] = (new Shape(&cubePointsCentered,
+            &cubeColours,&cubeColoursPurple,&cubeColoursGreen,
+            base,center_upRightTop,canCollideWith,
+            v3(5.0f,1.0f,5.0f),zeroV,zeroV,zeroV));
+
+    shapes[shoulder] = (new Shape(&cubePointsBottom,
+            &cubeColours,&cubeColoursPurple,&cubeColoursGreen,
+            shoulder,bottom_upRightTop,canCollideWith,
+            v3(1.0f,2.5f,1.0f),zeroV,V3_HALF_PI_NEGATIVE,V3_HALF_PI));
+
+    shapes[arm] = (new Shape(&cubePointsBottom,
+            &cubeColours,&cubeColoursPurple,&cubeColoursGreen,
+            arm,bottom_upRightTop,canCollideWith,
+            v3(1.0f,1.75f,1.0f),zeroV,V3_HALF_PI_NEGATIVE,V3_HALF_PI));
+
+    v3 baseHeight = 0.01f + 2.0f * shapes[base]->cuboid().topCenter();
+    v3 shoulderHeight = 0.01f + shapes[shoulder]->cuboid().topCenter();
 
     translateShape(shapes[arm],baseHeight);
     translateShape(shapes[shoulder],baseHeight);
@@ -192,8 +196,6 @@ void createShapes() {
 
     //v3 rotatedBy(90.0f,0.0f,0.0f);
     //rotateShape(shapes[arm], rotatedBy);
-
-    //extraShapes();
 
     for (auto& s: shapes) {
         auto& shape = s.second;
@@ -251,7 +253,8 @@ void keyboard(unsigned char key, int mouseX, int mouseY) {
     }
     if (!stop) {
         if (translate != zeroV) {
-            Movement m(&shape, Movement::Transform::translate, translate);
+            const v3 translateMultiplier = shape.cuboid().translationMultiplier;
+            Movement m(&shape, Movement::Transform::translate, translate * translateMultiplier);
             movements.push_back(m);
         } else if (rotateV != zeroV) {
             Movement m(&shape, Movement::Transform::rotateRads, rotateV);
@@ -264,7 +267,7 @@ void keyboard(unsigned char key, int mouseX, int mouseY) {
 }
 
 void specialInput(int key, int x, int y) {
-    Shape& s = getShape();
+    Shape& shape = getShape();
     bool stop = false;
     v3 translate;
     switch(key) {
@@ -283,7 +286,8 @@ void specialInput(int key, int x, int y) {
     }
     if (!stop) {
         if (translate != zeroV) {
-            Movement m(&s, Movement::Transform::translate, translate);
+            const v3 translateMultiplier = shape.cuboid().translationMultiplier;
+            Movement m(&shape, Movement::Transform::translate, translate * translateMultiplier);
             movements.push_back(m);
         }
         glutPostRedisplay();
@@ -305,37 +309,6 @@ void translateShape(Shape* shape, const v3& translate) {
     //assert(deleted);
     shape->translate(translate);
     bigTree.insert(shape->cuboid().pos(),shape);
-}
-
-void extraShapes() {
-    float ranMul = areaSize/3.0f;
-    float ranFix = areaSize/2.0f;
-    srand (static_cast <unsigned> (timeNowMicros()));
-    const int startId = 10;
-    for (int i = startId; i<startId+numbShapes; ++i) {
-        
-        Id id = i;
-        
-        float x = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-        float y = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-        float z = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-        float t = x + 1.2f;
-        auto scale = v3(t,1.0f,1.0f);
-        x *= ranMul;
-        x -= ranFix;
-        y *= ranMul;
-        y -= ranFix;
-        z *= ranMul;
-        z -= ranFix;
-
-        auto worked = shapes.insert(std::make_pair(id,new Shape(&cubePointsCentered,&cubeColours,&cubeColoursPurple,&cubeColoursGreen,id,scale,oneV,oneV)));
-        if (!worked.second) {
-            std::cout << "Could not insert into map, element likely already present\n";
-        }
-
-        translateShape(shapes[id],v3(x,y,z));
-        rotateShape(shapes[id],v3(x,y,z));
-    }
 }
 
 void display() {
@@ -650,3 +623,36 @@ int init(int argc, char* argv[]) {
 	//glutReshapeFunc(reshape); 
     return 0;
 }
+
+/*
+void extraShapes() {
+    float ranMul = areaSize/3.0f;
+    float ranFix = areaSize/2.0f;
+    srand (static_cast <unsigned> (timeNowMicros()));
+    const int startId = 10;
+    for (int i = startId; i<startId+numbShapes; ++i) {
+        
+        Id id = i;
+        
+        float x = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+        float y = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+        float z = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
+        float t = x + 1.2f;
+        auto scale = v3(t,1.0f,1.0f);
+        x *= ranMul;
+        x -= ranFix;
+        y *= ranMul;
+        y -= ranFix;
+        z *= ranMul;
+        z -= ranFix;
+
+        auto worked = shapes.insert(std::make_pair(id,new Shape(&cubePointsCentered,&cubeColours,&cubeColoursPurple,&cubeColoursGreen,id,scale,oneV,oneV)));
+        if (!worked.second) {
+            std::cout << "Could not insert into map, element likely already present\n";
+        }
+
+        translateShape(shapes[id],v3(x,y,z));
+        rotateShape(shapes[id],v3(x,y,z));
+    }
+}*/
+

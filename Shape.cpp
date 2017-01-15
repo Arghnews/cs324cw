@@ -11,12 +11,17 @@
 #include <cmath>
 #include <algorithm>
 #include <string>
+#include <set>
 
 #include "Shape.hpp"
 
+    //Shape(const fv* points, const fv* colours, const fv* red, int id, v3 topCenter, Set<Id> canCollideWith,
+    //        v3 scale=oneV, v3 motionLimiter=oneV, v3 translationMultiplier=oneV
+    //        size,          rotation,            , translationMultiplier, yaw_pitch_roll_min, yaw_pitch_roll_max
+
 Shape::Shape(const fv* points, const fv* colours, const fv* purple, const fv* green,
-        int id, v3 topCenter, v3 scale, v3 motionLimiter, v3 movementLimiter) :
-    _cuboid(*points,topCenter,scale,motionLimiter,movementLimiter), _colours(colours), 
+        int id, v3 topCenter, std::set<Id> canCollideWith, v3 scale, v3 translationMultiplier, v3 ypr_min, v3 ypr_max) :
+    _cuboid(*points,topCenter,scale,translationMultiplier, ypr_min, ypr_max), canCollideWith(canCollideWith), _colours(colours), 
     purple(purple), green(green), id(id), VBOs(2)
     {
 }
@@ -33,8 +38,8 @@ void Shape::translate(v3 by) {
     _cuboid.translate(by);
 }
 
-void Shape::rotateRads(v3 by) {
-    _cuboid.rotateRads(by);
+bool Shape::rotateRads(v3 by) {
+    return _cuboid.rotateRads(by);
 }
 
 void Shape::rotateQua(const fq& qua) {
@@ -161,19 +166,19 @@ void Shape::translate(float x, float y, float z) {
     translate(v3(x,y,z));
 }
 
-void Shape::rotateDegs(const v3 a) {
-    rotateDegs(a.x,a.y,a.z);
+bool Shape::rotateDegs(const v3 a) {
+    return rotateDegs(a.x,a.y,a.z);
 }
 
-void Shape::rotateDegs(float x, float y, float z) {
-    rotateRads(
+bool Shape::rotateDegs(float x, float y, float z) {
+    return rotateRads(
             (x*M_PI)/180.0f,
             (y*M_PI)/180.0f,
             (z*M_PI)/180.0f
             );
 }
 
-void Shape::rotateRads(float x, float y, float z) {
+bool Shape::rotateRads(float x, float y, float z) {
     rotateRads(v3(x,y,z));
 }
 

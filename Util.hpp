@@ -12,6 +12,8 @@
 #include <sstream>
 #include <iostream>
 #include <map>
+#include <limits>
+#include <math.h>
 
 class Shape;
 struct Movement;
@@ -30,7 +32,23 @@ typedef std::map<Id,Shape*> Shapes;
 
 static const v3 zeroV(0.0f,0.0f,0.0f);
 static const v3 oneV(1.0f,1.0f,1.0f);
+static const v3 V3_PI(M_PI,M_PI,M_PI);
+static const v3 V3_HALF_PI(V3_PI * 0.5f);
+static const v3 V3_HALF_PI_NEGATIVE(V3_HALF_PI * -1.0f);
+
 static const float EPSILON = 0.001f;
+static const float FLOAT_MAX_POSITIVE = std::numeric_limits<float>::max();
+static const float FLOAT_MAX_NEGATIVE = -1.0f * std::numeric_limits<float>::max();
+static const v3 V3_MAX_POSITIVE(FLOAT_MAX_POSITIVE,FLOAT_MAX_POSITIVE,FLOAT_MAX_POSITIVE);
+static const v3 V3_MAX_NEGATIVE(FLOAT_MAX_NEGATIVE,FLOAT_MAX_NEGATIVE,FLOAT_MAX_NEGATIVE);
+
+v3 static minV(const v3& a, const v3& b) {
+    return v3(std::min(a.x,b.x),std::min(a.y,b.y),std::min(a.z,b.z));
+}
+
+v3 static maxV(const v3& a, const v3& b) {
+    return v3(std::max(a.x,b.x),std::max(a.y,b.y),std::max(a.z,b.z));
+}
 
 template <class T>
 void static concat(std::vector<T>& grower, const std::vector<T>& added) {

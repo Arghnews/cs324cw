@@ -85,13 +85,14 @@ vv3 Cuboid::calcEdges(const vv3& v) {
     return e;
 }
 
-Cuboid::Cuboid(fv points, v3 topCenter, v3 scale, v3 motionLimiter, v3 movementLimiter) :
+Cuboid::Cuboid(fv points, v3 topCenter, v3 scale, v3 translationMultiplier, v3 ypr_min, v3 ypr_max) :
     points_(points),
     topCenter_(topCenter * scale), // note scale != scale_
     lastTopCenter_(topCenter_), // note scale != scale_
     scale_(scale),
-    motionLimiter_(motionLimiter),
-    movementLimiter_(movementLimiter)
+    translationMultiplier(translationMultiplier),
+    ypr_min(ypr_min),
+    ypr_max(ypr_max)
 {
     const int size = points_.size(); // 3d
     for (int i=0; i<size; i+=18) {
@@ -158,8 +159,9 @@ v3 Cuboid::topCenter() {
 void Cuboid::translate(v3 by) {
     // fma(a,b,c) -> a*b + c
     lastPos_ = pos_; // line below line below depends on this
-    pos_ = glm::fma(by,movementLimiter_,pos());
-    //const v3 moveBy = by * movementLimiter_;
+    //pos_ = glm::fma(by,translationMultiplier,pos());
+    pos_ += by;
+    //const v3 moveBy = by * translationMultiplier;
     //pos_ += moveBy;
     //topCenter_ += moveBy;
     recalcEdges();
@@ -175,36 +177,48 @@ void Cuboid::rotateQua(const fq& rotateBy) {
     recalcEdges();
 }
 
-void Cuboid::rotateRads(float yaw, float pitch, float roll) {
+bool Cuboid::rotateRads(float yaw, float pitch, float roll) {
+    const v3 vec(yaw,pitch,roll);
+    v3 new_ypr = ypr_ + vec;
+    // bounded by yaw min and max
+    if ((new_ypr.x < ypr_min.x 
+        || new_ypr.y < ypr_min.y 
+        || new_ypr.z < ypr_min.z) ||
+        (new_ypr.x > ypr_max.x 
+        || new_ypr.y > ypr_max.y 
+        || new_ypr.z > ypr_max.z)) {
+        return false;
+    }
+
+    ypr_ += vec;
     lastQua_ = qua_;
     lastTopCenter_ = topCenter_;
-    v3 vec(yaw,pitch,roll);
-    vec *= motionLimiter_;
     glm::fquat q = glm::quat(vec);
     qua_ = q * qua_;
     topCenter_ = q * topCenter_;
     recalcEdges();
     // the function that actually does the rotating
+    return true;
+}
+
+v3 Cuboid::yaw_pitch_roll() {
+    return ypr_;
 }
 
 v3 Cuboid::pos() const {
     return pos_;
 }
 
-v3 Cuboid::ang() const {
-    return ang_;
-}
-
-void Cuboid::rotateDegs(float x, float y, float z) {
-    rotateRads(
+bool Cuboid::rotateDegs(float x, float y, float z) {
+    return rotateRads(
             (x*M_PI)/180.0f,
             (y*M_PI)/180.0f,
             (z*M_PI)/180.0f
             );
 }
 
-void Cuboid::rotateRads(const v3 xyz) {
-    rotateRads(xyz.x, xyz.y, xyz.z);
+bool Cuboid::rotateRads(const v3 xyz) {
+    return rotateRads(xyz.x, xyz.y, xyz.z);
 }
 
 void Cuboid::translate(float x, float y, float z) {
@@ -218,20 +232,4 @@ v3 Cuboid::scale() const {
 std::ostream& operator<<(std::ostream& stream, const Cuboid& c) {
     //return stream << "Pos" << printVec(c.pos()) << ", ang:" << printVec(c.ang()) << ", size" << printVec(c.size());
 }
-
-/*Cuboid::Cuboid(const Cuboid& c) :
-    pos_(c.pos_),
-    ang_(c.ang_),
-    scale_(c.scale_),
-    actualPoints_(c.actualPoints_),
-    edges_(c.edges_),
-    vertices_(c.vertices_),
-    uniqEdges_(c.uniqEdges_),
-    points_(c.points_),
-    motionLimiter_(c.motionLimiter_),
-    movementLimiter_(c.movementLimiter_),
-    furthestVertex_(c.furthestVertex_)
-    {
-    // copy constructor
-}*/
 

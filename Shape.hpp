@@ -9,6 +9,7 @@
 #include "Cuboid.hpp"
 #include <iostream>
 #include <string>
+#include <limits>
 
 class Shape {
     private:
@@ -23,6 +24,7 @@ class Shape {
         bool _selected;
         
     public:
+        std::set<Id> canCollideWith;
         bool selected();
         void selected(bool b);
         void rotateQua(const fq& qua);
@@ -34,17 +36,18 @@ class Shape {
         GLuint colourVBO();
         std::vector<GLuint> VBOs;
         Shape(const fv* points, const fv* colours, const fv* purple, const fv* green, int id, v3 topCenter,
-                v3 scale=oneV, v3 motionLimiter=oneV, v3 movementLimiter=oneV);
+                std::set<Id> canCollideWith,
+                v3 scale=oneV, v3 translationMultiplier=oneV, v3 ypr_min=V3_MAX_NEGATIVE, v3 ypr_max=V3_MAX_POSITIVE);
         //Shape(const Shape&);
         bool colliding(bool isColliding);
         bool colliding() const;
         Cuboid& cuboid();
         void translate(float x, float y, float z);
         void translate(v3 by);
-        void rotateRads(float x, float y, float z);
-        void rotateRads(v3 by); // x, y, z, pretty rough atm
-        void rotateDegs(const v3 by);
-        void rotateDegs(float x, float y, float z);
+        bool rotateRads(float x, float y, float z);
+        bool rotateRads(v3 by); // x, y, z, pretty rough atm
+        bool rotateDegs(const v3 by);
+        bool rotateDegs(float x, float y, float z);
     
         const fv* points();
         const fv* colours();
