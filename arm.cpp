@@ -92,7 +92,7 @@ struct Movement {
 static bool allowedCollide = true;
 
 static const int numbShapes = 2;
-static int selectedShape = std::min(numbShapes, 1);
+static int selectedShape = 1;
 static const int base = 0;
 static const int arm = 1;
 static const int shoulder = 2;
@@ -280,7 +280,8 @@ void extraShapes() {
     float ranMul = areaSize/3.0f;
     float ranFix = areaSize/2.0f;
     srand (static_cast <unsigned> (timeNowMicros()));
-    for (int i = shapes.size(); i<numbShapes; ++i) {
+    const int startId = 10;
+    for (int i = startId; i<startId+numbShapes; ++i) {
         
         Id id = i;
         
@@ -489,6 +490,13 @@ void bindBuffers(GLuint VAO, std::vector<GLuint> VBOs, const fv* vertexData, con
 }
 
 Shape& getShape() {
+    if (shapes.count(selectedShape) == 0) {
+        for (auto& s: shapes) {
+            Id id = s.first;
+            selectedShape = id;
+            break;
+        }
+    }
     return *shapes[selectedShape];
 }
 
