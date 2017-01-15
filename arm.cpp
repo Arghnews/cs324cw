@@ -150,11 +150,11 @@ void createShapes() {
     /*
     //Shape(const fv* points, const fv* colours, const fv* red, int id,
     //        v3 scale=oneV, v3 motionLimiter=oneV, v3 movementLimiter=oneV);
-    shapes.push_back(new Shape(&cubePointsCentered,&cubeColours,&cubeColoursRed,base,
+    shapes.push_back(new Shape(&cubePointsCentered,&cubeColours,&cubeColoursPurple,base,
             v3(5.0f,1.0f,5.0f),v3(0.0f,1.0f,0.0f),zeroV));
-    shapes.push_back(new Shape(&cubePointsBottom,&cubeColours,&cubeColoursRed,arm,
+    shapes.push_back(new Shape(&cubePointsBottom,&cubeColours,&cubeColoursPurple,arm,
             v3(1.0f,2.0f,1.0f),v3(1.0f,1.0f,1.0f),oneV));
-    shapes.push_back(new Shape(&cubePointsBottom,&cubeColours,&cubeColoursRed,shoulder,
+    shapes.push_back(new Shape(&cubePointsBottom,&cubeColours,&cubeColoursPurple,shoulder,
             v3(1.0f,2.0f,1.0f),v3(1.0f,1.0f,1.0f),oneV));
 
     translateShape(shapes[base],v3(0.0f,0.0f,0.0f));
@@ -175,14 +175,19 @@ void createShapes() {
 
     v3 bottom_upRightTop = v3(0.0f, 1.0f, 0.0f);
 
-    shapes[shoulder] = (new Shape(&cubePointsBottom,&cubeColours,&cubeColoursRed,shoulder,bottom_upRightTop,
+    shapes[base] = (new Shape(&cubePointsCentered,&cubeColours,&cubeColoursPurple,&cubeColoursGreen,base,zeroV,
+            v3(5.0f,1.0f,5.0f),v3(0.0f,1.0f,0.0f),zeroV));
+    shapes[shoulder] = (new Shape(&cubePointsBottom,&cubeColours,&cubeColoursPurple,&cubeColoursGreen,shoulder,bottom_upRightTop,
             v3(1.0f,2.0f,1.0f),v3(1.0f,1.0f,1.0f),oneV));
-    shapes[arm] = (new Shape(&cubePointsBottom,&cubeColours,&cubeColoursRed,arm,bottom_upRightTop,
+    shapes[arm] = (new Shape(&cubePointsBottom,&cubeColours,&cubeColoursPurple,&cubeColoursGreen,arm,bottom_upRightTop,
             v3(1.0f,1.5f,1.0f),v3(1.0f,1.0f,1.0f),oneV));
+
+    v3 baseHeight = 0.01f + v3(0.0f,shapes[base]->cuboid().half_xyz().y,0.0f);
     v3 shoulderHeight = 0.01f + 2.0f * v3(0.0f,shapes[shoulder]->cuboid().half_xyz().y,0.0f);
-    std::cout << "Correct shoulderHeight " << printVec(shoulderHeight) << "\n";
-    v3 topCenter = shapes[shoulder]->cuboid().topCenter();
-    std::cout << "top center position " << printVec(topCenter) << "\n";
+
+    translateShape(shapes[arm],baseHeight);
+    translateShape(shapes[shoulder],baseHeight);
+
     translateShape(shapes[arm],shoulderHeight);
 
     //v3 rotatedBy(90.0f,0.0f,0.0f);
@@ -323,7 +328,7 @@ void extraShapes() {
         z *= ranMul;
         z -= ranFix;
 
-        auto worked = shapes.insert(std::make_pair(id,new Shape(&cubePointsCentered,&cubeColours,&cubeColoursRed,id,scale,oneV,oneV)));
+        auto worked = shapes.insert(std::make_pair(id,new Shape(&cubePointsCentered,&cubeColours,&cubeColoursPurple,&cubeColoursGreen,id,scale,oneV,oneV)));
         if (!worked.second) {
             std::cout << "Could not insert into map, element likely already present\n";
         }
@@ -571,9 +576,11 @@ void switchShape(int by) {
                 ids.push_back(s.first);
             }
         }
+        shapes[idSelected]->selected(false);
         idSelected++;
         idSelected %= ids.size();
         selectedShape = ids[idSelected];
+        shapes[idSelected]->selected(true);
     }
 }
 

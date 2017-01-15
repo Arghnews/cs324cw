@@ -18,9 +18,13 @@ class Shape {
         bool _colliding;
         Cuboid _cuboid;
         const fv* _colours;
-        const fv* red;
+        const fv* green;
+        const fv* purple;
+        bool _selected;
         
     public:
+        bool selected();
+        void selected(bool b);
         void rotateQua(const fq& qua);
         const int id;
         vv3 static getEdges(const vv3& v);
@@ -29,7 +33,7 @@ class Shape {
         GLuint VAO;
         GLuint colourVBO();
         std::vector<GLuint> VBOs;
-        Shape(const fv* points, const fv* colours, const fv* red, int id, v3 topCenter,
+        Shape(const fv* points, const fv* colours, const fv* purple, const fv* green, int id, v3 topCenter,
                 v3 scale=oneV, v3 motionLimiter=oneV, v3 movementLimiter=oneV);
         //Shape(const Shape&);
         bool colliding(bool isColliding);

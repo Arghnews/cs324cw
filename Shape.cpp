@@ -14,11 +14,19 @@
 
 #include "Shape.hpp"
 
-Shape::Shape(const fv* points, const fv* colours, const fv* red, 
+Shape::Shape(const fv* points, const fv* colours, const fv* purple, const fv* green,
         int id, v3 topCenter, v3 scale, v3 motionLimiter, v3 movementLimiter) :
     _cuboid(*points,topCenter,scale,motionLimiter,movementLimiter), _colours(colours), 
-    red(red), id(id), VBOs(2)
+    purple(purple), green(green), id(id), VBOs(2)
     {
+}
+
+bool Shape::selected() {
+    return _selected;
+}
+
+void Shape::selected(bool b) {
+    _selected = b;
 }
 
 void Shape::translate(v3 by) {
@@ -115,8 +123,11 @@ GLuint Shape::colourVBO() {
 }
 
 const fv* Shape::colours() {
-    if (_colliding) {
-        return red;
+    if (_selected) {
+        return green;
+    }
+    else if (_colliding) {
+        return purple;
     } else {
         return _colours;
     }   
