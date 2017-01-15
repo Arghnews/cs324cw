@@ -45,7 +45,9 @@ bool Octtree::del(v3S p) {
     for (auto& t: points) {
         auto& point = t.first;
         auto& sPtr = t.second;
-        if (areSame(p.first,point) && sPtr == p.second) {
+        const bool samePlace = areSame(p.first,point);
+        const bool samePointer = (sPtr == p.second);
+        if (samePlace && samePointer) {
             // swap the one to be removed with the last element
             // and remove the item at the end of the container
             // to prevent moving all items after '5' by one

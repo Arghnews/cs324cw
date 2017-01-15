@@ -26,9 +26,9 @@ typedef glm::mat4 m4;
 typedef std::pair<v3, Shape*> v3S;
 typedef std::vector<v3S> vv3S;
 typedef glm::fquat fq;
-//typedef std::vector<Shape*> Shapes;
 typedef int Id;
 typedef std::map<Id,Shape*> Shapes;
+typedef std::vector<Movement> Movements;
 
 static const v3 zeroV(0.0f,0.0f,0.0f);
 static const v3 oneV(1.0f,1.0f,1.0f);
@@ -41,14 +41,6 @@ static const float FLOAT_MAX_POSITIVE = std::numeric_limits<float>::max();
 static const float FLOAT_MAX_NEGATIVE = -1.0f * std::numeric_limits<float>::max();
 static const v3 V3_MAX_POSITIVE(FLOAT_MAX_POSITIVE,FLOAT_MAX_POSITIVE,FLOAT_MAX_POSITIVE);
 static const v3 V3_MAX_NEGATIVE(FLOAT_MAX_NEGATIVE,FLOAT_MAX_NEGATIVE,FLOAT_MAX_NEGATIVE);
-
-v3 static minV(const v3& a, const v3& b) {
-    return v3(std::min(a.x,b.x),std::min(a.y,b.y),std::min(a.z,b.z));
-}
-
-v3 static maxV(const v3& a, const v3& b) {
-    return v3(std::max(a.x,b.x),std::max(a.y,b.y),std::max(a.z,b.z));
-}
 
 template <class T>
 void static concat(std::vector<T>& grower, const std::vector<T>& added) {

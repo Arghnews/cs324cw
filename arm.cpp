@@ -43,76 +43,51 @@ void cleanupAndExit();
 Shape& getShape();
 void switchShape(int);
 void processMovements();
-void rotateShape(Shape* s, const v3& rotateBy);
-void rotateShape(Shape* s, const fq& qua);
+bool rotateShape(Shape* s, const v3& rotateBy);
 void translateShape(Shape* s, const v3& translate);
 void extraShapes();
 
 struct Movement {
-    enum Transform { rotateRads, rotateQua, translate };
-    fq qua;
+    enum Transform { rotateRads, translate };
     v3 vec;
     Shape* s;
     Transform t; // biggest first for better packing (maybe)
     // if all aligned doesn't matter
-    bool moved = false;
-    bool undone = false;
     friend std::ostream& operator<<(std::ostream& stream, const Movement& m) {
-        return stream << "Movement on " << m.s << " of type " << m.t;
+        return stream << "Movement on " << m.s << " of type " << m.t << " of " << printVec(m.vec);
     }
-
+    Movement(Shape* s, Transform t, v3 vec) : s(s), t(t), vec(vec) {}
     Movement(const Movement& m) : 
         s(m.s),
         t(m.t),
-        vec(m.vec),
-        qua(m.qua),
-        moved(m.moved),
-        undone(m.undone) {}
+        vec(m.vec) {}
     Movement& operator=(const Movement& m) {
         if (this != &m) {
-            qua = m.qua;
             vec = m.vec;
             s = m.s;
             t = m.t;
-            moved = m.moved;
-            undone = m.undone;
         }
         return *this;
     }
-    Movement(Shape* s, Transform t, v3 vec) : s(s), t(t), vec(vec) {}
-    Movement(Shape* s, Transform t, fq qua) : s(s), t(t), qua(qua) {}
     bool move() {
+        bool moved = false;
         if (t == Movement::Transform::rotateRads) {
-            return rotateShape(s,vec);
-            moved = true;
-        } else if (t == Movement::Transform::rotateQua) {
-            rotateShape(s,qua);
-            moved = true;
+            moved = rotateShape(s,vec);
         } else if (t == Movement::Transform::translate) {
             translateShape(s,vec);
             moved = true;
         }
+        return moved;
     }
-    void undo() {
+    bool undo() {
+        bool undone = false;
         if (t == Movement::Transform::rotateRads) {
-            rotateShape(s,-1.0f*vec);
-            undone = true;
-        } else if (t == Movement::Transform::rotateQua) {
-            auto& shape = *s;
-            //std::pair<v3,fq> last = shape.cuboid().getLast();
-            //const v3& lastPos = last.first;
-            //const v3& posNow = shape.cuboid().pos();
-            const fq& lastOrient = qua;
-            const fq& orientNow = shape.cuboid().orient();
-
-            //const v3& moveBack = (posNow-lastPos) * -1.0f;
-            const fq& quaBy = lastOrient * glm::inverse(orientNow);
-            rotateShape(s,quaBy);
-            undone = true;
+            undone = rotateShape(s,-1.0f*vec);
         } else if (t == Movement::Transform::translate) {
             translateShape(s,-1.0f*vec);
             undone = true;
         }
+        return undone;
     }
 };
 
@@ -131,40 +106,9 @@ float step = 0.25f; // for movement
 static const float areaSize = 100.0f;
 Octtree bigTree(v3(0.0f,0.0f,0.0f),areaSize);
 
-typedef std::vector<Movement> Movements;
-//Movements movements(&shapes);
 Movements movements;
 
 void createShapes() {
-
-    /*
-    //Shape(const fv* points, const fv* colours, const fv* red, int id,
-    //        v3 scale=oneV, v3 motionLimiter=oneV, v3 translationMultiplier=oneV);
-    shapes.push_back(new Shape(&cubePointsCentered,&cubeColours,&cubeColoursPurple,base,
-            v3(5.0f,1.0f,5.0f),v3(0.0f,1.0f,0.0f),zeroV));
-    shapes.push_back(new Shape(&cubePointsBottom,&cubeColours,&cubeColoursPurple,arm,
-            v3(1.0f,2.0f,1.0f),v3(1.0f,1.0f,1.0f),oneV));
-    shapes.push_back(new Shape(&cubePointsBottom,&cubeColours,&cubeColoursPurple,shoulder,
-            v3(1.0f,2.0f,1.0f),v3(1.0f,1.0f,1.0f),oneV));
-
-    translateShape(shapes[base],v3(0.0f,0.0f,0.0f));
-
-    v3 baseHeight = 0.01f + 2.0f * v3(0.0f,shapes[base]->cuboid().half_xyz().y,0.0f);
-
-    translateShape(shapes[arm],baseHeight);
-
-    v3 armHeight = 0.01f + 2.0f * v3(0.0f,shapes[arm]->cuboid().half_xyz().y,0.0f);
-
-    translateShape(shapes[shoulder],baseHeight);
-    translateShape(shapes[shoulder],armHeight);
-    */
-    
-    /*
-    Shape(const fv* points, 
-            const fv* colours, const fv* purple, const fv* green, 
-            int id, v3 topCenter, std::set<Id> canCollideWith, 
-            v3 scale=oneV, v3 translationMultiplier=oneV, v3 ypr_min=V3_MAX_NEGATIVE, v3 ypr_max=V3_MAX_POSITIVE);
-    */
 
     v3 bottom_upRightTop = v3(0.0f, 1.0f, 0.0f);
     v3 center_upRightTop = v3(0.0f, 0.0f, 0.0f);
@@ -189,6 +133,11 @@ void createShapes() {
     v3 baseHeight = 0.01f + 2.0f * shapes[base]->cuboid().topCenter();
     v3 shoulderHeight = 0.01f + shapes[shoulder]->cuboid().topCenter();
 
+    for (auto& s: shapes) {
+        auto& shape = s.second;
+        bigTree.insert(shape->cuboid().pos(),shape);
+    }
+
     translateShape(shapes[arm],baseHeight);
     translateShape(shapes[shoulder],baseHeight);
 
@@ -196,12 +145,6 @@ void createShapes() {
 
     //v3 rotatedBy(90.0f,0.0f,0.0f);
     //rotateShape(shapes[arm], rotatedBy);
-
-    for (auto& s: shapes) {
-        auto& shape = s.second;
-        bigTree.insert(shape->cuboid().pos(),shape);
-    }
-
     for (auto& s: shapes) {
         auto& shape = s.second;
         glGenVertexArrays(1, &(shape->VAO));
@@ -253,6 +196,7 @@ void keyboard(unsigned char key, int mouseX, int mouseY) {
     }
     if (!stop) {
         if (translate != zeroV) {
+            // for some shapes translationMultiplier will be 0, so cannot move
             const v3 translateMultiplier = shape.cuboid().translationMultiplier;
             Movement m(&shape, Movement::Transform::translate, translate * translateMultiplier);
             movements.push_back(m);
@@ -296,12 +240,8 @@ void specialInput(int key, int x, int y) {
     }
 }
 
-void rotateShape(Shape* s, const fq& qua) {
-    s->rotateQua(qua);
-}
-
-void rotateShape(Shape* s, const v3& rotateBy) {
-    s->rotateDegs(rotateBy);
+bool rotateShape(Shape* s, const v3& rotateBy) {
+    return s->rotateDegs(rotateBy);
 }
 
 void translateShape(Shape* shape, const v3& translate) {
@@ -309,9 +249,10 @@ void translateShape(Shape* shape, const v3& translate) {
     //assert(deleted);
     shape->translate(translate);
     bigTree.insert(shape->cuboid().pos(),shape);
+    std::cout << bigTree.size() << " is size of octtree\n";
 }
 
-void display() {
+void main_loop() {
 
     static long frame = 0l;
     static long totalTimeTaken = 0l;
@@ -321,7 +262,9 @@ void display() {
     long startTime = timeNowMicros();
 
     startLoopGl();
+    processMovements();
     long s = timeNowMicros();
+    
     collisions();
     long t = timeNowMicros();
     //std::cout << "Time taken for collision " << (float)(t-s)/1000.0f << "ms\n";
@@ -359,6 +302,8 @@ void idle() {
 }
 
 void processMovements() {
+    // need stacks to be built for each time a lower shape moves
+    // will have to unwind stack if a rotate fails
     // Quick and dirty vector inserts for now,
     // Later can change to Vector of vectors or something
     for (int i=0; i<movements.size(); ++i) {
@@ -396,8 +341,6 @@ void processMovements() {
 
 void collisions() {
 
-    processMovements();
-    
     std::set<int> collidingSet;
     std::set<int> notCollidingSet;
     for (const auto& s: shapes) {
@@ -615,7 +558,7 @@ int init(int argc, char* argv[]) {
         return -1;
     }
 
-    glutDisplayFunc(display); 
+    glutDisplayFunc(main_loop); 
 	glutKeyboardFunc(keyboard); 
 	glutIdleFunc(idle); 
     glutSpecialFunc(specialInput); 
