@@ -11,6 +11,7 @@
 #include <chrono>
 #include <sstream>
 #include <iostream>
+#include <map>
 
 class Shape;
 struct Movement;
@@ -23,7 +24,9 @@ typedef glm::mat4 m4;
 typedef std::pair<v3, Shape*> v3S;
 typedef std::vector<v3S> vv3S;
 typedef glm::fquat fq;
-typedef std::vector<Shape*> Shapes;
+//typedef std::vector<Shape*> Shapes;
+typedef int Id;
+typedef std::map<Id,Shape*> Shapes;
 
 static const v3 zeroV(0.0f,0.0f,0.0f);
 static const v3 oneV(1.0f,1.0f,1.0f);

@@ -91,8 +91,8 @@ struct Movement {
 
 static bool allowedCollide = true;
 
-static const int numbShapes = 3;
-static int selectedShape = 2;
+static const int numbShapes = 2;
+static int selectedShape = std::min(numbShapes, 1);
 static const int base = 0;
 static const int arm = 1;
 static const int shoulder = 2;
@@ -109,14 +109,16 @@ class Movements : public std::vector<Movement> {
     public:
         Movements(Shapes* shapes) : shapes(shapes) {}
         void push_back(const Movement& val) {
+            /*
             if (val.s->id == arm) {
                 Shape& shape_arm = *val.s;
                 Shape& shape_shoulder = *(*shapes)[shoulder];
+                std::cout << "AA\n";
+                std::cout << "BB\n";
                 if (val.t == Movement::Transform::rotateRads) {
                     // need rotate move shoulder too
                     Movement m(&shape_shoulder, Movement::Transform::rotateRads, val.vec);
                     std::vector<Movement>::push_back(m);
-                    /*
                     const v3 center = shape_arm.cuboid().pos();
                     const v3 xyz = v3(0.0f,2.0f*shape_arm.cuboid().half_xyz(),0.0f);
                     const v3 armTop = center + xyz;
@@ -125,10 +127,8 @@ class Movements : public std::vector<Movement> {
                     const fq qua = shape_arm.cuboid().orient();
                     //rotated_point = origin + (orientation_quaternion * (point-origin));
                     const v3 shoulderCenter = shape_shoulder.cuboid().pos();
-                    */
                 }
-                
-            }
+                */
             std::vector<Movement>::push_back(val);
         }
 };
@@ -137,6 +137,7 @@ Movements movements(&shapes);
 
 void createShapes() {
 
+    /*
     //Shape(const fv* points, const fv* colours, const fv* red, int id,
     //        v3 scale=oneV, v3 motionLimiter=oneV, v3 movementLimiter=oneV);
     shapes.push_back(new Shape(&cubePointsCentered,&cubeColours,&cubeColoursRed,base,
@@ -156,12 +157,20 @@ void createShapes() {
 
     translateShape(shapes[shoulder],baseHeight);
     translateShape(shapes[shoulder],armHeight);
+    */
+
+    shapes[arm] = (new Shape(&cubePointsBottom,&cubeColours,&cubeColoursRed,arm,
+            v3(1.0f,2.0f,1.0f),v3(1.0f,1.0f,1.0f),oneV));
+
+    extraShapes();
 
     for (auto& s: shapes) {
-        bigTree.insert(s->cuboid().pos(),s);
+        auto& shape = s.second;
+        bigTree.insert(shape->cuboid().pos(),shape);
     }
 
-    for (auto shape: shapes) {
+    for (auto& s: shapes) {
+        auto& shape = s.second;
         glGenVertexArrays(1, &(shape->VAO));
         glGenBuffers(1, &(shape->VBOs[0])); // vertex
         glGenBuffers(1, &(shape->VBOs[1])); // colour
@@ -272,6 +281,9 @@ void extraShapes() {
     float ranFix = areaSize/2.0f;
     srand (static_cast <unsigned> (timeNowMicros()));
     for (int i = shapes.size(); i<numbShapes; ++i) {
+        
+        Id id = i;
+        
         float x = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
         float y = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
         float z = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
@@ -284,10 +296,13 @@ void extraShapes() {
         z *= ranMul;
         z -= ranFix;
 
-        shapes.push_back(new Shape(&cubePointsCentered,&cubeColours,&cubeColoursRed,i,scale,oneV,oneV));
+        auto worked = shapes.insert(std::make_pair(id,new Shape(&cubePointsCentered,&cubeColours,&cubeColoursRed,id,scale,oneV,oneV)));
+        if (!worked.second) {
+            std::cout << "Could not insert into map, element likely already present\n";
+        }
 
-        translateShape(shapes.back(),v3(x,y,z));
-        rotateShape(shapes.back(),v3(x,y,z));
+        translateShape(shapes[id],v3(x,y,z));
+        rotateShape(shapes[id],v3(x,y,z));
     }
 }
 
@@ -301,7 +316,6 @@ void display() {
     long startTime = timeNowMicros();
 
     startLoopGl();
-
     long s = timeNowMicros();
     collisions();
     long t = timeNowMicros();
@@ -348,13 +362,14 @@ void collisions() {
     std::set<int> collidingSet;
     std::set<int> notCollidingSet;
     for (const auto& s: shapes) {
-        notCollidingSet.insert(s->id);
+        Shape& shape = *s.second;
+        notCollidingSet.insert(shape.id);
     }
     std::set<std::pair<int,int>> collidingPairs;
 
     const int size = shapes.size();
-    for (int i=0; i<size; ++i) {
-        Shape& shape = *shapes[i];
+    for (auto& s: shapes) {
+        Shape& shape = *s.second;
         const v3 pos = shape.cuboid().pos();
         //just use one for now, will change so that shapes
         // store their max dimensions
@@ -386,7 +401,7 @@ void collisions() {
         Movement& m = movements[i];
         const Shape& shape = *m.s;
         const int id = shape.id;
-        bool allowedToCollide = allowedCollide;
+        bool allowedToCollide = allowedCollide; // global for now
         auto col = collidingSet.find(id) != collidingSet.end();
         if (col && !allowedToCollide) {
             m.undo();
@@ -401,12 +416,11 @@ void collisions() {
     }
 
     movements.clear();
-
 }
 
 void render() {
-    for (int i=0; i<shapes.size(); ++i) {
-        Shape& shape = *shapes[i];
+    for (auto& s: shapes) {
+        Shape& shape = *s.second;
         auto& qua = shape.cuboid().qua_;
         glBindVertexArray(shape.VAO);
         //
@@ -451,7 +465,8 @@ void render() {
 }
 
 void bindBuffers(Shapes& shapes) {
-    for (auto& shape: shapes) {
+    for (auto& s: shapes) {
+        auto& shape = s.second;
         bindBuffers(shape->VAO, shape->VBOs, shape->points(), shape->colours());
     }
 }
@@ -479,10 +494,18 @@ Shape& getShape() {
 
 void switchShape(int by) {
     if (shapes.size() == 0) {
-        std::cout << "warning - shape list size 0" << "\n";
+        std::cout << "warning - shape list size 0, cannot switch shape" << "\n";
     } else if (shapes.size() > 1) {
-        selectedShape += by;
-        selectedShape %= shapes.size();
+        static std::vector<Id> ids;
+        static int idSelected = selectedShape;
+        if (ids.size() == 0) {
+            for (auto& s: shapes) {
+                ids.push_back(s.first);
+            }
+        }
+        idSelected++;
+        idSelected %= ids.size();
+        selectedShape = ids[idSelected];
     }
 }
 
@@ -506,12 +529,14 @@ int main(int argc, char* argv[]) {
 }
 
 void cleanupAndExit() {
-    for (auto& shape: shapes) {
+    for (auto& s: shapes) {
+        auto& shape = s.second;
         glDeleteVertexArrays(1, &shape->VAO);
         glDeleteBuffers(1, &shape->VBOs[0]);
         glDeleteBuffers(1, &shape->VBOs[1]);
     }
-    for (auto& shape: shapes) {
+    for (auto& s: shapes) {
+        auto& shape = s.second;
         delete shape;
     }
     shapes.clear();
