@@ -12,22 +12,32 @@
 #include <algorithm>
 #include <string>
 #include <cfloat>
+#include <set>
 
 #include "Shape.hpp"
+#include "State.hpp"
 
-void db(std::string s) {
-    static int i = 0;
-    std::cout << "DEBUG" << i << " " << s << "\n";
-    i++;
+    //Shape(const fv* points, const fv* colours, const fv* red, int id, v3 topCenter, Set<Id> canCollideWith,
+    //        v3 scale=oneV, v3 motionLimiter=oneV, v3 translationMultiplier=oneV
+    //        size,          rotation,            , translationMultiplier, yaw_pitch_roll_min, yaw_pitch_roll_max
+
+Shape::Shape(const fv* points, const fv* colours, const fv* purple, const fv* green,
+        int id, v3 topCenter, std::set<Id> canCollideWith, v3 scale, v3 translationMultiplier) :
+    _cuboid(*points,topCenter,scale,translationMultiplier), canCollideWith(canCollideWith), _colours(colours), 
+    purple(purple), green(green), id(id), VBOs(2)
+    {
+}
+
+bool Shape::selected() {
+    return _selected;
+}
+
+void Shape::selected(bool b) {
+    _selected = b;
 }
 
 vv3 Shape::getEdges(const vv3& v) {
     vv3 e;
-    // 36 vertices ->
-    // since it's straight from the gl
-    // every 3 points make up a triangle
-    // every 2 triangles make a face
-    //
     const int size = v.size();
     for (int i=0; i<size; i+=4) {
         vv3 face(4);
@@ -40,12 +50,7 @@ vv3 Shape::getEdges(const vv3& v) {
             e.push_back((face[j] - face[(j+1)%faceSize]));
         }
     }
-    // 3 axis
     return e;
-}
-
-void db() {
-    db("");
 }
 
 // returns normalised axes
@@ -85,15 +90,6 @@ bool Shape::colliding(Shape& s1, Shape& s2) {
     return true;
 }
 
-std::ostream& operator<<(std::ostream& stream, const Shape& s) {
-    //return stream << "Pos" << printVec(c.pos_) << ", ang:" << printVec(c.ang_) << ", size" << printVec(c.size_);
-    return stream << s.name << ": " << s._cuboid;
-}
-
-Shape::Shape(const fv* points, const fv* colours, const fv* red, std::string niceName) :
-    Shape(points,colours,red,niceName,v3(1.0f,1.0f,1.0f)) {
-}
-
 std::pair<float, float> Shape::project(const v3& axis_in, const vv3* verts_in) {
     const auto& verts = *verts_in;
     const v3 axis = glm::normalize(axis_in);
@@ -113,11 +109,6 @@ std::pair<float, float> Shape::project(const v3& axis_in, const vv3* verts_in) {
     return proj;
 }
 
-Shape::Shape(const fv* points, const fv* colours, const fv* red, std::string niceName, v3 scale) :
-    _cuboid(*points,scale), _colours(colours), red(red), name(niceName), VBOs(2)
-    {
-}
-
 GLuint Shape::colourVBO() {
     if (_colliding) {
         return VBOs[1];
@@ -127,25 +118,17 @@ GLuint Shape::colourVBO() {
 }
 
 const fv* Shape::colours() {
-    if (_colliding) {
-        return red;
+    if (_selected) {
+        return green;
+    }
+    else if (_colliding) {
+        return purple;
     } else {
         return _colours;
     }   
 }
 
 Shape::~Shape() {
-}
-
-Shape::Shape(const Shape& s) :
-        name(s.name),
-        _colliding(s._colliding),
-        _cuboid(s._cuboid),
-        _colours(s._colours),
-        VAO(s.VAO),
-        VBOs(s.VBOs)
-    {
-        // copy constructor
 }
 
 const fv* Shape::points() {
@@ -156,39 +139,16 @@ bool Shape::colliding(bool isColliding) {
     _colliding = isColliding;
 }
 
+std::ostream& operator<<(std::ostream& stream, const Shape& s) {
+    //return stream << "Pos" << printVec(c.pos_) << ", ang:" << printVec(c.ang_) << ", size" << printVec(c.size_);
+    return stream << s.name << ": " << s._cuboid;
+}
+
 bool Shape::colliding() const {
     return _colliding;
 }
 
 Cuboid& Shape::cuboid() {
     return _cuboid;
-}
-
-void Shape::translate(float x, float y, float z) {
-    translate(v3(x,y,z));
-}
-
-void Shape::translate(v3 by) {
-    _cuboid.translate(by);
-}
-
-void Shape::rotateDegs(const v3 a) {
-    rotateDegs(a.x,a.y,a.z);
-}
-
-void Shape::rotateDegs(float x, float y, float z) {
-    rotateRads(
-            (x*M_PI)/180.0f,
-            (y*M_PI)/180.0f,
-            (z*M_PI)/180.0f
-            );
-}
-
-void Shape::rotateRads(float x, float y, float z) {
-    rotateRads(v3(x,y,z));
-}
-
-void Shape::rotateRads(v3 by) {
-    _cuboid.rotateRads(by);
 }
 

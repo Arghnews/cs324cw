@@ -11,8 +11,13 @@
 #include <chrono>
 #include <sstream>
 #include <iostream>
+#include <map>
+#include <limits>
+#include <math.h>
 
 class Shape;
+struct Movement;
+struct State;
 
 typedef std::vector<GLfloat> fv;
 typedef glm::vec3 v3;
@@ -21,14 +26,44 @@ typedef std::vector<v3> vv3;
 typedef glm::mat4 m4;
 typedef std::pair<v3, Shape*> v3S;
 typedef std::vector<v3S> vv3S;
+typedef glm::fquat fq;
+typedef int Id;
+typedef std::map<Id,Shape*> Shapes;
+typedef std::vector<Movement> Movements;
 
 static const v3 zeroV(0.0f,0.0f,0.0f);
+static const v3 oneV(1.0f,1.0f,1.0f);
+static const float PI(M_PI);
+static const float HALF_PI(M_PI/2.0f);
+static const v3 V3_PI(M_PI,M_PI,M_PI);
+static const v3 V3_HALF_PI(V3_PI * 0.5f);
+static const v3 V3_HALF_PI_NEGATIVE(V3_HALF_PI * -1.0f);
+
+static const float EPSILON = 0.001f;
+static const float FLOAT_MAX_POSITIVE = 100000.0f;
+static const float FLOAT_MAX_NEGATIVE = -1.0f * FLOAT_MAX_POSITIVE;
+static const v3 V3_MAX_POSITIVE(FLOAT_MAX_POSITIVE,FLOAT_MAX_POSITIVE,FLOAT_MAX_POSITIVE);
+static const v3 V3_MAX_NEGATIVE(FLOAT_MAX_NEGATIVE,FLOAT_MAX_NEGATIVE,FLOAT_MAX_NEGATIVE);
+
+v3 static vabs(const v3& v) {
+    return v3(fabs(v.x),fabs(v.y),fabs(v.z));
+}
 
 template <class T>
 void static concat(std::vector<T>& grower, const std::vector<T>& added) {
     grower.insert( grower.end(), added.begin(), added.end() );
 }
 
+template <class T>
+std::pair<bool,int> static vecContains(const std::vector<T>& vec, const T& t) {
+    const int size = vec.size();
+    for (int i=0; i<size; ++i) {
+        if (vec[i] == t) {
+            return std::make_pair(true,i);
+        }
+    }
+    return std::make_pair(false,0);
+}
 
 std::string static printVec(const v3 v) {
     std::stringstream buffer;
@@ -37,7 +72,6 @@ std::string static printVec(const v3 v) {
 }
 
 bool static areSame(float a, float b) {
-    static const float EPSILON = 0.001f;
     return fabs(a - b) < EPSILON;
 }
 
