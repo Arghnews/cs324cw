@@ -46,8 +46,8 @@ void movePart(Movement& m, Id& parent, Id& child, std::deque<Movement>& thisMove
 Shape& getShape();
 void switchShape(int);
 Movements processMovements();
-bool rotateShape(Shape* s, const v3& rotateBy);
-bool translateShape(Shape* s, const v3& translate);
+State rotateShape(Shape* s, const v3& rotateBy);
+State translateShape(Shape* s, const v3& translate);
 void extraShapes();
 
 struct Movement {
@@ -68,9 +68,8 @@ struct Movement {
         }
         return stream << "Movement on " << m.s << " of type " << type << " of " << printVec(m.vec);
     }
-    Movement(Shape* s, Transform t, v3 vec) : s(s), t(t), vec(vec) {
-        state = s->cuboid().state();
-    }
+    Movement(Shape* s, Transform t, v3 vec) : s(s), t(t), vec(vec) {}
+    Movement(Shape* s, Transform t, v3 vec, State state) : s(s), t(t), vec(vec), state(state) {}
     Movement(const Movement& m) : 
         s(m.s),
         t(m.t),
@@ -89,21 +88,27 @@ struct Movement {
         }
         return *this;
     }
-    bool move() {
+    State move() {
+        State st;
         if (t == Movement::Transform::rotateRads) {
-            moved = rotateShape(s,vec);
+            st = rotateShape(s,vec);
+            moved = true;
         } else if (t == Movement::Transform::translate) {
-            moved = translateShape(s,vec);
+            st = translateShape(s,vec);
+            moved = true;
         }
-        return moved;
+        return st;
     }
-    bool undo() {
+    State undo() {
+        State st;
         if (t == Movement::Transform::rotateRads) {
-            undone = rotateShape(s,-1.0f*vec);
+            st = rotateShape(s,-1.0f*vec);
+            undone = true;
         } else if (t == Movement::Transform::translate) {
-            undone = translateShape(s,-1.0f*vec);
+            st = translateShape(s,-1.0f*vec);
+            undone = true;
         }
-        return undone;
+        return st;
     }
 };
 
@@ -191,14 +196,14 @@ void createShapes() {
     switchShape(1);
 }
 
-bool rotateShape(Shape* s, const v3& rotateBy) {
+State rotateShape(Shape* s, const v3& rotateBy) {
     return s->cuboid().rotateRads(rotateBy);
 }
 
-bool translateShape(Shape* shape, const v3& translate) {
+State translateShape(Shape* shape, const v3& translate) {
     const bool deleted = bigTree.del(shape->cuboid().state().pos,shape);
     //assert(deleted);
-    bool worked = shape->cuboid().translate(translate);
+    auto worked = shape->cuboid().translate(translate);
     bigTree.insert(shape->cuboid().state().pos,shape);
     return worked;
 }
@@ -241,31 +246,19 @@ Movements processMovements() {
         bool need_undo = false;
         while (!thisMove.empty()) {
             Movement m = thisMove.front();
-            bool worked = m.move();
-            if (worked) {
-                doneMoves.push_back(m);
-                // push all extra moves onto vector here
-                Id parent = m.s->id;
-                std::pair<bool,int> has_where = vecContains(arm_dependencies,parent);
-                for (int k=0; k<arm_dependencies.size(); ++k) {
-                    //std::cout << "Armd at " << k << " is " << arm_dependencies[k] << "\n";
-                }
-                //std::cout << "Parent id " << parent << "\n";
-                const bool has = has_where.first;
-                const int where = has_where.second;
-                if (has && where < arm_dependencies.size() - 1) {
-                    int child_index = where + 1;
-                    Id child = arm_dependencies[child_index];
-                    //std::cout << "Child index " << child_index << " and id " << child << "\n";
-                    movePart(m,parent,child,thisMove);
-                }
-                movements_done.push_back(m);
-                thisMove.pop_front();
-            } else {
-                need_undo = true;
-                thisMove.clear();
+            State change = m.move();
+            doneMoves.push_back(m);
+            // push all extra moves onto vector here
+            //Id parent = m.s->id;
+            //Id child = arm_dependencies[parent+1];
+            //movePart(m,parent,child,thisMove);
+            movements_done.push_back(m);
+            thisMove.pop_front();
+            //need_undo = true;
+            //thisMove.clear();
             }
         }
+    /*
         if (need_undo) {
             while (!doneMoves.empty()) {
                 Movement& m = doneMoves.back();
@@ -273,7 +266,7 @@ Movements processMovements() {
                 doneMoves.pop_back();
             }
         }
-    }
+    }*/
     return movements_done;
 }
 

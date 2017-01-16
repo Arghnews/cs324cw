@@ -53,11 +53,11 @@ class Cuboid {
 
         bool static colliding(const Cuboid& c1, const Cuboid& c2);
 
-        bool rotateRads(float yaw, float pitch, float roll);
-        bool rotateRads(const v3 xyz);
+        State rotateRads(const float& y, const float& p, const float& r);
+        State rotateRads(const v3& ypr);
 
-        bool translate(v3 by);
-        bool translate(float x, float y, float z);
+        State translate(v3 by);
+        State translate(float x, float y, float z);
 
         friend std::ostream& operator<<(std::ostream&, const Cuboid&);
 };

@@ -50,16 +50,19 @@ Cuboid::Cuboid(fv points, v3 topCenter, v3 scale, v3 translationMultiplier) :
     lastState_ = state_;
 }
 
-bool Cuboid::translate(v3 by) {
+State Cuboid::translate(v3 by) {
     lastState_.pos = state_.pos;
     state_.pos += by;
     recalcEdges();
-    return true;
+
+    State s;
+    s.pos = by;
+    s.changed = zeroV == by;
+    return s;
 }
 
-bool Cuboid::rotateRads(float yaw, float pitch, float roll) {
-    const v3 vec(yaw,pitch,roll);
-    v3 new_ypr = state_.ypr + vec;
+State Cuboid::rotateRads(const v3& ypr) {
+    v3 new_ypr = state_.ypr + ypr;
     // bounded by yaw min and max
     const bool yawLim = ((new_ypr.x < ypr_min.x 
         || new_ypr.y < ypr_min.y 
@@ -72,14 +75,18 @@ bool Cuboid::rotateRads(float yaw, float pitch, float roll) {
     lastState_.topCenter = state_.topCenter;
     lastState_.ypr = state_.ypr;
 
-    glm::fquat q = glm::quat(vec);
+    const fq q = glm::quat(ypr);
 
     state_.orient = q * state_.orient;
     state_.topCenter = q * state_.topCenter;
-    state_.ypr += vec;
+    state_.ypr += ypr;
     recalcEdges();
     // the function that actually does the rotating
-    return true;
+    State s;
+    s.orient = q;
+    s.topCenter = state_.topCenter - lastState_.topCenter;
+    s.changed = ypr == zeroV;
+    return s;
 }
 
 const v3 Cuboid::scale() const {
@@ -102,11 +109,11 @@ State Cuboid::lastState() {
     return lastState_;
 }
 
-bool Cuboid::rotateRads(const v3 xyz, bool changeYaw) {
-    return rotateRads(xyz.x, xyz.y, xyz.z, changeYaw);
+State Cuboid::rotateRads(const float& y, const float& p, const float& r) {
+    return rotateRads(v3(y,p,r));
 }
 
-bool Cuboid::translate(float x, float y, float z) {
+State Cuboid::translate(float x, float y, float z) {
     return translate(v3(x,y,z));
 }
 
