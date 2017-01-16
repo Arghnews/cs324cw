@@ -1,6 +1,5 @@
 #include <GL/glew.h> 
 #include <GL/glut.h> 
-#include <iostream>
 #include <string>
 #include <sstream>
 #include <iostream>
@@ -52,13 +51,9 @@ void extraShapes();
 
 struct Movement {
     enum Transform { rotateRads, translate };
-    v3 vec;
-    Shape* s;
+    State state; // if all aligned doesn't matter
     Transform t; // biggest first for better packing (maybe)
-    bool moved;
-    bool undone;
-    State state;
-    // if all aligned doesn't matter
+    Shape* s;
     friend std::ostream& operator<<(std::ostream& stream, const Movement& m) {
         std::string type = "";
         if (m.t == Transform::rotateRads) {
@@ -66,52 +61,39 @@ struct Movement {
         } else if (m.t == Transform::translate) {
             type = "translation";
         }
-        return stream << "Movement on " << m.s << " of type " << type << " of " << printVec(m.vec);
+        return stream << "Movement on " << m.s << " of type " << type << " of " << printVec(m.state.vec);
     }
-    Movement(Shape* s, Transform t, v3 vec) : s(s), t(t), vec(vec) {}
-    Movement(Shape* s, Transform t, v3 vec, State state) : s(s), t(t), vec(vec), state(state) {}
+    Movement(Shape* s, Transform t, v3 transforma) : s(s), t(t) {
+        state.vec = transforma;
+    }
+    Movement(Shape* s, Transform t, State state) : s(s), t(t), state(state) {}
     Movement(const Movement& m) : 
-        s(m.s),
+        state(m.state),
         t(m.t),
-        vec(m.vec),
-        moved(m.moved),
-        undone(m.undone),
-        state(m.state) {}
+        s(m.s) {}
     Movement& operator=(const Movement& m) {
         if (this != &m) {
-            vec = m.vec;
-            s = m.s;
-            t = m.t;
-            moved = m.moved;
-            undone = m.undone;
             state = m.state;
+            t = m.t;
+            s = m.s;
         }
         return *this;
     }
     State move() {
-        State st;
         if (t == Movement::Transform::rotateRads) {
-            st = rotateShape(s,vec);
-            moved = true;
+            return rotateShape(s,state.vec);
         } else if (t == Movement::Transform::translate) {
-            st = translateShape(s,vec);
-            moved = true;
+            return translateShape(s,state.vec);
         }
-        return st;
     }
     State undo() {
-        State st;
         if (t == Movement::Transform::rotateRads) {
-            st = rotateShape(s,-1.0f*vec);
-            undone = true;
+            return rotateShape(s,-1.0f*state.vec);
         } else if (t == Movement::Transform::translate) {
-            st = translateShape(s,-1.0f*vec);
-            undone = true;
+            return translateShape(s,-1.0f*state.vec);
         }
-        return st;
     }
 };
-
 
 static bool allowedCollide = false;
 static const int numbShapes = 2;
@@ -172,7 +154,7 @@ void createShapes() {
 
     for (auto& s: shapes) {
         auto& shape = s.second;
-        bigTree.insert(shape->cuboid().state().pos,shape);
+        bigTree.insert(shape->cuboid().state().vec,shape);
     }
 
     translateShape(shapes[shoulder],baseHeight);
@@ -201,10 +183,10 @@ State rotateShape(Shape* s, const v3& rotateBy) {
 }
 
 State translateShape(Shape* shape, const v3& translate) {
-    const bool deleted = bigTree.del(shape->cuboid().state().pos,shape);
+    const bool deleted = bigTree.del(shape->cuboid().state().vec,shape);
     //assert(deleted);
     auto worked = shape->cuboid().translate(translate);
-    bigTree.insert(shape->cuboid().state().pos,shape);
+    bigTree.insert(shape->cuboid().state().vec,shape);
     return worked;
 }
 
@@ -239,6 +221,8 @@ Movements processMovements() {
 
     for (int i=0; i<movements.size(); ++i) {
 
+        State change;
+
         std::deque<Movement> thisMove;
         std::deque<Movement> doneMoves;
 
@@ -246,7 +230,11 @@ Movements processMovements() {
         bool need_undo = false;
         while (!thisMove.empty()) {
             Movement m = thisMove.front();
-            State change = m.move();
+            State difference = m.move();
+            change = change + difference;
+            if (m->s.id == 1) { // if shoulder
+                
+            }
             doneMoves.push_back(m);
             // push all extra moves onto vector here
             //Id parent = m.s->id;
@@ -256,8 +244,8 @@ Movements processMovements() {
             thisMove.pop_front();
             //need_undo = true;
             //thisMove.clear();
-            }
         }
+    }
     /*
         if (need_undo) {
             while (!doneMoves.empty()) {
@@ -282,7 +270,7 @@ void movePart(Movement& m, Id& parent, Id& child, std::deque<Movement>& thisMove
         const v3 center = shape_parent.cuboid().state().topCenter;
         const v3 translation = center - lastCenter;
         Movement mTrans(&shape_child, Movement::Transform::translate, translation);
-        Movement mRotate(&shape_child, Movement::Transform::rotateRads, m.vec);
+        Movement mRotate(&shape_child, Movement::Transform::rotateRads, m.state.vec);
         thisMove.push_back(mTrans);
         thisMove.push_back(mRotate);
     } else if (m.t == Movement::Transform::translate) {
@@ -305,7 +293,7 @@ void collisions() {
     const int size = shapes.size();
     for (auto& s: shapes) {
         Shape& shape = *s.second;
-        const v3 pos = shape.cuboid().state().pos;
+        const v3 pos = shape.cuboid().state().vec;
         //just use one for now, will change so that shapes
         // store their max dimensions
         const float halfDimensions = shape.cuboid().furthestVertex()*2.0f;
@@ -381,7 +369,9 @@ void collisions() {
 void render() {
     for (auto& s: shapes) {
         Shape& shape = *s.second;
+        auto pos = shape.cuboid().state().vec;
         auto qua = shape.cuboid().state().orient;
+        auto sca = shape.cuboid().scale();
         glBindVertexArray(shape.VAO);
         //
         // local space -> world space -> view space -> clip space -> screen space
@@ -395,8 +385,8 @@ void render() {
         m4 rotateM = glm::mat4_cast(qua);
         m4 scale;
 
-        trans = glm::translate(trans, shape.cuboid().state().pos);
-        scale = glm::scale(scale, shape.cuboid().scale());  
+        trans = glm::translate(trans, pos);
+        scale = glm::scale(scale, sca);  
         model = trans * rotateM * scale;
 
         glm::mat4 view;

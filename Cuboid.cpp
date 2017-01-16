@@ -43,43 +43,31 @@ Cuboid::Cuboid(fv points, v3 topCenter, v3 scale, v3 translationMultiplier) :
     }
     half_xyz_ /= 2.0f;
 
-    state_.pos = zeroV;
+    state_.vec = zeroV;
     state_.orient = fq(); // identity
     state_.topCenter = topCenter*scale_;
-    state_.ypr = zeroV;
     lastState_ = state_;
 }
 
 State Cuboid::translate(v3 by) {
-    lastState_.pos = state_.pos;
-    state_.pos += by;
+    lastState_.vec = state_.vec;
+    state_.vec += by;
     recalcEdges();
 
     State s;
-    s.pos = by;
+    s.vec = by;
     s.changed = zeroV == by;
     return s;
 }
 
 State Cuboid::rotateRads(const v3& ypr) {
-    v3 new_ypr = state_.ypr + ypr;
-    // bounded by yaw min and max
-    const bool yawLim = ((new_ypr.x < ypr_min.x 
-        || new_ypr.y < ypr_min.y 
-        || new_ypr.z < ypr_min.z) ||
-        (new_ypr.x > ypr_max.x 
-        || new_ypr.y > ypr_max.y 
-        || new_ypr.z > ypr_max.z));
-
     lastState_.orient = state_.orient;
     lastState_.topCenter = state_.topCenter;
-    lastState_.ypr = state_.ypr;
 
     const fq q = glm::quat(ypr);
 
     state_.orient = q * state_.orient;
     state_.topCenter = q * state_.topCenter;
-    state_.ypr += ypr;
     recalcEdges();
     // the function that actually does the rotating
     State s;
@@ -122,7 +110,7 @@ const fv* Cuboid::points() {
 }
 
 vv3 Cuboid::getVertices() {
-    const v3 centre = state_.pos;
+    const v3 centre = state_.vec;
     const fq orient = state_.orient;
     const int verticesSize = actualPoints_.size();
     vv3 vertices(verticesSize);
@@ -188,6 +176,6 @@ void Cuboid::recalcEdges() {
     uniqEdges_ = unique(edges_,true);
 }
 std::ostream& operator<<(std::ostream& stream, const Cuboid& c) {
-    //return stream << "Pos" << printVec(c.pos()) << ", ang:" << printVec(c.ang()) << ", size" << printVec(c.size());
+    //return stream << "Pos" << printVec(c.vec()) << ", ang:" << printVec(c.ang()) << ", size" << printVec(c.size());
 }
 
