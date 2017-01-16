@@ -35,14 +35,6 @@ void Shape::selected(bool b) {
     _selected = b;
 }
 
-bool Shape::translate(v3 by) {
-    return _cuboid.translate(by);
-}
-
-bool Shape::rotateRads(v3 by) {
-    return _cuboid.rotateRads(by);
-}
-
 vv3 Shape::getEdges(const vv3& v) {
     vv3 e;
     const int size = v.size();
@@ -157,13 +149,5 @@ bool Shape::colliding() const {
 
 Cuboid& Shape::cuboid() {
     return _cuboid;
-}
-
-bool Shape::translate(float x, float y, float z) {
-    return translate(v3(x,y,z));
-}
-
-bool Shape::rotateRads(float x, float y, float z) {
-    rotateRads(v3(x,y,z));
 }
 

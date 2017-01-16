@@ -48,7 +48,7 @@ Cuboid::Cuboid(fv points, v3 topCenter, v3 scale, v3 translationMultiplier, v3 y
     state_.pos = zeroV;
     state_.orient = fq(); // identity
     state_.topCenter = topCenter*scale_;
-    state_.ypr = v3();
+    state_.ypr = zeroV;
     lastState_ = state_;
 }
 
@@ -59,16 +59,17 @@ bool Cuboid::translate(v3 by) {
     return true;
 }
 
-bool Cuboid::rotateRads(float yaw, float pitch, float roll) {
+bool Cuboid::rotateRads(float yaw, float pitch, float roll, bool changeYaw) {
     const v3 vec(yaw,pitch,roll);
     v3 new_ypr = state_.ypr + vec;
     // bounded by yaw min and max
-    if ((new_ypr.x < ypr_min.x 
+    const bool yawLim = ((new_ypr.x < ypr_min.x 
         || new_ypr.y < ypr_min.y 
         || new_ypr.z < ypr_min.z) ||
         (new_ypr.x > ypr_max.x 
         || new_ypr.y > ypr_max.y 
-        || new_ypr.z > ypr_max.z)) {
+        || new_ypr.z > ypr_max.z));
+    if (yawLim) {
         return false;
     }
 
@@ -106,14 +107,13 @@ State Cuboid::lastState() {
     return lastState_;
 }
 
-bool Cuboid::rotateRads(const v3 xyz) {
-    return rotateRads(xyz.x, xyz.y, xyz.z);
+bool Cuboid::rotateRads(const v3 xyz, bool changeYaw) {
+    return rotateRads(xyz.x, xyz.y, xyz.z, changeYaw);
 }
 
 bool Cuboid::translate(float x, float y, float z) {
     return translate(v3(x,y,z));
 }
-
 
 const fv* Cuboid::points() {
     return &points_;

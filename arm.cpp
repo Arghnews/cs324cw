@@ -106,7 +106,7 @@ struct Movement {
     }
 };
 
-static bool allowedCollide = true;
+static bool allowedCollide = false;
 
 static const int numbShapes = 2;
 static int selectedShape = 1;
@@ -128,27 +128,40 @@ void createShapes() {
     v3 bottom_upRightTop = v3(0.0f, 1.0f, 0.0f);
     v3 center_upRightTop = v3(0.0f, 0.5f, 0.0f);
 
-    std::set<Id> canCollideWith = {base, shoulder, arm};
+    /*Shape(const fv* points, const fv* colours, const fv* purple, const fv* green, int id, v3 topCenter,
+            std::set<Id> canCollideWith,
+            v3 scale=oneV, v3 translationMultiplier=oneV, v3 ypr_min=V3_MAX_NEGATIVE, v3 ypr_max=V3_MAX_POSITIVE);
+    */
 
+    std::set<Id> canCollideWith = {};
     shapes[base] = (new Shape(&cubePointsCentered,
             &cubeColours,&cubeColoursPurple,&cubeColoursGreen,
             base,center_upRightTop,canCollideWith,
             v3(5.0f,1.0f,5.0f),zeroV,zeroV,zeroV));
 
+    canCollideWith = {arm};
+    float n = 1.5f;
     shapes[shoulder] = (new Shape(&cubePointsBottom,
             &cubeColours,&cubeColoursPurple,&cubeColoursGreen,
             shoulder,bottom_upRightTop,canCollideWith,
-            //v3(1.0f,2.5f,1.0f),zeroV,V3_HALF_PI_NEGATIVE,V3_HALF_PI));
-            v3(1.0f,2.5f,1.0f),zeroV));
+            v3(1.0f,2.5f,1.0f),zeroV,
+            v3(n*-HALF_PI,FLOAT_MAX_NEGATIVE,-HALF_PI*n),
+            v3(n*HALF_PI,FLOAT_MAX_POSITIVE,n*HALF_PI)));
+            //v3(1.0f,2.5f,1.0f),zeroV));
+            //
 
+    canCollideWith = {shoulder};
     shapes[arm] = (new Shape(&cubePointsBottom,
             &cubeColours,&cubeColoursPurple,&cubeColoursGreen,
             arm,bottom_upRightTop,canCollideWith,
-            //v3(1.0f,1.75f,1.0f),zeroV,V3_HALF_PI_NEGATIVE,V3_HALF_PI));
-            v3(1.0f,1.75f,1.0f),zeroV));
+            v3(1.0f,1.75f,1.0f),zeroV,
+            v3(n*-HALF_PI,FLOAT_MAX_NEGATIVE,-HALF_PI*n),
+            v3(n*HALF_PI,FLOAT_MAX_POSITIVE,HALF_PI*n)));
+            //v3(1.0f,1.75f,1.0f),zeroV));
 
-    v3 baseHeight = 0.01f + 2.0f * shapes[base]->cuboid().state().topCenter;
-    v3 shoulderHeight = 0.01f + shapes[shoulder]->cuboid().state().topCenter;
+    float offset = 0.05f;
+    v3 baseHeight = offset + 2.0f * shapes[base]->cuboid().state().topCenter;
+    v3 shoulderHeight = offset + shapes[shoulder]->cuboid().state().topCenter;
 
     for (auto& s: shapes) {
         auto& shape = s.second;
@@ -161,7 +174,6 @@ void createShapes() {
     translateShape(shapes[arm],shoulderHeight);
 
     //v3 rotatedBy(90.0f,0.0f,0.0f);
-    //rotateShape(shapes[arm], rotatedBy);
     for (auto& s: shapes) {
         auto& shape = s.second;
         glGenVertexArrays(1, &(shape->VAO));
@@ -174,13 +186,13 @@ void createShapes() {
 }
 
 bool rotateShape(Shape* s, const v3& rotateBy) {
-    return s->rotateRads(rotateBy);
+    return s->cuboid().rotateRads(rotateBy);
 }
 
 bool translateShape(Shape* shape, const v3& translate) {
     const bool deleted = bigTree.del(shape->cuboid().state().pos,shape);
     //assert(deleted);
-    bool worked = shape->translate(translate);
+    bool worked = shape->cuboid().translate(translate);
     bigTree.insert(shape->cuboid().state().pos,shape);
     return worked;
 }
@@ -201,7 +213,7 @@ void main_loop() {
     bindBuffers(shapes);
     render();
 
-    static const float fps = 30.0f;
+    static const float fps = 60.0f;
     float fullFrametime = (1000.0f*1000.0f)/fps;
     long timeTaken = timeNowMicros() - startTime;
     int sleepTime = std::max((int)(fullFrametime - timeTaken),0);
@@ -265,13 +277,13 @@ void collisions() {
 
     Movements moves_made = processMovements();
 
-    std::set<int> collidingSet;
-    std::set<int> notCollidingSet;
+    std::set<Id> collidingSet;
+    std::set<Id> notCollidingSet;
     for (const auto& s: shapes) {
         Shape& shape = *s.second;
         notCollidingSet.insert(shape.id);
     }
-    std::set<std::pair<int,int>> collidingPairs;
+    std::set<std::pair<Id,Id>> collidingPairs;
 
     const int size = shapes.size();
     for (auto& s: shapes) {
@@ -296,24 +308,49 @@ void collisions() {
                 collidingSet.insert(nearby_shape.id);
                 notCollidingSet.erase(shape.id);
                 notCollidingSet.erase(nearby_shape.id);
-                collidingPairs.insert(std::make_pair(shape.id,nearby_shape.id));
+                const std::pair<Id,Id> colShapes = std::make_pair(
+                        std::min(shape.id,nearby_shape.id),std::max(shape.id,nearby_shape.id));
+                collidingPairs.insert(colShapes);
             } else {
                 // no collision
             }
         }
     }
 
-    for (int i=movements.size()-1; i>=0;--i) {
-        Movement& m = movements[i];
-        const Shape& shape = *m.s;
-        const int id = shape.id;
-        bool allowedToCollide = allowedCollide; // global for now
-        auto col = collidingSet.find(id) != collidingSet.end();
-        if (col && !allowedToCollide) {
-            m.undo();
+    // for now simple undo all approach if any collide ----
+    // however later can implement a system where in the movements above, each move made by say the shoulder
+    // affects the arm, and both these id's are recorded and put into lists
+    // then if the arm affects something else, this also into list etc
+    // and then down here can check if anything in the collidingPairs is in a list,
+    // to undo those lists of all affected objects
+
+    bool needUndo = false;
+
+    for (auto& pai: collidingPairs) {
+        const Id& shape1Id = pai.first;
+        const Id& shape2Id = pai.second;
+        const Shape& shape1 = *shapes[shape1Id];
+        const Shape& shape2 = *shapes[shape2Id];
+        static const bool allowedToCollideGlobal = allowedCollide; // global for now
+        //static const bool allowedToCollideGlobal = false; // global for now
+
+        std::set<Id> shape1CanHit = shape1.canCollideWith;
+        const bool can1Hit2 = shape1CanHit.find(shape2Id) != shape1CanHit.end();
+        std::set<Id> shape2CanHit = shape2.canCollideWith;
+        const bool can2Hit1 = shape2CanHit.find(shape1Id) != shape2CanHit.end();
+        const bool mayCollide = can1Hit2 && can2Hit1;
+        if (!mayCollide && !allowedToCollideGlobal) {
+            needUndo = true;
+            break;
         }
     }
 
+    if (needUndo) {
+        for (int i = moves_made.size(); i-- > 0;) {
+            moves_made[i].undo();
+        }
+    }
+    
     for (auto& id: collidingSet) {
         shapes[id]->colliding(true);
     }

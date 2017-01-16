@@ -33,15 +33,21 @@ typedef std::vector<Movement> Movements;
 
 static const v3 zeroV(0.0f,0.0f,0.0f);
 static const v3 oneV(1.0f,1.0f,1.0f);
+static const float PI(M_PI);
+static const float HALF_PI(M_PI/2.0f);
 static const v3 V3_PI(M_PI,M_PI,M_PI);
 static const v3 V3_HALF_PI(V3_PI * 0.5f);
 static const v3 V3_HALF_PI_NEGATIVE(V3_HALF_PI * -1.0f);
 
 static const float EPSILON = 0.001f;
-static const float FLOAT_MAX_POSITIVE = std::numeric_limits<float>::max();
-static const float FLOAT_MAX_NEGATIVE = -1.0f * std::numeric_limits<float>::max();
+static const float FLOAT_MAX_POSITIVE = 100000.0f;
+static const float FLOAT_MAX_NEGATIVE = -1.0f * FLOAT_MAX_POSITIVE;
 static const v3 V3_MAX_POSITIVE(FLOAT_MAX_POSITIVE,FLOAT_MAX_POSITIVE,FLOAT_MAX_POSITIVE);
 static const v3 V3_MAX_NEGATIVE(FLOAT_MAX_NEGATIVE,FLOAT_MAX_NEGATIVE,FLOAT_MAX_NEGATIVE);
+
+v3 static vabs(const v3& v) {
+    return v3(fabs(v.x),fabs(v.y),fabs(v.z));
+}
 
 template <class T>
 void static concat(std::vector<T>& grower, const std::vector<T>& added) {

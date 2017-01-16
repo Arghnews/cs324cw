@@ -25,7 +25,6 @@ class Shape {
         bool _selected;
         
     public:
-
         std::set<Id> canCollideWith;
         bool selected();
         void selected(bool b);
@@ -42,10 +41,6 @@ class Shape {
         bool colliding(bool isColliding);
         bool colliding() const;
         Cuboid& cuboid();
-        bool translate(float x, float y, float z);
-        bool translate(v3 by);
-        bool rotateRads(float x, float y, float z);
-        bool rotateRads(v3 by); // x, y, z, pretty rough atm
     
         const fv* points();
         const fv* colours();

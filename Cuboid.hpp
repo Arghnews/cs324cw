@@ -53,8 +53,8 @@ class Cuboid {
 
         bool static colliding(const Cuboid& c1, const Cuboid& c2);
 
-        bool rotateRads(float x, float y, float z);
-        bool rotateRads(const v3 xyz);
+        bool rotateRads(float yaw, float pitch, float roll, bool changeYaw=true);
+        bool rotateRads(const v3 xyz, const bool changeYaw=true);
 
         bool translate(v3 by);
         bool translate(float x, float y, float z);
