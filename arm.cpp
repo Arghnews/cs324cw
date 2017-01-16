@@ -42,6 +42,7 @@ void collisions();
 void keyboard(unsigned char key, int mouseX, int mouseY);
 void specialInput(int key, int x, int y);
 void cleanupAndExit();
+void movePart(Movement& m, Id& parent, Id& child, std::deque<Movement>& thisMove);
 Shape& getShape();
 void switchShape(int);
 Movements processMovements();
@@ -106,13 +107,14 @@ struct Movement {
     }
 };
 
-static bool allowedCollide = false;
 
+static bool allowedCollide = false;
 static const int numbShapes = 2;
 static int selectedShape = 1;
-static const int base = 0;
-static const int shoulder = 1;
-static const int arm = 2;
+static const Id base = 0;
+static const Id shoulder = 1;
+static const Id arm = 2;
+static const Id platter = 3;
 
 GLuint shaderProgram;
 Shapes shapes;
@@ -130,48 +132,52 @@ void createShapes() {
 
     /*Shape(const fv* points, const fv* colours, const fv* purple, const fv* green, int id, v3 topCenter,
             std::set<Id> canCollideWith,
-            v3 scale=oneV, v3 translationMultiplier=oneV, v3 ypr_min=V3_MAX_NEGATIVE, v3 ypr_max=V3_MAX_POSITIVE);
+            v3 scale=oneV, v3 translationMultiplier=oneV);
     */
 
     std::set<Id> canCollideWith = {};
     shapes[base] = (new Shape(&cubePointsCentered,
             &cubeColours,&cubeColoursPurple,&cubeColoursGreen,
             base,center_upRightTop,canCollideWith,
-            v3(5.0f,1.0f,5.0f),zeroV,zeroV,zeroV));
+            v3(5.0f,1.0f,5.0f),zeroV));
 
     canCollideWith = {arm};
     float n = 1.5f;
     shapes[shoulder] = (new Shape(&cubePointsBottom,
             &cubeColours,&cubeColoursPurple,&cubeColoursGreen,
             shoulder,bottom_upRightTop,canCollideWith,
-            v3(1.0f,2.5f,1.0f),zeroV,
-            v3(n*-HALF_PI,FLOAT_MAX_NEGATIVE,-HALF_PI*n),
-            v3(n*HALF_PI,FLOAT_MAX_POSITIVE,n*HALF_PI)));
-            //v3(1.0f,2.5f,1.0f),zeroV));
-            //
+            v3(1.0f,2.5f,1.0f),zeroV));
 
-    canCollideWith = {shoulder};
+    canCollideWith = {shoulder,platter};
     shapes[arm] = (new Shape(&cubePointsBottom,
             &cubeColours,&cubeColoursPurple,&cubeColoursGreen,
             arm,bottom_upRightTop,canCollideWith,
-            v3(1.0f,1.75f,1.0f),zeroV,
-            v3(n*-HALF_PI,FLOAT_MAX_NEGATIVE,-HALF_PI*n),
-            v3(n*HALF_PI,FLOAT_MAX_POSITIVE,HALF_PI*n)));
-            //v3(1.0f,1.75f,1.0f),zeroV));
+            v3(1.0f,1.75f,1.0f),zeroV));
+
+    canCollideWith = {arm};
+    shapes[platter] = (new Shape(&cubePointsCentered,
+            &cubeColours,&cubeColoursPurple,&cubeColoursGreen,
+            platter,center_upRightTop,canCollideWith,
+            v3(1.5f,0.5f,1.5f),zeroV));
 
     float offset = 0.05f;
     v3 baseHeight = offset + 2.0f * shapes[base]->cuboid().state().topCenter;
     v3 shoulderHeight = offset + shapes[shoulder]->cuboid().state().topCenter;
+    v3 armHeight = offset + shapes[arm]->cuboid().state().topCenter;
 
     for (auto& s: shapes) {
         auto& shape = s.second;
         bigTree.insert(shape->cuboid().state().pos,shape);
     }
 
-    translateShape(shapes[arm],baseHeight);
     translateShape(shapes[shoulder],baseHeight);
 
+    translateShape(shapes[arm],baseHeight);
     translateShape(shapes[arm],shoulderHeight);
+
+    translateShape(shapes[platter],baseHeight);
+    translateShape(shapes[platter],shoulderHeight);
+    translateShape(shapes[platter],armHeight);
 
     //v3 rotatedBy(90.0f,0.0f,0.0f);
     for (auto& s: shapes) {
@@ -224,6 +230,8 @@ Movements processMovements() {
 
     Movements movements_done;
 
+    static const std::vector<Id> arm_dependencies = { base, shoulder, arm, platter};
+
     for (int i=0; i<movements.size(); ++i) {
 
         std::deque<Movement> thisMove;
@@ -237,23 +245,19 @@ Movements processMovements() {
             if (worked) {
                 doneMoves.push_back(m);
                 // push all extra moves onto vector here
-                if (m.s->id == shoulder) {
-                    // When moving arm, should move shoulder too
-                    Shape& shape_arm = *shapes[arm];
-                    Shape& shape_shoulder = *shapes[shoulder];
-
-                    if (m.t == Movement::Transform::rotateRads) {
-                        // when the shoulder rotates, the arm should be translated to the shoulder's
-                        // new top center position
-                        // assumes the movement has just happened
-                        const v3 lastCenter = shape_shoulder.cuboid().lastState().topCenter;
-                        const v3 center = shape_shoulder.cuboid().state().topCenter;
-                        const v3 translation = center - lastCenter;
-                        Movement mTrans(&shape_arm, Movement::Transform::translate, translation);
-                        Movement mRotate(&shape_arm, Movement::Transform::rotateRads, m.vec);
-                        thisMove.push_back(mTrans);
-                        thisMove.push_back(mRotate);
-                    }
+                Id parent = m.s->id;
+                std::pair<bool,int> has_where = vecContains(arm_dependencies,parent);
+                for (int k=0; k<arm_dependencies.size(); ++k) {
+                    //std::cout << "Armd at " << k << " is " << arm_dependencies[k] << "\n";
+                }
+                //std::cout << "Parent id " << parent << "\n";
+                const bool has = has_where.first;
+                const int where = has_where.second;
+                if (has && where < arm_dependencies.size() - 1) {
+                    int child_index = where + 1;
+                    Id child = arm_dependencies[child_index];
+                    //std::cout << "Child index " << child_index << " and id " << child << "\n";
+                    movePart(m,parent,child,thisMove);
                 }
                 movements_done.push_back(m);
                 thisMove.pop_front();
@@ -271,6 +275,26 @@ Movements processMovements() {
         }
     }
     return movements_done;
+}
+
+void movePart(Movement& m, Id& parent, Id& child, std::deque<Movement>& thisMove) {
+    // When moving child, should move parent too
+    Shape& shape_child = *shapes[child];
+    Shape& shape_parent = *shapes[parent];
+
+    if (m.t == Movement::Transform::rotateRads) {
+        // when the parent rotates, the child should be translated to the parent's
+        // new top center position // assumes the movement has just happened
+        const v3 lastCenter = shape_parent.cuboid().lastState().topCenter;
+        const v3 center = shape_parent.cuboid().state().topCenter;
+        const v3 translation = center - lastCenter;
+        Movement mTrans(&shape_child, Movement::Transform::translate, translation);
+        Movement mRotate(&shape_child, Movement::Transform::rotateRads, m.vec);
+        thisMove.push_back(mTrans);
+        thisMove.push_back(mRotate);
+    } else if (m.t == Movement::Transform::translate) {
+    }
+    return;
 }
 
 void collisions() {
@@ -386,7 +410,7 @@ void render() {
         // Note that we're translating the scene in the reverse direction of where we want to move
         //view = glm::translate(view, v3(0.0f, 0.0f, -3.0f)); 
         view = glm::lookAt(
-                v3(1.5f,7.0f,3.0f), // eye
+                v3(1.5f,9.0f,3.0f), // eye
                 v3(0.0f,0.0f,0.0f),  // center
                 v3(0.0f,1.0f,0.0f)); // up
 

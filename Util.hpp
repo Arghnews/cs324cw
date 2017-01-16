@@ -54,6 +54,17 @@ void static concat(std::vector<T>& grower, const std::vector<T>& added) {
     grower.insert( grower.end(), added.begin(), added.end() );
 }
 
+template <class T>
+std::pair<bool,int> static vecContains(const std::vector<T>& vec, const T& t) {
+    const int size = vec.size();
+    for (int i=0; i<size; ++i) {
+        if (vec[i] == t) {
+            return std::make_pair(true,i);
+        }
+    }
+    return std::make_pair(false,0);
+}
+
 std::string static printVec(const v3 v) {
     std::stringstream buffer;
     buffer << "(" << v.x << "," << v.y << "," << v.z << ")";

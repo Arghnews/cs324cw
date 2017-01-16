@@ -39,7 +39,7 @@ class Cuboid {
         State state();
         void lastState(State& s);
         State lastState();
-        Cuboid(fv points, v3 topCenter, v3 scale, v3 translationMultiplier, v3 ypr_min, v3 ypr_max);
+        Cuboid(fv points, v3 topCenter, v3 scale, v3 translationMultiplier);
         v3 translationMultiplier; // movement multiplier
         const v3 scale() const;
         v3 half_xyz();
@@ -53,8 +53,8 @@ class Cuboid {
 
         bool static colliding(const Cuboid& c1, const Cuboid& c2);
 
-        bool rotateRads(float yaw, float pitch, float roll, bool changeYaw=true);
-        bool rotateRads(const v3 xyz, const bool changeYaw=true);
+        bool rotateRads(float yaw, float pitch, float roll);
+        bool rotateRads(const v3 xyz);
 
         bool translate(v3 by);
         bool translate(float x, float y, float z);

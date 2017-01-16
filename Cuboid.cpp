@@ -18,12 +18,10 @@
 
 // USING RADIANS
 
-Cuboid::Cuboid(fv points, v3 topCenter, v3 scale, v3 translationMultiplier, v3 ypr_min, v3 ypr_max) :
+Cuboid::Cuboid(fv points, v3 topCenter, v3 scale, v3 translationMultiplier) :
     points_(points),
     scale_(scale),
-    translationMultiplier(translationMultiplier),
-    ypr_min(ypr_min),
-    ypr_max(ypr_max)
+    translationMultiplier(translationMultiplier)
 {
     const int size = points_.size(); // 3d
     for (int i=0; i<size; i+=18) {
@@ -59,7 +57,7 @@ bool Cuboid::translate(v3 by) {
     return true;
 }
 
-bool Cuboid::rotateRads(float yaw, float pitch, float roll, bool changeYaw) {
+bool Cuboid::rotateRads(float yaw, float pitch, float roll) {
     const v3 vec(yaw,pitch,roll);
     v3 new_ypr = state_.ypr + vec;
     // bounded by yaw min and max
@@ -69,9 +67,6 @@ bool Cuboid::rotateRads(float yaw, float pitch, float roll, bool changeYaw) {
         (new_ypr.x > ypr_max.x 
         || new_ypr.y > ypr_max.y 
         || new_ypr.z > ypr_max.z));
-    if (yawLim) {
-        return false;
-    }
 
     lastState_.orient = state_.orient;
     lastState_.topCenter = state_.topCenter;
