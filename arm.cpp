@@ -242,38 +242,29 @@ Movements processMovements() {
 
     for (int i=0; i<movements.size(); ++i) {
 
-        //State change;
+        State change;
 
         std::deque<Movement> thisMove;
-        std::deque<Movement> doneMoves;
 
         thisMove.push_back(movements[i]);
         bool need_undo = false;
         while (!thisMove.empty()) {
             Movement& m = thisMove.front();
             State difference = m.move();
-            //change = change + difference;
             int shoulderId = 1;
             if (m.shape == shoulderId) { // if shoulder
                 Id armId = shoulderId + 1;
                 if (m.t == Movement::Transform::Rotation) {
-                    State rotDelta = m.state; // original rotation
-                    State transDelta = difference; // difference in top center
-                    Movement mTrans(armId, Movement::Transform::TranslationTopCenter, transDelta);
-                    Movement mRotate(armId, Movement::Transform::Rotation, rotDelta);
+                    change.rotation += m.state.rotation; // increase by original rotation
+                    change.topCenter += difference.topCenter; // difference in top center
+                    Movement mTrans(armId, Movement::Transform::TranslationTopCenter, change);
+                    Movement mRotate(armId, Movement::Transform::Rotation, change);
                     thisMove.push_back(mRotate);
                     thisMove.push_back(mTrans);
                 }
             }
-            doneMoves.push_back(m);
-            // push all extra moves onto vector here
-            //Id parent = m.s->id;
-            //Id child = arm_dependencies[parent+1];
-            //movePart(m,parent,child,thisMove);
             movements_done.push_back(m);
             thisMove.pop_front();
-            //need_undo = true;
-            //thisMove.clear();
         }
     }
 

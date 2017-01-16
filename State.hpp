@@ -16,6 +16,7 @@ struct State {
     State();
     State(const State& s);
     State& operator=(const State& other);
+    friend State operator+(const State& s1, const State& s2);
     friend std::ostream& operator<<(std::ostream& stream, const State& state);
 };
 #endif
