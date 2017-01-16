@@ -242,23 +242,31 @@ Movements processMovements() {
 
     for (int i=0; i<movements.size(); ++i) {
 
-        State change;
-
         std::deque<Movement> thisMove;
 
+        State acc_transform = movements[i].state;
+
         thisMove.push_back(movements[i]);
-        bool need_undo = false;
+
         while (!thisMove.empty()) {
             Movement& m = thisMove.front();
             State difference = m.move();
-            int shoulderId = 1;
-            if (m.shape == shoulderId) { // if shoulder
-                Id armId = shoulderId + 1;
+            Id& id = m.shape;
+            
+            const auto has_index = vecContains(arm_d, id); // O(n^2), but list is always tiny
+            const bool has = has_index.first;
+            const int where = has_index.second;
+            const bool valid_place = !(where==0 && arm_d.size()==1) && (where < arm_d.size()-1);
+            const bool chain = has && valid_place;
+
+            if (chain) {
+                const Id parent = where;
+                const Id child = parent + 1;
+
                 if (m.t == Movement::Transform::Rotation) {
-                    change.rotation += m.state.rotation; // increase by original rotation
-                    change.topCenter += difference.topCenter; // difference in top center
-                    Movement mTrans(armId, Movement::Transform::TranslationTopCenter, change);
-                    Movement mRotate(armId, Movement::Transform::Rotation, change);
+                    acc_transform.topCenter += difference.topCenter; // difference in top center
+                    Movement mTrans(child, Movement::Transform::TranslationTopCenter, acc_transform);
+                    Movement mRotate(child, Movement::Transform::Rotation, acc_transform);
                     thisMove.push_back(mRotate);
                     thisMove.push_back(mTrans);
                 }
