@@ -14,6 +14,7 @@
 #include <set>
 
 #include "Shape.hpp"
+#include "State.hpp"
 
     //Shape(const fv* points, const fv* colours, const fv* red, int id, v3 topCenter, Set<Id> canCollideWith,
     //        v3 scale=oneV, v3 motionLimiter=oneV, v3 translationMultiplier=oneV
@@ -34,16 +35,12 @@ void Shape::selected(bool b) {
     _selected = b;
 }
 
-void Shape::translate(v3 by) {
-    _cuboid.translate(by);
+bool Shape::translate(v3 by) {
+    return _cuboid.translate(by);
 }
 
 bool Shape::rotateRads(v3 by) {
     return _cuboid.rotateRads(by);
-}
-
-void Shape::rotateQua(const fq& qua) {
-    _cuboid.rotateQua(qua);
 }
 
 vv3 Shape::getEdges(const vv3& v) {
@@ -162,20 +159,8 @@ Cuboid& Shape::cuboid() {
     return _cuboid;
 }
 
-void Shape::translate(float x, float y, float z) {
-    translate(v3(x,y,z));
-}
-
-bool Shape::rotateDegs(const v3 a) {
-    return rotateDegs(a.x,a.y,a.z);
-}
-
-bool Shape::rotateDegs(float x, float y, float z) {
-    return rotateRads(
-            (x*M_PI)/180.0f,
-            (y*M_PI)/180.0f,
-            (z*M_PI)/180.0f
-            );
+bool Shape::translate(float x, float y, float z) {
+    return translate(v3(x,y,z));
 }
 
 bool Shape::rotateRads(float x, float y, float z) {

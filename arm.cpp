@@ -22,14 +22,16 @@
 #include <algorithm>
 #include <iterator>
 #include <set>
+#include <deque>
 
 #include "crap.hpp"
 #include "Util.hpp"
 #include "Shape.hpp"
 #include "Octtree.hpp"
 #include "AABB.hpp"
+#include "State.hpp"
 
-
+void idle();
 int init(int argc, char* argv[]);
 void createShapes();
 void render();
@@ -42,9 +44,9 @@ void specialInput(int key, int x, int y);
 void cleanupAndExit();
 Shape& getShape();
 void switchShape(int);
-void processMovements();
+Movements processMovements();
 bool rotateShape(Shape* s, const v3& rotateBy);
-void translateShape(Shape* s, const v3& translate);
+bool translateShape(Shape* s, const v3& translate);
 void extraShapes();
 
 struct Movement {
@@ -52,40 +54,53 @@ struct Movement {
     v3 vec;
     Shape* s;
     Transform t; // biggest first for better packing (maybe)
+    bool moved;
+    bool undone;
+    State state;
     // if all aligned doesn't matter
     friend std::ostream& operator<<(std::ostream& stream, const Movement& m) {
-        return stream << "Movement on " << m.s << " of type " << m.t << " of " << printVec(m.vec);
+        std::string type = "";
+        if (m.t == Transform::rotateRads) {
+            type = "rotation";
+        } else if (m.t == Transform::translate) {
+            type = "translation";
+        }
+        return stream << "Movement on " << m.s << " of type " << type << " of " << printVec(m.vec);
     }
-    Movement(Shape* s, Transform t, v3 vec) : s(s), t(t), vec(vec) {}
+    Movement(Shape* s, Transform t, v3 vec) : s(s), t(t), vec(vec) {
+        state = s->cuboid().state();
+    }
     Movement(const Movement& m) : 
         s(m.s),
         t(m.t),
-        vec(m.vec) {}
+        vec(m.vec),
+        moved(m.moved),
+        undone(m.undone),
+        state(m.state) {}
     Movement& operator=(const Movement& m) {
         if (this != &m) {
             vec = m.vec;
             s = m.s;
             t = m.t;
+            moved = m.moved;
+            undone = m.undone;
+            state = m.state;
         }
         return *this;
     }
     bool move() {
-        bool moved = false;
         if (t == Movement::Transform::rotateRads) {
             moved = rotateShape(s,vec);
         } else if (t == Movement::Transform::translate) {
-            translateShape(s,vec);
-            moved = true;
+            moved = translateShape(s,vec);
         }
         return moved;
     }
     bool undo() {
-        bool undone = false;
         if (t == Movement::Transform::rotateRads) {
             undone = rotateShape(s,-1.0f*vec);
         } else if (t == Movement::Transform::translate) {
-            translateShape(s,-1.0f*vec);
-            undone = true;
+            undone = translateShape(s,-1.0f*vec);
         }
         return undone;
     }
@@ -101,7 +116,7 @@ static const int arm = 2;
 
 GLuint shaderProgram;
 Shapes shapes;
-float step = 0.25f; // for movement
+float step = 0.2f; // for movement
 
 static const float areaSize = 100.0f;
 Octtree bigTree(v3(0.0f,0.0f,0.0f),areaSize);
@@ -111,7 +126,7 @@ Movements movements;
 void createShapes() {
 
     v3 bottom_upRightTop = v3(0.0f, 1.0f, 0.0f);
-    v3 center_upRightTop = v3(0.0f, 0.0f, 0.0f);
+    v3 center_upRightTop = v3(0.0f, 0.5f, 0.0f);
 
     std::set<Id> canCollideWith = {base, shoulder, arm};
 
@@ -123,19 +138,21 @@ void createShapes() {
     shapes[shoulder] = (new Shape(&cubePointsBottom,
             &cubeColours,&cubeColoursPurple,&cubeColoursGreen,
             shoulder,bottom_upRightTop,canCollideWith,
-            v3(1.0f,2.5f,1.0f),zeroV,V3_HALF_PI_NEGATIVE,V3_HALF_PI));
+            //v3(1.0f,2.5f,1.0f),zeroV,V3_HALF_PI_NEGATIVE,V3_HALF_PI));
+            v3(1.0f,2.5f,1.0f),zeroV));
 
     shapes[arm] = (new Shape(&cubePointsBottom,
             &cubeColours,&cubeColoursPurple,&cubeColoursGreen,
             arm,bottom_upRightTop,canCollideWith,
-            v3(1.0f,1.75f,1.0f),zeroV,V3_HALF_PI_NEGATIVE,V3_HALF_PI));
+            //v3(1.0f,1.75f,1.0f),zeroV,V3_HALF_PI_NEGATIVE,V3_HALF_PI));
+            v3(1.0f,1.75f,1.0f),zeroV));
 
-    v3 baseHeight = 0.01f + 2.0f * shapes[base]->cuboid().topCenter();
-    v3 shoulderHeight = 0.01f + shapes[shoulder]->cuboid().topCenter();
+    v3 baseHeight = 0.01f + 2.0f * shapes[base]->cuboid().state().topCenter;
+    v3 shoulderHeight = 0.01f + shapes[shoulder]->cuboid().state().topCenter;
 
     for (auto& s: shapes) {
         auto& shape = s.second;
-        bigTree.insert(shape->cuboid().pos(),shape);
+        bigTree.insert(shape->cuboid().state().pos,shape);
     }
 
     translateShape(shapes[arm],baseHeight);
@@ -152,6 +169,229 @@ void createShapes() {
         glGenBuffers(1, &(shape->VBOs[1])); // colour
     }
 
+    switchShape(-1);
+    switchShape(1);
+}
+
+bool rotateShape(Shape* s, const v3& rotateBy) {
+    return s->rotateRads(rotateBy);
+}
+
+bool translateShape(Shape* shape, const v3& translate) {
+    const bool deleted = bigTree.del(shape->cuboid().state().pos,shape);
+    //assert(deleted);
+    bool worked = shape->translate(translate);
+    bigTree.insert(shape->cuboid().state().pos,shape);
+    return worked;
+}
+
+void main_loop() {
+
+    static long frame = 0l;
+    static long totalTimeTaken = 0l;
+    static long timeTakenInterval = 0l;
+    ++frame;
+
+    long startTime = timeNowMicros();
+
+    startLoopGl();
+    
+    collisions();
+
+    bindBuffers(shapes);
+    render();
+
+    static const float fps = 30.0f;
+    float fullFrametime = (1000.0f*1000.0f)/fps;
+    long timeTaken = timeNowMicros() - startTime;
+    int sleepTime = std::max((int)(fullFrametime - timeTaken),0);
+    std::this_thread::sleep_for(std::chrono::microseconds(sleepTime));
+}
+
+Movements processMovements() {
+
+    Movements movements_done;
+
+    for (int i=0; i<movements.size(); ++i) {
+
+        std::deque<Movement> thisMove;
+        std::deque<Movement> doneMoves;
+
+        thisMove.push_back(movements[i]);
+        bool need_undo = false;
+        while (!thisMove.empty()) {
+            Movement m = thisMove.front();
+            bool worked = m.move();
+            if (worked) {
+                doneMoves.push_back(m);
+                // push all extra moves onto vector here
+                if (m.s->id == shoulder) {
+                    // When moving arm, should move shoulder too
+                    Shape& shape_arm = *shapes[arm];
+                    Shape& shape_shoulder = *shapes[shoulder];
+
+                    if (m.t == Movement::Transform::rotateRads) {
+                        // when the shoulder rotates, the arm should be translated to the shoulder's
+                        // new top center position
+                        // assumes the movement has just happened
+                        const v3 lastCenter = shape_shoulder.cuboid().lastState().topCenter;
+                        const v3 center = shape_shoulder.cuboid().state().topCenter;
+                        const v3 translation = center - lastCenter;
+                        Movement mTrans(&shape_arm, Movement::Transform::translate, translation);
+                        Movement mRotate(&shape_arm, Movement::Transform::rotateRads, m.vec);
+                        thisMove.push_back(mTrans);
+                        thisMove.push_back(mRotate);
+                    }
+                }
+                movements_done.push_back(m);
+                thisMove.pop_front();
+            } else {
+                need_undo = true;
+                thisMove.clear();
+            }
+        }
+        if (need_undo) {
+            while (!doneMoves.empty()) {
+                Movement& m = doneMoves.back();
+                m.undo();
+                doneMoves.pop_back();
+            }
+        }
+    }
+    return movements_done;
+}
+
+void collisions() {
+
+    Movements moves_made = processMovements();
+
+    std::set<int> collidingSet;
+    std::set<int> notCollidingSet;
+    for (const auto& s: shapes) {
+        Shape& shape = *s.second;
+        notCollidingSet.insert(shape.id);
+    }
+    std::set<std::pair<int,int>> collidingPairs;
+
+    const int size = shapes.size();
+    for (auto& s: shapes) {
+        Shape& shape = *s.second;
+        const v3 pos = shape.cuboid().state().pos;
+        //just use one for now, will change so that shapes
+        // store their max dimensions
+        const float halfDimensions = shape.cuboid().furthestVertex()*2.0f;
+        vv3S shapes_nearby = bigTree.queryRange(pos, halfDimensions);
+
+        for (auto& s_n: shapes_nearby) {
+            auto& nearby_shape = *s_n.second;
+
+            if (&shape == &nearby_shape) {
+                continue;
+            }
+
+            const bool collidingNow = Shape::colliding(shape, nearby_shape);
+            if (collidingNow) {
+                // collision
+                collidingSet.insert(shape.id);
+                collidingSet.insert(nearby_shape.id);
+                notCollidingSet.erase(shape.id);
+                notCollidingSet.erase(nearby_shape.id);
+                collidingPairs.insert(std::make_pair(shape.id,nearby_shape.id));
+            } else {
+                // no collision
+            }
+        }
+    }
+
+    for (int i=movements.size()-1; i>=0;--i) {
+        Movement& m = movements[i];
+        const Shape& shape = *m.s;
+        const int id = shape.id;
+        bool allowedToCollide = allowedCollide; // global for now
+        auto col = collidingSet.find(id) != collidingSet.end();
+        if (col && !allowedToCollide) {
+            m.undo();
+        }
+    }
+
+    for (auto& id: collidingSet) {
+        shapes[id]->colliding(true);
+    }
+    for (auto& id: notCollidingSet) {
+        shapes[id]->colliding(false);
+    }
+
+    movements.clear();
+}
+
+void render() {
+    for (auto& s: shapes) {
+        Shape& shape = *s.second;
+        auto qua = shape.cuboid().state().orient;
+        glBindVertexArray(shape.VAO);
+        //
+        // local space -> world space -> view space -> clip space -> screen space
+        //          model matrix   view matrix  projection matrix   viewport transform
+        // Vclip = Mprojection * Mview * Mmodel * Vlocal
+
+        float aspectRatio = (float)(glutGet(GLUT_WINDOW_WIDTH) / glutGet(GLUT_WINDOW_HEIGHT));
+
+        m4 model;
+        m4 trans;
+        m4 rotateM = glm::mat4_cast(qua);
+        m4 scale;
+
+        trans = glm::translate(trans, shape.cuboid().state().pos);
+        scale = glm::scale(scale, shape.cuboid().scale());  
+        model = trans * rotateM * scale;
+
+        glm::mat4 view;
+        // Note that we're translating the scene in the reverse direction of where we want to move
+        //view = glm::translate(view, v3(0.0f, 0.0f, -3.0f)); 
+        view = glm::lookAt(
+                v3(1.5f,7.0f,3.0f), // eye
+                v3(0.0f,0.0f,0.0f),  // center
+                v3(0.0f,1.0f,0.0f)); // up
+
+        glm::mat4 projection;
+        projection = glm::perspective(glm::radians(80.0f), aspectRatio, 0.1f, 100.0f);
+        //projection = glm::ortho(-3.0f,3.0f,-3.0f,3.0f,0.1f, 100.0f);
+
+        GLint modelLoc = glGetUniformLocation(shaderProgram, "model");
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
+        GLint viewLoc = glGetUniformLocation(shaderProgram, "view");
+        glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
+        GLint projectionLoc = glGetUniformLocation(shaderProgram, "projection");
+        glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
+
+        glDrawArrays(GL_TRIANGLES, 0, shape.points()->size());
+    }
+    glBindVertexArray(0);
+    glutSwapBuffers(); 
+}
+
+void bindBuffers(Shapes& shapes) {
+    for (auto& s: shapes) {
+        auto& shape = s.second;
+        bindBuffers(shape->VAO, shape->VBOs, shape->points(), shape->colours());
+    }
+}
+
+void bindBuffers(GLuint VAO, std::vector<GLuint> VBOs, const fv* vertexData, const fv* colourData) {
+    glBindVertexArray(VAO);
+    glBindBuffer(GL_ARRAY_BUFFER, VBOs[0]);
+    glBufferData(GL_ARRAY_BUFFER, vertexData->size()*sizeof(GLfloat), 
+            vertexData->data(), GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 
+            3 * sizeof(GLfloat), (GLvoid*)(0*sizeof(GLfloat)));
+    glEnableVertexAttribArray(0);
+    glBindBuffer(GL_ARRAY_BUFFER, VBOs[1]);
+    glBufferData(GL_ARRAY_BUFFER, colourData->size()*sizeof(GLfloat), 
+            colourData->data(), GL_STATIC_DRAW);
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 
+            3 * sizeof(GLfloat), (GLvoid*)(0*sizeof(GLfloat)));
+    glEnableVertexAttribArray(1);
+    glBindVertexArray(0);
 }
 
 void keyboard(unsigned char key, int mouseX, int mouseY) {
@@ -161,17 +401,17 @@ void keyboard(unsigned char key, int mouseX, int mouseY) {
     v3 translate(zeroV);
     v3 rotateV(zeroV);
     switch (key) {
-        case 'r':  rotateV = v3(10.0f,0.0f,0.0f);
+        case 'r':  rotateV = v3(glm::radians(10.0f),0.0f,0.0f);
                    break;
-        case 'R':  rotateV = v3(-10.0f,0.0f,0.0f);
+        case 'R':  rotateV = v3(glm::radians(-10.0f),0.0f,0.0f);
                    break;
-        case 'y':  rotateV = v3(0.0f,10.0f,0.0f);
+        case 'y':  rotateV = v3(0.0f,glm::radians(10.0f),0.0f);
                    break;
-        case 'Y':  rotateV = v3(0.0f,-10.0f,0.0f);
+        case 'Y':  rotateV = v3(0.0f,glm::radians(-10.0f),0.0f);
                    break;
-        case 'z':  rotateV = v3(0.0f,0.0f,10.0f);
+        case 'z':  rotateV = v3(0.0f,0.0f,glm::radians(10.0f));
                    break;
-        case 'Z':  rotateV = v3(0.0f,0.0f,-10.0f);
+        case 'Z':  rotateV = v3(0.0f,0.0f,glm::radians(-10.0f));
                    break;
 
         case 'Q':
@@ -240,235 +480,6 @@ void specialInput(int key, int x, int y) {
     }
 }
 
-bool rotateShape(Shape* s, const v3& rotateBy) {
-    return s->rotateDegs(rotateBy);
-}
-
-void translateShape(Shape* shape, const v3& translate) {
-    const bool deleted = bigTree.del(shape->cuboid().pos(),shape);
-    //assert(deleted);
-    shape->translate(translate);
-    bigTree.insert(shape->cuboid().pos(),shape);
-    std::cout << bigTree.size() << " is size of octtree\n";
-}
-
-void main_loop() {
-
-    static long frame = 0l;
-    static long totalTimeTaken = 0l;
-    static long timeTakenInterval = 0l;
-    ++frame;
-
-    long startTime = timeNowMicros();
-
-    startLoopGl();
-    processMovements();
-    long s = timeNowMicros();
-    
-    collisions();
-    long t = timeNowMicros();
-    //std::cout << "Time taken for collision " << (float)(t-s)/1000.0f << "ms\n";
-
-    long p = timeNowMicros();
-    bindBuffers(shapes);
-    render();
-    long q = timeNowMicros();
-    //std::cout << "For rendering " << (float)(q-p)/1000.0f << "ms\n";
-
-    long timeTaken = timeNowMicros() - startTime;
-    const float fps = 30.0f;
-    const float fullFrametime = (1000.0f*1000.0f)/fps;
-    int sleepTime = std::max((int)(fullFrametime - timeTaken),0);
-    bool SPARE_TIME_FOR_WHEN_ILETT_WHINES = false;
-    if (SPARE_TIME_FOR_WHEN_ILETT_WHINES) {
-        std::cout << "Time taken for frame " << (float)timeTaken/1000.0f << "ms" << "\n";
-        std::cout << "Spare frame time " << (float)sleepTime/1000.0f << "ms\n";
-    }
-
-    totalTimeTaken += timeTaken;
-    timeTakenInterval += timeTaken;
-    static const int interval = 30;
-    if (frame % interval == 0) {
-        const double averageFrametimeMs = (double)(timeTakenInterval / interval) / 1000.0;
-        timeTakenInterval = 0l;
-        //std::cout << "Average frametime for last " << interval << " frames is " << averageFrametimeMs << "ms" << "\n";
-    }
-    std::this_thread::sleep_for(std::chrono::microseconds(sleepTime));
-
-}
-
-void idle() {
-    glutPostRedisplay();
-}
-
-void processMovements() {
-    // need stacks to be built for each time a lower shape moves
-    // will have to unwind stack if a rotate fails
-    // Quick and dirty vector inserts for now,
-    // Later can change to Vector of vectors or something
-    for (int i=0; i<movements.size(); ++i) {
-        Movement& m = movements[i];
-        m.move();
-        auto& shape = *m.s;
-        if (m.s->id == shoulder) {
-            // When moving arm, should move shoulder too
-            if (shapes.count(shoulder) == 0 || shapes.count(arm) == 0) {
-                std::cout << "No shoulder/arm in map!!!\n";
-                std::cout << "Exiting now, change this (in processMovements in arm.cpp)\n";
-                exit(0);
-            }
-            Shape& shape_arm = *shapes[arm];
-            Shape& shape_shoulder = *shapes[shoulder];
-
-            if (m.t == Movement::Transform::rotateRads) {
-                // when the shoulder rotates, the arm should be translated to the shoulder's
-                // new top center position
-                // assumes the movement has just happened
-
-                const v3 lastCenter = shape_shoulder.cuboid().lastTopCenter();
-                const v3 center = shape_shoulder.cuboid().topCenter();
-                const v3 translation = center - lastCenter;
-                Movement mTrans(&shape_arm, Movement::Transform::translate, translation);
-                Movements::iterator iter = movements.begin();
-                movements.insert(movements.begin()+i+1, mTrans);
-
-                Movement mRotate = Movement(&shape_arm, Movement::Transform::rotateRads, m.vec);
-                movements.insert(movements.begin()+i+2, mRotate);
-            }
-        }
-    }
-}
-
-void collisions() {
-
-    std::set<int> collidingSet;
-    std::set<int> notCollidingSet;
-    for (const auto& s: shapes) {
-        Shape& shape = *s.second;
-        notCollidingSet.insert(shape.id);
-    }
-    std::set<std::pair<int,int>> collidingPairs;
-
-    const int size = shapes.size();
-    for (auto& s: shapes) {
-        Shape& shape = *s.second;
-        const v3 pos = shape.cuboid().pos();
-        //just use one for now, will change so that shapes
-        // store their max dimensions
-        const float halfDimensions = shape.cuboid().furthestVertex()*2.0f;
-        vv3S shapes_nearby = bigTree.queryRange(pos, halfDimensions);
-
-        for (auto& s_n: shapes_nearby) {
-            auto& nearby_shape = *s_n.second;
-
-            if (&shape == &nearby_shape) {
-                continue;
-            }
-
-            const bool collidingNow = Shape::colliding(shape, nearby_shape);
-            if (collidingNow) {
-                // collision
-                collidingSet.insert(shape.id);
-                collidingSet.insert(nearby_shape.id);
-                notCollidingSet.erase(shape.id);
-                notCollidingSet.erase(nearby_shape.id);
-                collidingPairs.insert(std::make_pair(shape.id,nearby_shape.id));
-            } else {
-                // no collision
-            }
-        }
-    }
-
-    for (int i=movements.size()-1; i>=0;--i) {
-        Movement& m = movements[i];
-        const Shape& shape = *m.s;
-        const int id = shape.id;
-        bool allowedToCollide = allowedCollide; // global for now
-        auto col = collidingSet.find(id) != collidingSet.end();
-        if (col && !allowedToCollide) {
-            m.undo();
-        }
-    }
-
-    for (auto& id: collidingSet) {
-        shapes[id]->colliding(true);
-    }
-    for (auto& id: notCollidingSet) {
-        shapes[id]->colliding(false);
-    }
-
-    movements.clear();
-}
-
-void render() {
-    for (auto& s: shapes) {
-        Shape& shape = *s.second;
-        auto& qua = shape.cuboid().qua_;
-        glBindVertexArray(shape.VAO);
-        //
-        // local space -> world space -> view space -> clip space -> screen space
-        //          model matrix   view matrix  projection matrix   viewport transform
-        // Vclip = Mprojection * Mview * Mmodel * Vlocal
-
-        float aspectRatio = (float)(glutGet(GLUT_WINDOW_WIDTH) / glutGet(GLUT_WINDOW_HEIGHT));
-
-        m4 model;
-        m4 trans;
-        m4 rotateM = glm::mat4_cast(qua);
-        m4 scale;
-
-        trans = glm::translate(trans, shape.cuboid().pos());
-        scale = glm::scale(scale, shape.cuboid().scale());  
-        model = trans * rotateM * scale;
-
-        glm::mat4 view;
-        // Note that we're translating the scene in the reverse direction of where we want to move
-        //view = glm::translate(view, v3(0.0f, 0.0f, -3.0f)); 
-        view = glm::lookAt(
-                v3(1.5f,7.0f,3.0f), // eye
-                v3(0.0f,0.0f,0.0f),  // center
-                v3(0.0f,1.0f,0.0f)); // up
-
-        glm::mat4 projection;
-        projection = glm::perspective(glm::radians(80.0f), aspectRatio, 0.1f, 100.0f);
-        //projection = glm::ortho(-3.0f,3.0f,-3.0f,3.0f,0.1f, 100.0f);
-
-        GLint modelLoc = glGetUniformLocation(shaderProgram, "model");
-        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
-        GLint viewLoc = glGetUniformLocation(shaderProgram, "view");
-        glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
-        GLint projectionLoc = glGetUniformLocation(shaderProgram, "projection");
-        glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
-
-        glDrawArrays(GL_TRIANGLES, 0, shape.points()->size());
-    }
-    glBindVertexArray(0);
-    glutSwapBuffers(); 
-}
-
-void bindBuffers(Shapes& shapes) {
-    for (auto& s: shapes) {
-        auto& shape = s.second;
-        bindBuffers(shape->VAO, shape->VBOs, shape->points(), shape->colours());
-    }
-}
-
-void bindBuffers(GLuint VAO, std::vector<GLuint> VBOs, const fv* vertexData, const fv* colourData) {
-    glBindVertexArray(VAO);
-    glBindBuffer(GL_ARRAY_BUFFER, VBOs[0]);
-    glBufferData(GL_ARRAY_BUFFER, vertexData->size()*sizeof(GLfloat), 
-            vertexData->data(), GL_STATIC_DRAW);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 
-            3 * sizeof(GLfloat), (GLvoid*)(0*sizeof(GLfloat)));
-    glEnableVertexAttribArray(0);
-    glBindBuffer(GL_ARRAY_BUFFER, VBOs[1]);
-    glBufferData(GL_ARRAY_BUFFER, colourData->size()*sizeof(GLfloat), 
-            colourData->data(), GL_STATIC_DRAW);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 
-            3 * sizeof(GLfloat), (GLvoid*)(0*sizeof(GLfloat)));
-    glEnableVertexAttribArray(1);
-    glBindVertexArray(0);
-}
 
 Shape& getShape() {
     if (shapes.count(selectedShape) == 0) {
@@ -536,10 +547,8 @@ void cleanupAndExit() {
 
 void startLoopGl() {
     glEnable(GL_DEPTH_TEST);
-
     // Uncommenting this call will result in wireframe polygons.
     //glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-
     glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT); 
 }
 
@@ -565,6 +574,10 @@ int init(int argc, char* argv[]) {
 	//glutKeyboardFunc(keyboard); 
 	//glutReshapeFunc(reshape); 
     return 0;
+}
+
+void idle() {
+    glutPostRedisplay();
 }
 
 /*

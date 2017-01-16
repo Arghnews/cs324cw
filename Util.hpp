@@ -17,6 +17,7 @@
 
 class Shape;
 struct Movement;
+struct State;
 
 typedef std::vector<GLfloat> fv;
 typedef glm::vec3 v3;

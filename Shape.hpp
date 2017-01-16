@@ -10,6 +10,7 @@
 #include <iostream>
 #include <string>
 #include <limits>
+#include "State.hpp"
 
 class Shape {
     private:
@@ -24,10 +25,10 @@ class Shape {
         bool _selected;
         
     public:
+
         std::set<Id> canCollideWith;
         bool selected();
         void selected(bool b);
-        void rotateQua(const fq& qua);
         const int id;
         vv3 static getEdges(const vv3& v);
         bool static colliding(Shape&, Shape&);
@@ -38,16 +39,13 @@ class Shape {
         Shape(const fv* points, const fv* colours, const fv* purple, const fv* green, int id, v3 topCenter,
                 std::set<Id> canCollideWith,
                 v3 scale=oneV, v3 translationMultiplier=oneV, v3 ypr_min=V3_MAX_NEGATIVE, v3 ypr_max=V3_MAX_POSITIVE);
-        //Shape(const Shape&);
         bool colliding(bool isColliding);
         bool colliding() const;
         Cuboid& cuboid();
-        void translate(float x, float y, float z);
-        void translate(v3 by);
+        bool translate(float x, float y, float z);
+        bool translate(v3 by);
         bool rotateRads(float x, float y, float z);
         bool rotateRads(v3 by); // x, y, z, pretty rough atm
-        bool rotateDegs(const v3 by);
-        bool rotateDegs(float x, float y, float z);
     
         const fv* points();
         const fv* colours();

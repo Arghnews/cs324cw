@@ -14,12 +14,14 @@
 #include <sstream>
 #include <math.h>
 
+#include "State.hpp"
+
 // USING RADIANS
 class Cuboid {
     private:
-        v3 pos_; // x, y, z of center
-        v3 ypr_; // x, y, z
-        const v3 scale_; // 1.0,1.0,1.0
+        State state_;
+        State lastState_;
+        const v3 scale_;
         fv points_; // 108 floats
         vv3 actualPoints_; // 24 vertices
         vv3 vertices_; // 8 vertices unique
@@ -29,51 +31,33 @@ class Cuboid {
         float furthestVertex_; // from center
         float calcFurthestVertex();
         v3 half_xyz_;
-        v3 topCenter_; // what it says
-        v3 lastTopCenter_; // what it says
         v3 ypr_min;
         v3 ypr_max;
 
     public:
+        void state(State& s);
+        State state();
+        void lastState(State& s);
+        State lastState();
         Cuboid(fv points, v3 topCenter, v3 scale, v3 translationMultiplier, v3 ypr_min, v3 ypr_max);
-        v3 yaw_pitch_roll();
         v3 translationMultiplier; // movement multiplier
-        v3 lastTopCenter();
-        v3 topCenter();
-        void rotateQua(const fq& qua);
-        fq orient();
-        void orient(fq q);
-        std::pair<v3,fq> getLast();
-        void setLast(std::pair<v3,fq>);
-        void setLast(v3 v, fq f);
-        std::pair<v3,fq> backOne();
-        fq lastQua_;
-        v3 lastPos_;
-        fq lastQua();
-        v3 lastPos();
-        void moveBack(); // moves back to last position
+        const v3 scale() const;
         v3 half_xyz();
         float furthestVertex();
         vv3* actualPoints();
         const vv3* uniqueVertices(); // 8
         vv3 getUniqueEdges(); // sign insensitive unique edges
         void recalcEdges();
-        fq qua_;
         vv3 getVertices();
         const fv* points();
 
         bool static colliding(const Cuboid& c1, const Cuboid& c2);
 
-        v3 pos() const;
-        v3 ang() const;
-        v3 scale() const;
-
-        bool rotateDegs(float x, float y, float z);
         bool rotateRads(float x, float y, float z);
         bool rotateRads(const v3 xyz);
 
-        void translate(v3 by);
-        void translate(float x, float y, float z);
+        bool translate(v3 by);
+        bool translate(float x, float y, float z);
 
         friend std::ostream& operator<<(std::ostream&, const Cuboid&);
 };

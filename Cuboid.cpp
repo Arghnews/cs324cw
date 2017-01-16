@@ -14,81 +14,12 @@
 #include <utility>
 
 #include "Cuboid.hpp"
+#include "State.hpp"
 
 // USING RADIANS
 
-std::pair<v3,fq> Cuboid::getLast() {
-    return std::make_pair(lastPos_,lastQua_);
-}
-
-void Cuboid::setLast(v3 v, fq f) {
-    setLast(std::make_pair(v,f));
-}
-
-void Cuboid::setLast(std::pair<v3,fq> p) {
-    lastPos_ = p.first;
-    lastQua_ = p.second;
-}
-
-const fv* Cuboid::points() {
-    return &points_;
-}
-
-// --- TAKE NOTE ---
-// In an ideal world this would be stored
-// and can just return it on a change
-vv3 Cuboid::getVertices() {
-    const v3 centre = pos();
-    const int verticesSize = actualPoints_.size();
-    vv3 vertices(verticesSize);
-    for (int i=0; i<verticesSize; ++i) {
-        v3 vertex = actualPoints_[i];
-        vertex *= scale_; // must be before rotate
-        vertex = qua_ * vertex;
-        vertex += centre;
-        vertices[i] = vertex;
-    }
-    return vertices;
-}
-
-vv3* Cuboid::actualPoints() {
-    return &actualPoints_;
-}
-
-vv3 Cuboid::getUniqueEdges() {
-    return uniqEdges_;
-}
-
-void Cuboid::orient(fq q) {
-    qua_ = q;
-}
-
-fq Cuboid::orient() {
-    return qua_;
-}
-
-vv3 Cuboid::calcEdges(const vv3& v) {
-    vv3 e;
-    const int size = v.size();
-    for (int i=0; i<size; i+=4) {
-        vv3 face(4);
-        face[0] = v[i+0];
-        face[1] = v[i+1];
-        face[2] = v[i+2];
-        face[3] = v[i+3];
-        const int faceSize = face.size();
-        for (int j=0; j<faceSize; ++j) {
-            e.push_back((face[j] - face[(j+1)%faceSize]));
-        }
-    }
-    assert (size==24 && "Should have 24 vertices");
-    return e;
-}
-
 Cuboid::Cuboid(fv points, v3 topCenter, v3 scale, v3 translationMultiplier, v3 ypr_min, v3 ypr_max) :
     points_(points),
-    topCenter_(topCenter * scale), // note scale != scale_
-    lastTopCenter_(topCenter_), // note scale != scale_
     scale_(scale),
     translationMultiplier(translationMultiplier),
     ypr_min(ypr_min),
@@ -114,12 +45,119 @@ Cuboid::Cuboid(fv points, v3 topCenter, v3 scale, v3 translationMultiplier, v3 y
     }
     half_xyz_ /= 2.0f;
 
-    pos_ = zeroV;
-    qua_ = fq(); // identity
-    lastPos_ = pos_;
-    lastQua_ = qua_;
+    state_.pos = zeroV;
+    state_.orient = fq(); // identity
+    state_.topCenter = topCenter*scale_;
+    state_.ypr = v3();
+    lastState_ = state_;
 }
 
+bool Cuboid::translate(v3 by) {
+    lastState_.pos = state_.pos;
+    state_.pos += by;
+    recalcEdges();
+    return true;
+}
+
+bool Cuboid::rotateRads(float yaw, float pitch, float roll) {
+    const v3 vec(yaw,pitch,roll);
+    v3 new_ypr = state_.ypr + vec;
+    // bounded by yaw min and max
+    if ((new_ypr.x < ypr_min.x 
+        || new_ypr.y < ypr_min.y 
+        || new_ypr.z < ypr_min.z) ||
+        (new_ypr.x > ypr_max.x 
+        || new_ypr.y > ypr_max.y 
+        || new_ypr.z > ypr_max.z)) {
+        return false;
+    }
+
+    lastState_.orient = state_.orient;
+    lastState_.topCenter = state_.topCenter;
+    lastState_.ypr = state_.ypr;
+
+    glm::fquat q = glm::quat(vec);
+
+    state_.orient = q * state_.orient;
+    state_.topCenter = q * state_.topCenter;
+    state_.ypr += vec;
+    recalcEdges();
+    // the function that actually does the rotating
+    return true;
+}
+
+const v3 Cuboid::scale() const {
+    return scale_;
+}
+
+void Cuboid::state(State& s) {
+    state_ = s;
+}
+
+State Cuboid::state() {
+    return state_;
+}
+
+void Cuboid::lastState(State& s) {
+    lastState_ = s;
+}
+
+State Cuboid::lastState() {
+    return lastState_;
+}
+
+bool Cuboid::rotateRads(const v3 xyz) {
+    return rotateRads(xyz.x, xyz.y, xyz.z);
+}
+
+bool Cuboid::translate(float x, float y, float z) {
+    return translate(v3(x,y,z));
+}
+
+
+const fv* Cuboid::points() {
+    return &points_;
+}
+
+vv3 Cuboid::getVertices() {
+    const v3 centre = state_.pos;
+    const fq orient = state_.orient;
+    const int verticesSize = actualPoints_.size();
+    vv3 vertices(verticesSize);
+    for (int i=0; i<verticesSize; ++i) {
+        v3 vertex = actualPoints_[i];
+        vertex *= scale_; // must be before rotate
+        vertex = orient * vertex;
+        vertex += centre;
+        vertices[i] = vertex;
+    }
+    return vertices;
+}
+
+vv3* Cuboid::actualPoints() {
+    return &actualPoints_;
+}
+
+vv3 Cuboid::getUniqueEdges() {
+    return uniqEdges_;
+}
+
+vv3 Cuboid::calcEdges(const vv3& v) {
+    vv3 e;
+    const int size = v.size();
+    for (int i=0; i<size; i+=4) {
+        vv3 face(4);
+        face[0] = v[i+0];
+        face[1] = v[i+1];
+        face[2] = v[i+2];
+        face[3] = v[i+3];
+        const int faceSize = face.size();
+        for (int j=0; j<faceSize; ++j) {
+            e.push_back((face[j] - face[(j+1)%faceSize]));
+        }
+    }
+    return e;
+}
 v3 Cuboid::half_xyz() {
     return half_xyz_;
 }
@@ -147,88 +185,6 @@ void Cuboid::recalcEdges() {
     edges_ = edges24;
     uniqEdges_ = unique(edges_,true);
 }
-
-v3 Cuboid::lastTopCenter() {
-    return lastTopCenter_;
-}
-
-v3 Cuboid::topCenter() {
-    return topCenter_;
-}
-
-void Cuboid::translate(v3 by) {
-    // fma(a,b,c) -> a*b + c
-    lastPos_ = pos_; // line below line below depends on this
-    //pos_ = glm::fma(by,translationMultiplier,pos());
-    pos_ += by;
-    //const v3 moveBy = by * translationMultiplier;
-    //pos_ += moveBy;
-    //topCenter_ += moveBy;
-    recalcEdges();
-}
-
-void Cuboid::rotateQua(const fq& rotateBy) {
-    std::cout << "rotate by quaternion is currently unsupported!\n";
-    std::cout << "I'm in Cuboid.cpp in rotateQua! I never thought I'd use this\n";
-    std::cout << "Exiting now...\n";
-    exit(0);
-    lastQua_ = qua_;
-    qua_ = rotateBy * qua_;
-    recalcEdges();
-}
-
-bool Cuboid::rotateRads(float yaw, float pitch, float roll) {
-    const v3 vec(yaw,pitch,roll);
-    v3 new_ypr = ypr_ + vec;
-    // bounded by yaw min and max
-    if ((new_ypr.x < ypr_min.x 
-        || new_ypr.y < ypr_min.y 
-        || new_ypr.z < ypr_min.z) ||
-        (new_ypr.x > ypr_max.x 
-        || new_ypr.y > ypr_max.y 
-        || new_ypr.z > ypr_max.z)) {
-        return false;
-    }
-
-    ypr_ += vec;
-    lastQua_ = qua_;
-    lastTopCenter_ = topCenter_;
-    glm::fquat q = glm::quat(vec);
-    qua_ = q * qua_;
-    topCenter_ = q * topCenter_;
-    recalcEdges();
-    // the function that actually does the rotating
-    return true;
-}
-
-v3 Cuboid::yaw_pitch_roll() {
-    return ypr_;
-}
-
-v3 Cuboid::pos() const {
-    return pos_;
-}
-
-bool Cuboid::rotateDegs(float x, float y, float z) {
-    return rotateRads(
-            (x*M_PI)/180.0f,
-            (y*M_PI)/180.0f,
-            (z*M_PI)/180.0f
-            );
-}
-
-bool Cuboid::rotateRads(const v3 xyz) {
-    return rotateRads(xyz.x, xyz.y, xyz.z);
-}
-
-void Cuboid::translate(float x, float y, float z) {
-    translate(v3(x,y,z));
-}
-
-v3 Cuboid::scale() const {
-    return scale_;
-}
-
 std::ostream& operator<<(std::ostream& stream, const Cuboid& c) {
     //return stream << "Pos" << printVec(c.pos()) << ", ang:" << printVec(c.ang()) << ", size" << printVec(c.size());
 }
