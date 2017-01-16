@@ -35,6 +35,9 @@ class Cuboid {
         v3 ypr_max;
 
     public:
+        State rotateRads(const v3& ypr);
+        State translate(v3 by);
+
         void state(State& s);
         State state();
         void lastState(State& s);
@@ -52,12 +55,6 @@ class Cuboid {
         const fv* points();
 
         bool static colliding(const Cuboid& c1, const Cuboid& c2);
-
-        State rotateRads(const float& y, const float& p, const float& r);
-        State rotateRads(const v3& ypr);
-
-        State translate(v3 by);
-        State translate(float x, float y, float z);
 
         friend std::ostream& operator<<(std::ostream&, const Cuboid&);
 };

@@ -22,6 +22,7 @@
 #include <iterator>
 #include <set>
 #include <deque>
+#include <stdexcept>
 
 #include "crap.hpp"
 #include "Util.hpp"
@@ -41,56 +42,68 @@ void collisions();
 void keyboard(unsigned char key, int mouseX, int mouseY);
 void specialInput(int key, int x, int y);
 void cleanupAndExit();
-void movePart(Movement& m, Id& parent, Id& child, std::deque<Movement>& thisMove);
 Shape& getShape();
 void switchShape(int);
 Movements processMovements();
-State rotateShape(Shape* s, const v3& rotateBy);
-State translateShape(Shape* s, const v3& translate);
+State rotateShape(Id shape, const v3& rotateBy);
+State translateShape(Id shape, const v3& translate);
 void extraShapes();
 
 struct Movement {
-    enum Transform { rotateRads, translate };
+    enum Transform { Rotation, Translation, TranslationTopCenter };
     State state; // if all aligned doesn't matter
     Transform t; // biggest first for better packing (maybe)
-    Shape* s;
+    Id shape;
     friend std::ostream& operator<<(std::ostream& stream, const Movement& m) {
         std::string type = "";
-        if (m.t == Transform::rotateRads) {
+        if (m.t == Transform::Rotation) {
             type = "rotation";
-        } else if (m.t == Transform::translate) {
+        } else if (m.t == Transform::Translation) {
             type = "translation";
+        } else if (m.t == Transform::TranslationTopCenter) {
+            type = "translationTopCenter";
         }
-        return stream << "Movement on " << m.s << " of type " << type << " of " << printVec(m.state.vec);
+        return stream << "Movement on " << m.shape << " of type " << type << " of " << m.state;
     }
-    Movement(Shape* s, Transform t, v3 transforma) : s(s), t(t) {
-        state.vec = transforma;
+    Movement(Id shape, Transform t, v3 transforma) : shape(shape), t(t) {
+        if (t == Transform::Rotation) {
+            state.rotation = transforma;
+        } else if (t == Transform::Translation) {
+            state.pos = transforma;
+        } else if (t == Transform::TranslationTopCenter) {
+            state.topCenter = transforma;
+        }
     }
-    Movement(Shape* s, Transform t, State state) : s(s), t(t), state(state) {}
+    Movement (Id shape, Transform t, State state) : shape(shape), t(t), state(state) {
+    }
     Movement(const Movement& m) : 
         state(m.state),
         t(m.t),
-        s(m.s) {}
+        shape(m.shape) {}
     Movement& operator=(const Movement& m) {
         if (this != &m) {
             state = m.state;
             t = m.t;
-            s = m.s;
+            shape = m.shape;
         }
         return *this;
     }
     State move() {
-        if (t == Movement::Transform::rotateRads) {
-            return rotateShape(s,state.vec);
-        } else if (t == Movement::Transform::translate) {
-            return translateShape(s,state.vec);
+        if (t == Movement::Transform::Rotation) {
+            return rotateShape(shape,state.rotation);
+        } else if (t == Movement::Transform::Translation) {
+            return translateShape(shape,state.pos);
+        } else if (t == Movement::Transform::TranslationTopCenter) {
+            return translateShape(shape,state.topCenter);
         }
     }
     State undo() {
-        if (t == Movement::Transform::rotateRads) {
-            return rotateShape(s,-1.0f*state.vec);
-        } else if (t == Movement::Transform::translate) {
-            return translateShape(s,-1.0f*state.vec);
+        if (t == Movement::Transform::Rotation) {
+            return rotateShape(shape,-1.0f*state.rotation);
+        } else if (t == Movement::Transform::Translation) {
+            return translateShape(shape,-1.0f*state.pos);
+        } else if (t == Movement::Transform::TranslationTopCenter) {
+            return translateShape(shape,-1.0f*state.topCenter);
         }
     }
 };
@@ -154,17 +167,17 @@ void createShapes() {
 
     for (auto& s: shapes) {
         auto& shape = s.second;
-        bigTree.insert(shape->cuboid().state().vec,shape);
+        bigTree.insert(shape->cuboid().state().pos,shape);
     }
 
-    translateShape(shapes[shoulder],baseHeight);
+    translateShape(shoulder,baseHeight);
 
-    translateShape(shapes[arm],baseHeight);
-    translateShape(shapes[arm],shoulderHeight);
+    translateShape(arm,baseHeight);
+    translateShape(arm,shoulderHeight);
 
-    translateShape(shapes[platter],baseHeight);
-    translateShape(shapes[platter],shoulderHeight);
-    translateShape(shapes[platter],armHeight);
+    translateShape(platter,baseHeight);
+    translateShape(platter,shoulderHeight);
+    translateShape(platter,armHeight);
 
     //v3 rotatedBy(90.0f,0.0f,0.0f);
     for (auto& s: shapes) {
@@ -174,19 +187,27 @@ void createShapes() {
         glGenBuffers(1, &(shape->VBOs[1])); // colour
     }
 
-    switchShape(-1);
-    switchShape(1);
+    switchShape(0);
 }
 
-State rotateShape(Shape* s, const v3& rotateBy) {
-    return s->cuboid().rotateRads(rotateBy);
+State rotateShape(Id s, const v3& rotateBy) {
+    if (shapes.count(s) == 0) {
+        std::string err = "No element with id " + std::to_string(s) + " in map";
+        throw std::runtime_error(err);
+    }
+    return shapes[s]->cuboid().rotateRads(rotateBy);
 }
 
-State translateShape(Shape* shape, const v3& translate) {
-    const bool deleted = bigTree.del(shape->cuboid().state().vec,shape);
+State translateShape(Id s, const v3& translate) {
+    if (shapes.count(s) == 0) {
+        std::string err = "No element with id " + std::to_string(s) + " in map";
+        throw std::runtime_error(err);
+    }
+    Shape& shape = *shapes[s];
+    const bool deleted = bigTree.del(shape.cuboid().state().pos,&shape);
     //assert(deleted);
-    auto worked = shape->cuboid().translate(translate);
-    bigTree.insert(shape->cuboid().state().vec,shape);
+    auto worked = shape.cuboid().translate(translate);
+    bigTree.insert(shape.cuboid().state().pos,&shape);
     return worked;
 }
 
@@ -217,11 +238,11 @@ Movements processMovements() {
 
     Movements movements_done;
 
-    static const std::vector<Id> arm_dependencies = { base, shoulder, arm, platter};
+    static const std::vector<Id> arm_d = { base, shoulder, arm, platter};
 
     for (int i=0; i<movements.size(); ++i) {
 
-        State change;
+        //State change;
 
         std::deque<Movement> thisMove;
         std::deque<Movement> doneMoves;
@@ -229,11 +250,20 @@ Movements processMovements() {
         thisMove.push_back(movements[i]);
         bool need_undo = false;
         while (!thisMove.empty()) {
-            Movement m = thisMove.front();
+            Movement& m = thisMove.front();
             State difference = m.move();
-            change = change + difference;
-            if (m->s.id == 1) { // if shoulder
-                
+            //change = change + difference;
+            int shoulderId = 1;
+            if (m.shape == shoulderId) { // if shoulder
+                Id armId = shoulderId + 1;
+                if (m.t == Movement::Transform::Rotation) {
+                    State rotDelta = m.state; // original rotation
+                    State transDelta = difference; // difference in top center
+                    Movement mTrans(armId, Movement::Transform::TranslationTopCenter, transDelta);
+                    Movement mRotate(armId, Movement::Transform::Rotation, rotDelta);
+                    thisMove.push_back(mRotate);
+                    thisMove.push_back(mTrans);
+                }
             }
             doneMoves.push_back(m);
             // push all extra moves onto vector here
@@ -246,36 +276,8 @@ Movements processMovements() {
             //thisMove.clear();
         }
     }
-    /*
-        if (need_undo) {
-            while (!doneMoves.empty()) {
-                Movement& m = doneMoves.back();
-                m.undo();
-                doneMoves.pop_back();
-            }
-        }
-    }*/
+
     return movements_done;
-}
-
-void movePart(Movement& m, Id& parent, Id& child, std::deque<Movement>& thisMove) {
-    // When moving child, should move parent too
-    Shape& shape_child = *shapes[child];
-    Shape& shape_parent = *shapes[parent];
-
-    if (m.t == Movement::Transform::rotateRads) {
-        // when the parent rotates, the child should be translated to the parent's
-        // new top center position // assumes the movement has just happened
-        const v3 lastCenter = shape_parent.cuboid().lastState().topCenter;
-        const v3 center = shape_parent.cuboid().state().topCenter;
-        const v3 translation = center - lastCenter;
-        Movement mTrans(&shape_child, Movement::Transform::translate, translation);
-        Movement mRotate(&shape_child, Movement::Transform::rotateRads, m.state.vec);
-        thisMove.push_back(mTrans);
-        thisMove.push_back(mRotate);
-    } else if (m.t == Movement::Transform::translate) {
-    }
-    return;
 }
 
 void collisions() {
@@ -293,7 +295,7 @@ void collisions() {
     const int size = shapes.size();
     for (auto& s: shapes) {
         Shape& shape = *s.second;
-        const v3 pos = shape.cuboid().state().vec;
+        const v3 pos = shape.cuboid().state().pos;
         //just use one for now, will change so that shapes
         // store their max dimensions
         const float halfDimensions = shape.cuboid().furthestVertex()*2.0f;
@@ -369,7 +371,7 @@ void collisions() {
 void render() {
     for (auto& s: shapes) {
         Shape& shape = *s.second;
-        auto pos = shape.cuboid().state().vec;
+        auto pos = shape.cuboid().state().pos;
         auto qua = shape.cuboid().state().orient;
         auto sca = shape.cuboid().scale();
         glBindVertexArray(shape.VAO);
@@ -440,6 +442,7 @@ void bindBuffers(GLuint VAO, std::vector<GLuint> VBOs, const fv* vertexData, con
 
 void keyboard(unsigned char key, int mouseX, int mouseY) {
     Shape& shape = getShape();
+    const Id id = shape.id;
     bool stop = false;
 
     v3 translate(zeroV);
@@ -482,10 +485,10 @@ void keyboard(unsigned char key, int mouseX, int mouseY) {
         if (translate != zeroV) {
             // for some shapes translationMultiplier will be 0, so cannot move
             const v3 translateMultiplier = shape.cuboid().translationMultiplier;
-            Movement m(&shape, Movement::Transform::translate, translate * translateMultiplier);
+            Movement m(id, Movement::Transform::Translation, translate * translateMultiplier);
             movements.push_back(m);
         } else if (rotateV != zeroV) {
-            Movement m(&shape, Movement::Transform::rotateRads, rotateV);
+            Movement m(id, Movement::Transform::Rotation, rotateV);
             movements.push_back(m);
         }
         glutPostRedisplay();
@@ -496,6 +499,7 @@ void keyboard(unsigned char key, int mouseX, int mouseY) {
 
 void specialInput(int key, int x, int y) {
     Shape& shape = getShape();
+    const Id id = shape.id;
     bool stop = false;
     v3 translate;
     switch(key) {
@@ -515,7 +519,7 @@ void specialInput(int key, int x, int y) {
     if (!stop) {
         if (translate != zeroV) {
             const v3 translateMultiplier = shape.cuboid().translationMultiplier;
-            Movement m(&shape, Movement::Transform::translate, translate * translateMultiplier);
+            Movement m(id, Movement::Transform::Translation, translate * translateMultiplier);
             movements.push_back(m);
         }
         glutPostRedisplay();
@@ -523,7 +527,6 @@ void specialInput(int key, int x, int y) {
         cleanupAndExit();
     }
 }
-
 
 Shape& getShape() {
     if (shapes.count(selectedShape) == 0) {

@@ -10,13 +10,12 @@
 
 struct State {
     fq orient;
-    v3 vec;
+    v3 pos;
     v3 topCenter;
-    bool changed;
+    v3 rotation;
     State();
     State(const State& s);
     State& operator=(const State& other);
-    friend State operator+(const State& s1, const State& s2);
     friend std::ostream& operator<<(std::ostream& stream, const State& state);
 };
 #endif

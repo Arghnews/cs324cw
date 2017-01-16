@@ -10,28 +10,19 @@
 State::State() {}
 State::State(const State& s) :
     orient(s.orient),
-    vec(s.vec),
+    pos(s.pos),
     topCenter(s.topCenter),
-    changed(s.changed) {}
+    rotation(s.rotation) {}
     State& State::operator=(const State& other) {
         if (this != &other) {
             orient = other.orient;
-            vec = other.vec;
+            pos = other.pos;
             topCenter = other.topCenter;
-            changed = other.changed;
+            rotation = other.rotation;
         }
         return *this;
     }
 
-// ORDER MATTERS
-State operator+(const State& s1, const State& s2) {
-    State state;
-    state.orient = s2.orient * s1.orient;
-    state.vec = s1.vec + s2.vec;
-    state.topCenter = s1.topCenter + s2.topCenter;
-    state.changed = false;
-    return state;
-}
 std::ostream& operator<<(std::ostream& stream, const State& state) {
-    return stream << " state of " << printVec(state.vec) << " vec, topCenter:" << printVec(state.topCenter);
+    return stream << "Pos" << printVec(state.pos) << ", topC:" << printVec(state.topCenter) << " and rotation:" << printVec(state.rotation);
 }

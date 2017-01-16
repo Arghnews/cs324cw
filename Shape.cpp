@@ -61,7 +61,7 @@ vv3 Shape::getAxes(vv3 v1, vv3 v2) {
     for (const auto& axis1: axes1) {
         for (const auto& axis2: axes2) {
             const auto t = glm::normalize(glm::cross(axis1,axis2));
-            if (!isnan(t.x) && !isnan(t.y) && !isnan(t.z)) {
+            if (!std::isnan(t.x) && !std::isnan(t.y) && !std::isnan(t.z)) {
                 axes3.push_back(t);
             }
         }
