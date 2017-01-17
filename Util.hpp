@@ -6,6 +6,8 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/rotate_vector.hpp>
+#include <glm/gtc/quaternion.hpp>
+#include <glm/gtx/quaternion.hpp>
 #include <vector>
 #include <algorithm>
 #include <chrono>
@@ -68,9 +70,15 @@ std::pair<bool,int> static vecContains(const std::vector<std::vector<T>>& vec, c
     return std::make_pair(false,0);
 }
 
-std::string static printVec(const v3 v) {
+std::string static printVec(const glm::vec3 v) {
     std::stringstream buffer;
     buffer << "(" << v.x << "," << v.y << "," << v.z << ")";
+    return buffer.str();
+}
+
+std::string static printQ(const glm::quat v) {
+    std::stringstream buffer;
+    buffer << "( " << v.x << "," << v.y << "," << v.z << ", " << v.w << ")";
     return buffer.str();
 }
 

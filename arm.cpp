@@ -10,6 +10,7 @@
 #include <thread>
 #define GLM_FORCE_RADIANS
 #include <glm/glm.hpp>
+#include <glm/gtx/rotate_vector.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/quaternion.hpp>
@@ -51,7 +52,7 @@ State rotateShape(Id shape, const v3& rotateBy);
 State translateShape(Id shape, const v3& translate);
 void extraShapes();
 
-static bool allowedCollide = false;
+static bool allowCollision = true;
 
 //static const int numbShapes = 2;
 static int selectedShape = 1;
@@ -61,6 +62,7 @@ static const Id arm = 2;
 static const Id platter = 3;
 static const Id claw1 = 4;
 static const Id claw2 = 5;
+static std::vector<v3> claw_offsets;
 
 static const std::vector<std::vector<Id>> ARM_PARTS = {
     {base},
@@ -131,7 +133,7 @@ void createShapes() {
             claw2,bottom_upRightTop,canCollideWith,
             clawDimensions,zeroV));
 
-    v3 gap(0.0f,0.1f,0.0f); // gap between things
+    v3 gap(0.0f,0.0f,0.0f); // gap between things
     v3 baseHeight = gap + 2.0f * shapes[base]->cuboid().state().topCenter;
     v3 shoulderHeight = shapes[shoulder]->cuboid().state().topCenter;
     v3 armHeight = shapes[arm]->cuboid().state().topCenter;
@@ -167,15 +169,17 @@ void createShapes() {
     translateShape(claw2,armHeight);
     translateShape(claw2,platterHeight);
     
-    gap *= 0.0f;
     // move claw to side
-    v3 claw1_offset = v3(platter_diag_flat,0.0f,platter_diag_flat);
-    v3 claw2_offset = claw1_offset * -1.0f;
-    translateShape(claw1,claw1_offset+gap);
-    translateShape(claw2,claw2_offset+gap);
+    auto claw1_offset = v3(platter_diag_flat,0.0f,platter_diag_flat);
+    //auto claw1_offset = zeroV;
+    claw_offsets.push_back(claw1_offset);
+    claw_offsets.push_back(claw1_offset * -1.0f);
+    translateShape(claw1,claw_offsets[0]+gap);
+    translateShape(claw2,claw_offsets[1]+gap);
 
     for (auto& s: shapes) {
         auto& shape = s.second;
+        rotateShape(s.first, v3(0.01f,0.01f,0.01f));
         glGenVertexArrays(1, &(shape->VAO));
         glGenBuffers(1, &(shape->VBOs[0])); // vertex
         glGenBuffers(1, &(shape->VBOs[1])); // colour
@@ -189,7 +193,11 @@ State rotateShape(Id s, const v3& rotateBy) {
         std::string err = "No element with id " + std::to_string(s) + " in map";
         throw std::runtime_error(err);
     }
-    return shapes[s]->cuboid().rotateRads(rotateBy);
+    std::cout << "Rotating shape " << s << " by " << printVec(rotateBy) << "\n";
+    auto orient = shapes[s]->cuboid().state().orient;
+    std::cout << "Quart before " << printQ(orient) << "\n";
+    auto r = shapes[s]->cuboid().rotateRads(rotateBy);
+    std::cout << "Quart after " << printQ(shapes[s]->cuboid().state().orient) << "\n";
 }
 
 State translateShape(Id s, const v3& translate) {
@@ -235,7 +243,7 @@ Movements processMovements() {
 
         std::deque<Movement> thisMove;
 
-        State acc_transform = movements[i].state;
+        State acc_transform = State(movements[i].state);
 
         thisMove.push_back(movements[i]);
 
@@ -257,6 +265,7 @@ Movements processMovements() {
                 if (ARM_PARTS[child].size() == 1) { // only one child
                     if (m.t == Movement::Transform::Rotation) {
                         acc_transform.topCenter += difference.topCenter; // difference in top center
+                        acc_transform.orient = difference.orient;
                         Movement mTrans(child, Movement::Transform::TranslationTopCenter, acc_transform);
                         Movement mRotate(child, Movement::Transform::Rotation, acc_transform);
                         thisMove.push_back(mRotate);
@@ -264,17 +273,42 @@ Movements processMovements() {
                     }
                 } else { // only works if multiple objects are at the end! only, ie arm -> shoulder -> .. {claw1,claw2}
                     if (m.t == Movement::Transform::Rotation) {
+                        // bespoke code for claw
                         auto& children = ARM_PARTS[child];
                         const int children_size = children.size();
-                        // WRONG NEEDS BESPOKE REWRITE
+
+                        //acc_transform.topCenter += difference.topCenter; // difference in top center
+
                         for (int j=0; j<children_size; ++j) {
                             Id this_child = children[j];
-                            acc_transform.topCenter = difference.topCenter; // difference in top center
-                            Movement mTrans(this_child, Movement::Transform::TranslationTopCenter, acc_transform);
-                            Movement mRotate(this_child, Movement::Transform::Rotation, acc_transform);
-                            thisMove.push_back(mRotate);
+
+                            State offset = acc_transform;
+
+                            const State parentState = shapes[parent]->cuboid().state();
+                            const v3 parent_pos = parentState.pos;
+                            const State childState = shapes[this_child]->cuboid().state();
+                            const v3 my_pos = childState.pos;
+                            // can just use rotate ang because it never changes
+
+                            const fq q(offset.rotation);
+
+                            const v3 rotated_point = parent_pos + (q * (my_pos - parent_pos) );
+                            //rotated_point = origin + (orientation_quaternion * (point-origin));
+                            //v3 rotated_point = glm::rotate(my_pos, rot, axe);
+                            //v3 rotated_point = glm::axis(parentState.orient) * my_pos;
+                            const v3 translationVec = rotated_point - childState.pos;
+
+                            offset.topCenter += translationVec;
+
+                            Movement mTrans(this_child, Movement::Transform::TranslationTopCenter, offset);
                             thisMove.push_back(mTrans);
+                            Movement mRotate(this_child, Movement::Transform::Rotation, offset);
+                            thisMove.push_back(mRotate);
                         }
+                        
+
+                        // if here parent has just moved
+                        // claw_offsets [0]->[1]
                     }
                 }
             }
@@ -345,7 +379,7 @@ void collisions() {
         const Id& shape2Id = pai.second;
         const Shape& shape1 = *shapes[shape1Id];
         const Shape& shape2 = *shapes[shape2Id];
-        static const bool allowedToCollideGlobal = allowedCollide; // global for now
+        static const bool allowedToCollideGlobal = allowCollision; // global for now
         //static const bool allowedToCollideGlobal = false; // global for now
 
         std::set<Id> shape1CanHit = shape1.canCollideWith;
@@ -610,7 +644,7 @@ void switchShape(int by) {
             }
         }
         shapes[idSelected]->selected(false);
-        idSelected++;
+        idSelected += by;
         idSelected %= ids.size();
         selectedShape = ids[idSelected];
         shapes[idSelected]->selected(true);

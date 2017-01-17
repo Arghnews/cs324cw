@@ -37,8 +37,9 @@ Movement::Movement (Id shape, Transform t, State state) : shape(shape), t(t), st
 Movement::Movement(const Movement& m) : 
     state(m.state),
     t(m.t),
-    shape(m.shape) {}
-    Movement& Movement::operator=(const Movement& m) {
+    shape(m.shape) {
+    }
+Movement& Movement::operator=(const Movement& m) {
         if (this != &m) {
             state = m.state;
             t = m.t;
