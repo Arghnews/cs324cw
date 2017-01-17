@@ -43,19 +43,29 @@ void mouseClicks(int button, int state, int x, int y);
 void startLoopGl();
 void collisions();
 void keyboard(unsigned char key, int mouseX, int mouseY);
+void keyboard_up(unsigned char key, int x, int y);
 void specialInput(int key, int x, int y);
 void cleanupAndExit();
-Shape& getShape();
+std::vector<Shape*> getShapes();
 void switchShape(int);
 Movements processMovements();
 State rotateShape(Id shape, const v3& rotateBy);
 State translateShape(Id shape, const v3& translate);
 void extraShapes();
 
+static const float fps = 60.0f;
+static v3 camera_movement_multiplier(zeroV);
+static v3 camera_velocity(0.15f,0.15f,0.15f);
+// make sure these aren't same otherwise nan's
+static v3 camera_lookingAt(-1.5f,-8.0f,-3.0f); // eye, coordinate in world
+static v3 camera_position(1.5f,9.0f,3.0f);  // center, where looking at
+static float mouseX;
+static float mouseY;
+
 static bool allowCollision = false;
 
 //static const int numbShapes = 2;
-static int selectedShape = 1;
+static int selectedShape = 0;
 static const Id base = 0;
 static const Id shoulder = 1;
 static const Id arm = 2;
@@ -64,12 +74,16 @@ static const Id claw1 = 4;
 static const Id claw2 = 5;
 static std::vector<v3> claw_offsets;
 
+static const std::vector<Id> CLAW_PARTS = {
+    claw1, claw2
+};
+
 static const std::vector<std::vector<Id>> ARM_PARTS = {
     {base},
     {shoulder},
     {arm},
     {platter},
-    {claw1, claw2}
+    CLAW_PARTS
 };
 
 GLuint shaderProgram;
@@ -133,7 +147,7 @@ void createShapes() {
             claw2,bottom_upRightTop,canCollideWith,
             clawDimensions,zeroV));
 
-    v3 gap(0.0f,0.1f,0.0f); // gap between things
+    v3 gap(0.0f,0.25f,0.0f); // gap between things
     v3 baseHeight = gap + 2.0f * shapes[base]->cuboid().state().topCenter;
     v3 shoulderHeight = shapes[shoulder]->cuboid().state().topCenter;
     v3 armHeight = shapes[arm]->cuboid().state().topCenter;
@@ -170,22 +184,20 @@ void createShapes() {
     translateShape(claw2,platterHeight);
     
     // move claw to side
-    auto claw1_offset = v3(platter_diag_flat,0.0f,platter_diag_flat);
+    auto claw_offset = v3(platter_diag_flat,0.0f,platter_diag_flat);
     //auto claw1_offset = zeroV;
-    claw_offsets.push_back(claw1_offset);
-    claw_offsets.push_back(claw1_offset * -1.0f);
+    claw_offsets.push_back(claw_offset);
+    claw_offsets.push_back(claw_offset * -1.0f);
     translateShape(claw1,claw_offsets[0]+gap);
     translateShape(claw2,claw_offsets[1]+gap);
 
     for (auto& s: shapes) {
         auto& shape = s.second;
-        rotateShape(s.first, v3(0.01f,0.01f,0.01f));
         glGenVertexArrays(1, &(shape->VAO));
         glGenBuffers(1, &(shape->VBOs[0])); // vertex
         glGenBuffers(1, &(shape->VBOs[1])); // colour
     }
 
-    switchShape(0);
 }
 
 State rotateShape(Id s, const v3& rotateBy) {
@@ -210,6 +222,10 @@ State translateShape(Id s, const v3& translate) {
     return worked;
 }
 
+void moveCamera() {
+    camera_position += camera_movement_multiplier * camera_velocity * glm::normalize(camera_lookingAt);
+}
+
 void main_loop() {
 
     static long frame = 0l;
@@ -225,8 +241,8 @@ void main_loop() {
 
     bindBuffers(shapes);
     render();
+    moveCamera();
 
-    static const float fps = 60.0f;
     float fullFrametime = (1000.0f*1000.0f)/fps;
     long timeTaken = timeNowMicros() - startTime;
     int sleepTime = std::max((int)(fullFrametime - timeTaken),0);
@@ -254,10 +270,7 @@ Movements processMovements() {
         const bool valid_place = !(where==0 && ARM_PARTS.size()==1) && (where < ARM_PARTS.size()-1);
         const bool chain = has && valid_place;
 
-        std::cout << "Why did I choose to do the robot arm?\n";
-
         if (chain) { // chaining movement of linked objects
-            std::cout << "In chain\n";
             const Id parent = where;
             const Id child_start = parent + 1;
             const int chain_size = ARM_PARTS.size();
@@ -295,65 +308,6 @@ Movements processMovements() {
     }
     return movements_done;
 }
-        /*
-        while (!thisMove.empty()) {
-
-            if (chain) { // chaining movement of linked objects
-                const Id parent = where;
-                const Id child = parent + 1;
-
-                if (ARM_PARTS[child].size() == 1) { // only one child
-                    if (m.t == Movement::Transform::Rotation) {
-                        acc_transform.topCenter += difference.topCenter; // difference in top center
-                        acc_transform.orient = difference.orient;
-                        Movement mTrans(child, Movement::Transform::TranslationTopCenter, acc_transform);
-                        Movement mRotate(child, Movement::Transform::Rotation, acc_transform);
-                        thisMove.push_back(mRotate);
-                        thisMove.push_back(mTrans);
-                    }
-                } else { // only works if multiple objects are at the end! only, ie arm -> shoulder -> .. {claw1,claw2}
-                    if (m.t == Movement::Transform::Rotation) {
-                        // bespoke code for claw
-                        auto& children = ARM_PARTS[child];
-                        const int children_size = children.size();
-
-                        //acc_transform.topCenter += difference.topCenter; // difference in top center
-
-                        for (int j=0; j<children_size; ++j) {
-                            Id this_child = children[j];
-
-                            State offset = acc_transform;
-
-                            const State parentState = shapes[parent]->cuboid().state();
-                            const v3 parent_pos = parentState.pos;
-                            const State childState = shapes[this_child]->cuboid().state();
-                            const v3 my_pos = childState.pos;
-                            // can just use rotate ang because it never changes
-
-                            const fq q(offset.rotation);
-
-                            const v3 rotated_point = parent_pos + (q * (my_pos - parent_pos) );
-                            const v3 translationVec = rotated_point - childState.pos;
-                            //rotated_point = origin + (orientation_quaternion * (point-origin));
-                            //v3 rotated_point = glm::rotate(my_pos, rot, axe);
-                            //v3 rotated_point = glm::axis(parentState.orient) * my_pos;
-
-                            offset.topCenter += translationVec;
-
-                            Movement mTrans(this_child, Movement::Transform::TranslationTopCenter, offset);
-                            thisMove.push_back(mTrans);
-                            Movement mRotate(this_child, Movement::Transform::Rotation, offset);
-                            thisMove.push_back(mRotate);
-                        }
-                        
-
-                        // if here parent has just moved
-                        // claw_offsets [0]->[1]
-                    }
-                }
-            }
-
-        }*/
 
 void collisions() {
 
@@ -443,12 +397,6 @@ void collisions() {
     movements.clear();
 }
 
-// make sure these aren't same otherwise nan's
-static v3 camera_lookingAt(-1.5f,-8.0f,-3.0f); // eye, coordinate in world
-static v3 camera_position(1.5f,9.0f,3.0f);  // center, where looking at
-static float mouseX;
-static float mouseY;
-
 void render() {
     for (auto& s: shapes) {
         Shape& shape = *s.second;
@@ -499,11 +447,13 @@ void render() {
 
 void mouseClicks(int button, int state, int x, int y) {
     if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
-        // left click go forward
-        camera_position += glm::normalize(camera_lookingAt);
+        camera_movement_multiplier = oneV;
+    } else if (button == GLUT_LEFT_BUTTON && state == GLUT_UP) {
+        camera_movement_multiplier = zeroV;
     } else if (button == GLUT_RIGHT_BUTTON && state == GLUT_DOWN) {
-        // left click go forward
-        camera_position += -glm::normalize(camera_lookingAt);
+        camera_movement_multiplier = -oneV;
+    } else if (button == GLUT_RIGHT_BUTTON && state == GLUT_UP) {
+        camera_movement_multiplier = zeroV;
     }
 }
 
@@ -524,8 +474,6 @@ void mouseMove(int x, int y) {
 	float oldCursorY = mouseY;
     float deltaX = mouseOffset.x/halfWidth;
     float deltaY = mouseOffset.y/halfHeight;
-	//float deltaX = xPos-oldCursorX;
-	//float deltaY = yPos-oldCursorY;
 	static const float PI_BY_EIGHTEEN = M_PI/18.0f; 
 	static const float PI_BY_EIGHTEEN_TIMES_SEVENTEEN = 17.0f * M_PI/18.0f; 
 	glm::vec3 lookingAtCopy = camera_lookingAt;
@@ -567,47 +515,47 @@ void bindBuffers(GLuint VAO, std::vector<GLuint> VBOs, const fv* vertexData, con
 }
 
 void keyboard(unsigned char key, int mouseX, int mouseY) {
-    Shape& shape = getShape();
-    const Id id = shape.id;
     bool stop = false;
+    for (auto& s: getShapes()) {
+        Shape& shape = *s;
+        const Id id = shape.id;
 
-    v3 translate(zeroV);
-    v3 rotateV(zeroV);
-    switch (key) {
-        case 'r':  rotateV = v3(glm::radians(10.0f),0.0f,0.0f);
-                   break;
-        case 'R':  rotateV = v3(glm::radians(-10.0f),0.0f,0.0f);
-                   break;
-        case 'y':  rotateV = v3(0.0f,glm::radians(10.0f),0.0f);
-                   break;
-        case 'Y':  rotateV = v3(0.0f,glm::radians(-10.0f),0.0f);
-                   break;
-        case 'z':  rotateV = v3(0.0f,0.0f,glm::radians(10.0f));
-                   break;
-        case 'Z':  rotateV = v3(0.0f,0.0f,glm::radians(-10.0f));
-                   break;
+        v3 translate(zeroV);
+        v3 rotateV(zeroV);
+        switch (key) {
+            case 'r':  rotateV = v3(glm::radians(10.0f),0.0f,0.0f);
+                       break;
+            case 'R':  rotateV = v3(glm::radians(-10.0f),0.0f,0.0f);
+                       break;
+            case 'y':  rotateV = v3(0.0f,glm::radians(10.0f),0.0f);
+                       break;
+            case 'Y':  rotateV = v3(0.0f,glm::radians(-10.0f),0.0f);
+                       break;
+            case 'z':  rotateV = v3(0.0f,0.0f,glm::radians(10.0f));
+                       break;
+            case 'Z':  rotateV = v3(0.0f,0.0f,glm::radians(-10.0f));
+                       break;
 
-        case 'Q':
-        case 'q':  stop = true; 
-                   break;
-        case 'W':  
-        case 'w':  
-                   translate = v3(0,0,-step);
-                   break;
-        case 'S':  
-        case 's':  
-                   translate = v3(0,0,step);
-                   break;
-        case 'A':
-        case 'a':
-                   translate = v3(-step,0,0);
-                   break;
-        case 'D':  
-        case 'd':  
-                   translate = v3(step,0,0);
-                   break;
-    }
-    if (!stop) {
+            case 'Q':
+            case 'q':  stop = true; 
+                       break;
+            case 'W':  
+            case 'w':  
+                       translate = v3(0,0,-step);
+                       break;
+            case 'S':  
+            case 's':  
+                       translate = v3(0,0,step);
+                       break;
+            case 'A':
+            case 'a':
+                       translate = v3(-step,0,0);
+                       break;
+            case 'D':  
+            case 'd':  
+                       translate = v3(step,0,0);
+                       break;
+        }
         if (translate != zeroV) {
             // for some shapes translationMultiplier will be 0, so cannot move
             const v3 translateMultiplier = shape.cuboid().translationMultiplier;
@@ -618,52 +566,59 @@ void keyboard(unsigned char key, int mouseX, int mouseY) {
             Movement m(id, Movement::Transform::Rotation, rotationMultiplier * rotateV);
             movements.push_back(m);
         }
+    }
+    if (!stop) {
         glutPostRedisplay();
     } else {
         cleanupAndExit();
     }
 }
 
+void keyboard_up(unsigned char key, int x, int y) {
+    std::cout << "Key up!\n";
+}
+
 void specialInput(int key, int x, int y) {
-    Shape& shape = getShape();
-    const Id id = shape.id;
     bool stop = false;
-    v3 translate;
-    switch(key) {
-        case GLUT_KEY_UP:
-            translate = v3(0,step,0);
-            break;    
-        case GLUT_KEY_DOWN:
-            translate = v3(0,-step,0);
-            break;
-        case GLUT_KEY_LEFT:
-            switchShape(-1);
-            break;
-        case GLUT_KEY_RIGHT:
-            switchShape(1);
-            break;
-    }
-    if (!stop) {
+    for (auto& s: getShapes()) {
+        Shape& shape = *s;
+        const Id id = shape.id;
+        v3 translate;
+        switch(key) {
+            case GLUT_KEY_UP:
+                translate = v3(0,step,0);
+                break;    
+            case GLUT_KEY_DOWN:
+                translate = v3(0,-step,0);
+                break;
+            case GLUT_KEY_LEFT:
+                switchShape(-1);
+                break;
+            case GLUT_KEY_RIGHT:
+                switchShape(1);
+                break;
+        }
         if (translate != zeroV) {
             const v3 translateMultiplier = shape.cuboid().translationMultiplier;
             Movement m(id, Movement::Transform::Translation, translate * translateMultiplier);
             movements.push_back(m);
         }
+    }
+    if (!stop) {
         glutPostRedisplay();
     } else {
         cleanupAndExit();
     }
 }
 
-Shape& getShape() {
-    if (shapes.count(selectedShape) == 0) {
-        for (auto& s: shapes) {
-            Id id = s.first;
-            selectedShape = id;
-            break;
-        }
+std::vector<Shape*> getShapes() {
+    static bool run = false;
+    std::vector<Shape*> r;
+    std::vector<Id> selected = ARM_PARTS[selectedShape];
+    for (auto& s: selected) {
+        r.push_back(shapes[s]);
     }
-    return *shapes[selectedShape];
+    return r;
 }
 
 void switchShape(int by) {
@@ -673,15 +628,21 @@ void switchShape(int by) {
         static std::vector<Id> ids;
         static int idSelected = selectedShape;
         if (ids.size() == 0) {
-            for (auto& s: shapes) {
-                ids.push_back(s.first);
+            for (auto& arm_part: ARM_PARTS) {
+                for (auto& part: arm_part) {
+                    ids.push_back(part);
+                }
             }
         }
-        shapes[idSelected]->selected(false);
-        idSelected += by;
+        for (auto& s: ARM_PARTS[idSelected]) {
+            shapes[s]->selected(false);
+        }
+        idSelected += by; // there is a logic flaw somewhere here
         idSelected %= ids.size();
-        selectedShape = ids[idSelected];
-        shapes[idSelected]->selected(true);
+        selectedShape = ARM_PARTS[idSelected];
+        for (auto& s: ARM_PARTS[idSelected]) {
+            shapes[s]->selected(true);
+        }
     }
 }
 
@@ -741,10 +702,13 @@ int init(int argc, char* argv[]) {
         return -1;
     }
     glutDisplayFunc(main_loop); 
+    glutSetKeyRepeat(GLUT_KEY_REPEAT_OFF);
 	glutKeyboardFunc(keyboard); 
+    glutKeyboardUpFunc(keyboard_up);
 	glutIdleFunc(idle); 
     glutSpecialFunc(specialInput); 
     glutMouseFunc(mouseClicks);
+    glutMotionFunc(mouseMove);
     glutPassiveMotionFunc(mouseMove);
     glutSetCursor(GLUT_CURSOR_NONE);
     
