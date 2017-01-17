@@ -18,10 +18,11 @@
 
 // USING RADIANS
 
-Cuboid::Cuboid(fv points, v3 topCenter, v3 scale, v3 translationMultiplier) :
+Cuboid::Cuboid(fv points, v3 topCenter, v3 scale, v3 translationMultiplier, v3 rotationMultiplier) :
     points_(points),
     scale_(scale),
-    translationMultiplier(translationMultiplier)
+    translationMultiplier(translationMultiplier),
+    rotationMultiplier(rotationMultiplier)
 {
     const int size = points_.size(); // 3d
     for (int i=0; i<size; i+=18) {

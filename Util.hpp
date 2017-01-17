@@ -56,11 +56,13 @@ void static concat(std::vector<T>& grower, const std::vector<T>& added) {
 }
 
 template <class T>
-std::pair<bool,int> static vecContains(const std::vector<T>& vec, const T& t) {
+std::pair<bool,int> static vecContains(const std::vector<std::vector<T>>& vec, const T& t) {
     const int size = vec.size();
     for (int i=0; i<size; ++i) {
-        if (vec[i] == t) {
-            return std::make_pair(true,i);
+        for (int j=0; j<vec[i].size(); ++j) {
+            if (vec[i][j] == t) {
+                return std::make_pair(true,i);
+            }
         }
     }
     return std::make_pair(false,0);

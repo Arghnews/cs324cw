@@ -42,8 +42,9 @@ class Cuboid {
         State state();
         void lastState(State& s);
         State lastState();
-        Cuboid(fv points, v3 topCenter, v3 scale, v3 translationMultiplier);
+        Cuboid(fv points, v3 topCenter, v3 scale, v3 translationMultiplier, v3 rotationMultiplier);
         v3 translationMultiplier; // movement multiplier
+        v3 rotationMultiplier; // rotation multiplier
         const v3 scale() const;
         v3 half_xyz();
         float furthestVertex();

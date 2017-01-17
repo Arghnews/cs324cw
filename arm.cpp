@@ -53,14 +53,22 @@ void extraShapes();
 
 static bool allowedCollide = false;
 
-static const int numbShapes = 2;
+//static const int numbShapes = 2;
 static int selectedShape = 1;
 static const Id base = 0;
 static const Id shoulder = 1;
 static const Id arm = 2;
 static const Id platter = 3;
+static const Id claw1 = 3;
+static const Id claw2 = 4;
 
-static const std::vector<Id> arm_parts = { base, shoulder, arm, platter};
+static const std::vector<std::vector<Id>> ARM_PARTS = {
+    {base},
+    {shoulder},
+    {arm},
+    {platter},
+    {claw1, claw2}
+};
 
 GLuint shaderProgram;
 Shapes shapes;
@@ -76,11 +84,13 @@ void createShapes() {
     v3 bottom_upRightTop = v3(0.0f, 1.0f, 0.0f);
     v3 center_upRightTop = v3(0.0f, 0.5f, 0.0f);
 
+//Shape::Shape(const fv* points, const fv* colours, const fv* purple, const fv* green,
+//int id, v3 topCenter, std::set<Id> canCollideWith, v3 scale, v3 translationMultiplier)
     std::set<Id> canCollideWith = {};
     shapes[base] = (new Shape(&cubePointsCentered,
             &cubeColours,&cubeColoursPurple,&cubeColoursGreen,
             base,center_upRightTop,canCollideWith,
-            v3(5.0f,1.0f,5.0f),zeroV));
+            v3(5.0f,1.0f,5.0f),zeroV,v3(0.0f,1.0f,0.0)));
 
     canCollideWith = {arm};
     float n = 1.5f;
@@ -191,22 +201,26 @@ Movements processMovements() {
             State difference = m.move();
             Id& id = m.shape;
             
-            const auto has_index = vecContains(arm_parts, id); // O(n^2), but list is always tiny
+            const auto has_index = vecContains(ARM_PARTS, id); // O(n^2), but list is always tiny
             const bool has = has_index.first;
             const int where = has_index.second;
-            const bool valid_place = !(where==0 && arm_parts.size()==1) && (where < arm_parts.size()-1);
+            const bool valid_place = !(where==0 && ARM_PARTS.size()==1) && (where < ARM_PARTS.size()-1);
             const bool chain = has && valid_place;
 
-            if (chain) {
+            if (chain) { // chaining movement of linked objects
                 const Id parent = where;
                 const Id child = parent + 1;
-
-                if (m.t == Movement::Transform::Rotation) {
-                    acc_transform.topCenter += difference.topCenter; // difference in top center
-                    Movement mTrans(child, Movement::Transform::TranslationTopCenter, acc_transform);
-                    Movement mRotate(child, Movement::Transform::Rotation, acc_transform);
-                    thisMove.push_back(mRotate);
-                    thisMove.push_back(mTrans);
+                if (ARM_PARTS[child].size() == 1) { // only one child
+                    if (m.t == Movement::Transform::Rotation) {
+                        acc_transform.topCenter += difference.topCenter; // difference in top center
+                        Movement mTrans(child, Movement::Transform::TranslationTopCenter, acc_transform);
+                        Movement mRotate(child, Movement::Transform::Rotation, acc_transform);
+                        thisMove.push_back(mRotate);
+                        thisMove.push_back(mTrans);
+                    }
+                } else {
+                    const Id children = parent + 1; // may have multiple dependents that all need to be moved
+                    
                 }
             }
             movements_done.push_back(m);
@@ -476,7 +490,8 @@ void keyboard(unsigned char key, int mouseX, int mouseY) {
             Movement m(id, Movement::Transform::Translation, translate * translateMultiplier);
             movements.push_back(m);
         } else if (rotateV != zeroV) {
-            Movement m(id, Movement::Transform::Rotation, rotateV);
+            const v3 rotationMultiplier = shape.cuboid().rotationMultiplier;
+            Movement m(id, Movement::Transform::Rotation, rotationMultiplier * rotateV);
             movements.push_back(m);
         }
         glutPostRedisplay();
