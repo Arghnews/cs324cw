@@ -76,11 +76,6 @@ void createShapes() {
     v3 bottom_upRightTop = v3(0.0f, 1.0f, 0.0f);
     v3 center_upRightTop = v3(0.0f, 0.5f, 0.0f);
 
-    /*Shape(const fv* points, const fv* colours, const fv* purple, const fv* green, int id, v3 topCenter,
-            std::set<Id> canCollideWith,
-            v3 scale=oneV, v3 translationMultiplier=oneV);
-    */
-
     std::set<Id> canCollideWith = {};
     shapes[base] = (new Shape(&cubePointsCentered,
             &cubeColours,&cubeColoursPurple,&cubeColoursGreen,
@@ -151,7 +146,6 @@ State translateShape(Id s, const v3& translate) {
     }
     Shape& shape = *shapes[s];
     const bool deleted = bigTree.del(shape.cuboid().state().pos,&shape);
-    //assert(deleted);
     auto worked = shape.cuboid().translate(translate);
     bigTree.insert(shape.cuboid().state().pos,&shape);
     return worked;
@@ -311,6 +305,7 @@ void collisions() {
     movements.clear();
 }
 
+// make sure these aren't same otherwise nan's
 static v3 camera_lookingAt(-1.5f,-8.0f,-3.0f); // eye, coordinate in world
 static v3 camera_position(1.5f,9.0f,3.0f);  // center, where looking at
 static float mouseX;
@@ -364,17 +359,35 @@ void render() {
     glutSwapBuffers(); 
 }
 
-
+void mouseClicks(int button, int state, int x, int y) {
+    if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
+        // left click go forward
+        camera_position += glm::normalize(camera_lookingAt);
+    } else if (button == GLUT_RIGHT_BUTTON && state == GLUT_DOWN) {
+        // left click go forward
+        camera_position += -glm::normalize(camera_lookingAt);
+    }
+}
 
 void mouseMove(int x, int y) {
+    int cX = glutGet(GLUT_WINDOW_WIDTH) / 2;                                     
+    int cY = glutGet(GLUT_WINDOW_HEIGHT) / 2;                                    
+    if (cX != x || cY != y) {                                                    
+        glutWarpPointer(cX, cY);                                                 
+    }
+
+    auto mouseOffset = glm::vec2(x, cY) - glm::vec2(cX, y);                      
 	float halfWidth = glutGet(GLUT_WINDOW_WIDTH)/2.0f;
 	float halfHeight = glutGet(GLUT_WINDOW_HEIGHT)/2.0f;
+
 	float xPos = x/halfWidth - 1.0f;
 	float yPos = 1.0f - y/halfHeight;
 	float oldCursorX = mouseX;
 	float oldCursorY = mouseY;
-	float deltaX = xPos-oldCursorX;
-	float deltaY = yPos-oldCursorY;
+    float deltaX = mouseOffset.x/halfWidth;
+    float deltaY = mouseOffset.y/halfHeight;
+	//float deltaX = xPos-oldCursorX;
+	//float deltaY = yPos-oldCursorY;
 	static const float PI_BY_EIGHTEEN = M_PI/18.0f; 
 	static const float PI_BY_EIGHTEEN_TIMES_SEVENTEEN = 17.0f * M_PI/18.0f; 
 	glm::vec3 lookingAtCopy = camera_lookingAt;
@@ -549,7 +562,7 @@ int main(int argc, char* argv[]) {
 
     cleanupAndExit();
 
-	return 0; 
+    return 0; 
 }
 
 void cleanupAndExit() {
@@ -592,8 +605,10 @@ int init(int argc, char* argv[]) {
 	glutKeyboardFunc(keyboard); 
 	glutIdleFunc(idle); 
     glutSpecialFunc(specialInput); 
-    //glutMouseFunc(mouseClicks);
+    glutMouseFunc(mouseClicks);
     glutPassiveMotionFunc(mouseMove);
+    glutSetCursor(GLUT_CURSOR_NONE);
+    
 	//glutKeyboardFunc(keyboard); 
 	//glutReshapeFunc(reshape); 
     return 0;
