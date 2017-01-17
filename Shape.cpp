@@ -22,8 +22,8 @@
     //        size,          rotation,            , translationMultiplier, yaw_pitch_roll_min, yaw_pitch_roll_max
 
 Shape::Shape(const fv* points, const fv* colours, const fv* purple, const fv* green,
-        int id, v3 topCenter, std::set<Id> canCollideWith, v3 scale, v3 translationMultiplier) :
-    _cuboid(*points,topCenter,scale,translationMultiplier), canCollideWith(canCollideWith), _colours(colours), 
+        int id, v3 topCenter, std::set<Id> canCollideWith, v3 scale, v3 translationMultiplier, v3 rotationMultiplier) :
+    _cuboid(*points,topCenter,scale,translationMultiplier,rotationMultiplier), canCollideWith(canCollideWith), _colours(colours), 
     purple(purple), green(green), id(id), VBOs(2)
     {
 }

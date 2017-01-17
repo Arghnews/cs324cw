@@ -37,7 +37,7 @@ class Shape {
         std::vector<GLuint> VBOs;
         Shape(const fv* points, const fv* colours, const fv* purple, const fv* green, int id, v3 topCenter,
                 std::set<Id> canCollideWith,
-                v3 scale=oneV, v3 translationMultiplier=oneV);
+                v3 scale=oneV, v3 translationMultiplier=oneV, v3 rotationMultiplier=oneV);
         bool colliding(bool isColliding);
         bool colliding() const;
         Cuboid& cuboid();

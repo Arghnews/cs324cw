@@ -6,22 +6,27 @@
 #include <glm/gtx/quaternion.hpp>
 #include "Util.hpp"
 #include "State.hpp"
+#include <iostream>
 
-State::State() {}
+State::State() {
+}
+
 State::State(const State& s) :
     orient(s.orient),
     pos(s.pos),
     topCenter(s.topCenter),
-    rotation(s.rotation) {}
-    State& State::operator=(const State& other) {
-        if (this != &other) {
-            orient = other.orient;
-            pos = other.pos;
-            topCenter = other.topCenter;
-            rotation = other.rotation;
-        }
-        return *this;
+    rotation(s.rotation) {
+}
+
+State& State::operator=(const State& other) {
+    if (this != &other) {
+        orient = other.orient;
+        pos = other.pos;
+        topCenter = other.topCenter;
+        rotation = other.rotation;
     }
+    return *this;
+}
 
 State operator+(const State& s1, const State& s2) {
     State s;

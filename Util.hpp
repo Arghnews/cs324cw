@@ -6,6 +6,8 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/rotate_vector.hpp>
+#include <glm/gtc/quaternion.hpp>
+#include <glm/gtx/quaternion.hpp>
 #include <vector>
 #include <algorithm>
 #include <chrono>
@@ -33,6 +35,7 @@ typedef std::vector<Movement> Movements;
 
 static const v3 zeroV(0.0f,0.0f,0.0f);
 static const v3 oneV(1.0f,1.0f,1.0f);
+static const v3 UP_VECTOR(0.0f,1.0f,0.0f);
 static const float PI(M_PI);
 static const float HALF_PI(M_PI/2.0f);
 static const v3 V3_PI(M_PI,M_PI,M_PI);
@@ -55,19 +58,27 @@ void static concat(std::vector<T>& grower, const std::vector<T>& added) {
 }
 
 template <class T>
-std::pair<bool,int> static vecContains(const std::vector<T>& vec, const T& t) {
+std::pair<bool,int> static vecContains(const std::vector<std::vector<T>>& vec, const T& t) {
     const int size = vec.size();
     for (int i=0; i<size; ++i) {
-        if (vec[i] == t) {
-            return std::make_pair(true,i);
+        for (int j=0; j<vec[i].size(); ++j) {
+            if (vec[i][j] == t) {
+                return std::make_pair(true,i);
+            }
         }
     }
     return std::make_pair(false,0);
 }
 
-std::string static printVec(const v3 v) {
+std::string static printVec(const glm::vec3 v) {
     std::stringstream buffer;
     buffer << "(" << v.x << "," << v.y << "," << v.z << ")";
+    return buffer.str();
+}
+
+std::string static printQ(const glm::quat v) {
+    std::stringstream buffer;
+    buffer << "( " << v.x << "," << v.y << "," << v.z << ", " << v.w << ")";
     return buffer.str();
 }
 

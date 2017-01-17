@@ -10,6 +10,7 @@
 #include <thread>
 #define GLM_FORCE_RADIANS
 #include <glm/glm.hpp>
+#include <glm/gtx/rotate_vector.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <glm/gtx/quaternion.hpp>
@@ -29,6 +30,7 @@
 #include "Shape.hpp"
 #include "Octtree.hpp"
 #include "AABB.hpp"
+#include "Movement.hpp"
 #include "State.hpp"
 
 void idle();
@@ -37,6 +39,7 @@ void createShapes();
 void render();
 void bindBuffers(Shapes& shapes);
 void bindBuffers(GLuint VAO, std::vector<GLuint> VBOs, const fv* vertexData, const fv* colourData);
+void mouseClicks(int button, int state, int x, int y);
 void startLoopGl();
 void collisions();
 void keyboard(unsigned char key, int mouseX, int mouseY);
@@ -49,72 +52,25 @@ State rotateShape(Id shape, const v3& rotateBy);
 State translateShape(Id shape, const v3& translate);
 void extraShapes();
 
-struct Movement {
-    enum Transform { Rotation, Translation, TranslationTopCenter };
-    State state; // if all aligned doesn't matter
-    Transform t; // biggest first for better packing (maybe)
-    Id shape;
-    friend std::ostream& operator<<(std::ostream& stream, const Movement& m) {
-        std::string type = "";
-        if (m.t == Transform::Rotation) {
-            type = "rotation";
-        } else if (m.t == Transform::Translation) {
-            type = "translation";
-        } else if (m.t == Transform::TranslationTopCenter) {
-            type = "translationTopCenter";
-        }
-        return stream << "Movement on " << m.shape << " of type " << type << " of " << m.state;
-    }
-    Movement(Id shape, Transform t, v3 transforma) : shape(shape), t(t) {
-        if (t == Transform::Rotation) {
-            state.rotation = transforma;
-        } else if (t == Transform::Translation) {
-            state.pos = transforma;
-        } else if (t == Transform::TranslationTopCenter) {
-            state.topCenter = transforma;
-        }
-    }
-    Movement (Id shape, Transform t, State state) : shape(shape), t(t), state(state) {
-    }
-    Movement(const Movement& m) : 
-        state(m.state),
-        t(m.t),
-        shape(m.shape) {}
-    Movement& operator=(const Movement& m) {
-        if (this != &m) {
-            state = m.state;
-            t = m.t;
-            shape = m.shape;
-        }
-        return *this;
-    }
-    State move() {
-        if (t == Movement::Transform::Rotation) {
-            return rotateShape(shape,state.rotation);
-        } else if (t == Movement::Transform::Translation) {
-            return translateShape(shape,state.pos);
-        } else if (t == Movement::Transform::TranslationTopCenter) {
-            return translateShape(shape,state.topCenter);
-        }
-    }
-    State undo() {
-        if (t == Movement::Transform::Rotation) {
-            return rotateShape(shape,-1.0f*state.rotation);
-        } else if (t == Movement::Transform::Translation) {
-            return translateShape(shape,-1.0f*state.pos);
-        } else if (t == Movement::Transform::TranslationTopCenter) {
-            return translateShape(shape,-1.0f*state.topCenter);
-        }
-    }
-};
+static bool allowCollision = false;
 
-static bool allowedCollide = false;
-static const int numbShapes = 2;
+//static const int numbShapes = 2;
 static int selectedShape = 1;
 static const Id base = 0;
 static const Id shoulder = 1;
 static const Id arm = 2;
 static const Id platter = 3;
+static const Id claw1 = 4;
+static const Id claw2 = 5;
+static std::vector<v3> claw_offsets;
+
+static const std::vector<std::vector<Id>> ARM_PARTS = {
+    {base},
+    {shoulder},
+    {arm},
+    {platter},
+    {claw1, claw2}
+};
 
 GLuint shaderProgram;
 Shapes shapes;
@@ -129,41 +85,64 @@ void createShapes() {
 
     v3 bottom_upRightTop = v3(0.0f, 1.0f, 0.0f);
     v3 center_upRightTop = v3(0.0f, 0.5f, 0.0f);
-
-    /*Shape(const fv* points, const fv* colours, const fv* purple, const fv* green, int id, v3 topCenter,
-            std::set<Id> canCollideWith,
-            v3 scale=oneV, v3 translationMultiplier=oneV);
-    */
-
     std::set<Id> canCollideWith = {};
+
+//Shape::Shape(const fv* points, const fv* colours, const fv* purple, const fv* green,
+//int id, v3 topCenter, std::set<Id> canCollideWith, v3 scale, v3 translationMultiplier)
+    
+    // base
     shapes[base] = (new Shape(&cubePointsCentered,
             &cubeColours,&cubeColoursPurple,&cubeColoursGreen,
             base,center_upRightTop,canCollideWith,
-            v3(5.0f,1.0f,5.0f),zeroV));
+            v3(5.0f,1.0f,5.0f),zeroV,v3(0.0f,1.0f,0.0)));
 
+    // shoulder
     canCollideWith = {arm};
     float n = 1.5f;
     shapes[shoulder] = (new Shape(&cubePointsBottom,
             &cubeColours,&cubeColoursPurple,&cubeColoursGreen,
             shoulder,bottom_upRightTop,canCollideWith,
-            v3(1.0f,2.5f,1.0f),zeroV));
+            v3(1.0f,4.5f,1.0f),zeroV));
 
+    // arm
     canCollideWith = {shoulder,platter};
     shapes[arm] = (new Shape(&cubePointsBottom,
             &cubeColours,&cubeColoursPurple,&cubeColoursGreen,
             arm,bottom_upRightTop,canCollideWith,
-            v3(1.0f,1.75f,1.0f),zeroV));
+            v3(1.0f,3.5f,1.0f),zeroV));
 
+    // platter
     canCollideWith = {arm};
     shapes[platter] = (new Shape(&cubePointsCentered,
             &cubeColours,&cubeColoursPurple,&cubeColoursGreen,
             platter,center_upRightTop,canCollideWith,
-            v3(1.5f,0.5f,1.5f),zeroV));
+            v3(4.5f,0.25f,4.5f),zeroV));
 
-    float offset = 0.05f;
-    v3 baseHeight = offset + 2.0f * shapes[base]->cuboid().state().topCenter;
-    v3 shoulderHeight = offset + shapes[shoulder]->cuboid().state().topCenter;
-    v3 armHeight = offset + shapes[arm]->cuboid().state().topCenter;
+    const v3 clawDimensions = v3(0.2,3.0f,0.2f);
+    // claw1
+    canCollideWith = {};
+    shapes[claw1] = (new Shape(&cubePointsBottom,
+            &cubeColours,&cubeColoursPurple,&cubeColoursGreen,
+            claw1,bottom_upRightTop,canCollideWith,
+            clawDimensions,zeroV));
+
+    // claw2
+    canCollideWith = {};
+    shapes[claw2] = (new Shape(&cubePointsBottom,
+            &cubeColours,&cubeColoursPurple,&cubeColoursGreen,
+            claw2,bottom_upRightTop,canCollideWith,
+            clawDimensions,zeroV));
+
+    v3 gap(0.0f,0.1f,0.0f); // gap between things
+    v3 baseHeight = gap + 2.0f * shapes[base]->cuboid().state().topCenter;
+    v3 shoulderHeight = shapes[shoulder]->cuboid().state().topCenter;
+    v3 armHeight = shapes[arm]->cuboid().state().topCenter;
+    v3 platterHeight = shapes[platter]->cuboid().state().topCenter;
+    // assumes platter square
+    const v3 halfDimensions = shapes[platter]->cuboid().half_xyz();
+    const float x_d = halfDimensions.x;
+    const float z_d = halfDimensions.z;
+    float platter_diag_flat = sqrt((x_d*x_d + z_d*z_d));
 
     for (auto& s: shapes) {
         auto& shape = s.second;
@@ -179,9 +158,28 @@ void createShapes() {
     translateShape(platter,shoulderHeight);
     translateShape(platter,armHeight);
 
-    //v3 rotatedBy(90.0f,0.0f,0.0f);
+    // claws
+    translateShape(claw1,baseHeight);
+    translateShape(claw1,shoulderHeight);
+    translateShape(claw1,armHeight);
+    translateShape(claw1,platterHeight);
+
+    translateShape(claw2,baseHeight);
+    translateShape(claw2,shoulderHeight);
+    translateShape(claw2,armHeight);
+    translateShape(claw2,platterHeight);
+    
+    // move claw to side
+    auto claw1_offset = v3(platter_diag_flat,0.0f,platter_diag_flat);
+    //auto claw1_offset = zeroV;
+    claw_offsets.push_back(claw1_offset);
+    claw_offsets.push_back(claw1_offset * -1.0f);
+    translateShape(claw1,claw_offsets[0]+gap);
+    translateShape(claw2,claw_offsets[1]+gap);
+
     for (auto& s: shapes) {
         auto& shape = s.second;
+        rotateShape(s.first, v3(0.01f,0.01f,0.01f));
         glGenVertexArrays(1, &(shape->VAO));
         glGenBuffers(1, &(shape->VBOs[0])); // vertex
         glGenBuffers(1, &(shape->VBOs[1])); // colour
@@ -195,7 +193,9 @@ State rotateShape(Id s, const v3& rotateBy) {
         std::string err = "No element with id " + std::to_string(s) + " in map";
         throw std::runtime_error(err);
     }
-    return shapes[s]->cuboid().rotateRads(rotateBy);
+    auto orient = shapes[s]->cuboid().state().orient;
+    auto r = shapes[s]->cuboid().rotateRads(rotateBy);
+    return r;
 }
 
 State translateShape(Id s, const v3& translate) {
@@ -205,7 +205,6 @@ State translateShape(Id s, const v3& translate) {
     }
     Shape& shape = *shapes[s];
     const bool deleted = bigTree.del(shape.cuboid().state().pos,&shape);
-    //assert(deleted);
     auto worked = shape.cuboid().translate(translate);
     bigTree.insert(shape.cuboid().state().pos,&shape);
     return worked;
@@ -238,46 +237,123 @@ Movements processMovements() {
 
     Movements movements_done;
 
-    static const std::vector<Id> arm_d = { base, shoulder, arm, platter};
-
     for (int i=0; i<movements.size(); ++i) {
 
         std::deque<Movement> thisMove;
 
-        State acc_transform = movements[i].state;
+        Movement& m = movements[i];
+        State originalMove = m.state;
+        const Id& id = m.shape;
+        const State& before = shapes[id]->cuboid().state();
+        State difference = m.move();
+        const State& after = shapes[id]->cuboid().state();
 
-        thisMove.push_back(movements[i]);
+        const auto has_index = vecContains(ARM_PARTS, id); // O(n^2), but list is always tiny
+        const bool has = has_index.first;
+        const int where = has_index.second;
+        const bool valid_place = !(where==0 && ARM_PARTS.size()==1) && (where < ARM_PARTS.size()-1);
+        const bool chain = has && valid_place;
+
+        std::cout << "Why did I choose to do the robot arm?\n";
+
+        if (chain) { // chaining movement of linked objects
+            std::cout << "In chain\n";
+            const Id parent = where;
+            const Id child_start = parent + 1;
+            const int chain_size = ARM_PARTS.size();
+            const v3 parent_pos = after.pos;
+            const fq q(originalMove.rotation);
+
+            if (m.t == Movement::Transform::Rotation) {
+
+                for (int j=child_start; j<chain_size; ++j) {
+                    const auto& children = ARM_PARTS[j];
+                    for (int k=0; k<children.size(); ++k) {
+                        const Id this_child = children[k];
+                        const State childState = shapes[this_child]->cuboid().state();
+                        const v3 my_pos = childState.pos;
+                        const v3 rotated_point = parent_pos + (q * (my_pos - parent_pos) );
+                        const v3 translationVec = rotated_point - childState.pos;
+                        Movement mTrans(this_child, Movement::Transform::Translation, translationVec);
+                        Movement mRotate(this_child, Movement::Transform::Rotation, originalMove);
+                        thisMove.push_back(mRotate);
+                        thisMove.push_back(mTrans);
+                    }
+                }
+
+            }
+        }
+        movements_done.push_back(m);
 
         while (!thisMove.empty()) {
             Movement& m = thisMove.front();
-            State difference = m.move();
-            Id& id = m.shape;
-            
-            const auto has_index = vecContains(arm_d, id); // O(n^2), but list is always tiny
-            const bool has = has_index.first;
-            const int where = has_index.second;
-            const bool valid_place = !(where==0 && arm_d.size()==1) && (where < arm_d.size()-1);
-            const bool chain = has && valid_place;
-
-            if (chain) {
-                const Id parent = where;
-                const Id child = parent + 1;
-
-                if (m.t == Movement::Transform::Rotation) {
-                    acc_transform.topCenter += difference.topCenter; // difference in top center
-                    Movement mTrans(child, Movement::Transform::TranslationTopCenter, acc_transform);
-                    Movement mRotate(child, Movement::Transform::Rotation, acc_transform);
-                    thisMove.push_back(mRotate);
-                    thisMove.push_back(mTrans);
-                }
-            }
+            m.move();
             movements_done.push_back(m);
             thisMove.pop_front();
         }
-    }
 
+    }
     return movements_done;
 }
+        /*
+        while (!thisMove.empty()) {
+
+            if (chain) { // chaining movement of linked objects
+                const Id parent = where;
+                const Id child = parent + 1;
+
+                if (ARM_PARTS[child].size() == 1) { // only one child
+                    if (m.t == Movement::Transform::Rotation) {
+                        acc_transform.topCenter += difference.topCenter; // difference in top center
+                        acc_transform.orient = difference.orient;
+                        Movement mTrans(child, Movement::Transform::TranslationTopCenter, acc_transform);
+                        Movement mRotate(child, Movement::Transform::Rotation, acc_transform);
+                        thisMove.push_back(mRotate);
+                        thisMove.push_back(mTrans);
+                    }
+                } else { // only works if multiple objects are at the end! only, ie arm -> shoulder -> .. {claw1,claw2}
+                    if (m.t == Movement::Transform::Rotation) {
+                        // bespoke code for claw
+                        auto& children = ARM_PARTS[child];
+                        const int children_size = children.size();
+
+                        //acc_transform.topCenter += difference.topCenter; // difference in top center
+
+                        for (int j=0; j<children_size; ++j) {
+                            Id this_child = children[j];
+
+                            State offset = acc_transform;
+
+                            const State parentState = shapes[parent]->cuboid().state();
+                            const v3 parent_pos = parentState.pos;
+                            const State childState = shapes[this_child]->cuboid().state();
+                            const v3 my_pos = childState.pos;
+                            // can just use rotate ang because it never changes
+
+                            const fq q(offset.rotation);
+
+                            const v3 rotated_point = parent_pos + (q * (my_pos - parent_pos) );
+                            const v3 translationVec = rotated_point - childState.pos;
+                            //rotated_point = origin + (orientation_quaternion * (point-origin));
+                            //v3 rotated_point = glm::rotate(my_pos, rot, axe);
+                            //v3 rotated_point = glm::axis(parentState.orient) * my_pos;
+
+                            offset.topCenter += translationVec;
+
+                            Movement mTrans(this_child, Movement::Transform::TranslationTopCenter, offset);
+                            thisMove.push_back(mTrans);
+                            Movement mRotate(this_child, Movement::Transform::Rotation, offset);
+                            thisMove.push_back(mRotate);
+                        }
+                        
+
+                        // if here parent has just moved
+                        // claw_offsets [0]->[1]
+                    }
+                }
+            }
+
+        }*/
 
 void collisions() {
 
@@ -337,14 +413,14 @@ void collisions() {
         const Id& shape2Id = pai.second;
         const Shape& shape1 = *shapes[shape1Id];
         const Shape& shape2 = *shapes[shape2Id];
-        static const bool allowedToCollideGlobal = allowedCollide; // global for now
+        static const bool allowedToCollideGlobal = allowCollision; // global for now
         //static const bool allowedToCollideGlobal = false; // global for now
 
         std::set<Id> shape1CanHit = shape1.canCollideWith;
         const bool can1Hit2 = shape1CanHit.find(shape2Id) != shape1CanHit.end();
         std::set<Id> shape2CanHit = shape2.canCollideWith;
         const bool can2Hit1 = shape2CanHit.find(shape1Id) != shape2CanHit.end();
-        const bool mayCollide = can1Hit2 && can2Hit1;
+        const bool mayCollide = can1Hit2 || can2Hit1;
         if (!mayCollide && !allowedToCollideGlobal) {
             needUndo = true;
             break;
@@ -366,6 +442,12 @@ void collisions() {
 
     movements.clear();
 }
+
+// make sure these aren't same otherwise nan's
+static v3 camera_lookingAt(-1.5f,-8.0f,-3.0f); // eye, coordinate in world
+static v3 camera_position(1.5f,9.0f,3.0f);  // center, where looking at
+static float mouseX;
+static float mouseY;
 
 void render() {
     for (auto& s: shapes) {
@@ -394,12 +476,12 @@ void render() {
         // Note that we're translating the scene in the reverse direction of where we want to move
         //view = glm::translate(view, v3(0.0f, 0.0f, -3.0f)); 
         view = glm::lookAt(
-                v3(1.5f,9.0f,3.0f), // eye
-                v3(0.0f,0.0f,0.0f),  // center
-                v3(0.0f,1.0f,0.0f)); // up
+                camera_position, // eye, coordinate in world
+                camera_position + camera_lookingAt,  // center, where looking at
+                UP_VECTOR); // up
 
         glm::mat4 projection;
-        projection = glm::perspective(glm::radians(80.0f), aspectRatio, 0.1f, 100.0f);
+        projection = glm::perspective(glm::radians(80.0f), aspectRatio, 0.1f, 200.0f);
         //projection = glm::ortho(-3.0f,3.0f,-3.0f,3.0f,0.1f, 100.0f);
 
         GLint modelLoc = glGetUniformLocation(shaderProgram, "model");
@@ -413,6 +495,51 @@ void render() {
     }
     glBindVertexArray(0);
     glutSwapBuffers(); 
+}
+
+void mouseClicks(int button, int state, int x, int y) {
+    if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
+        // left click go forward
+        camera_position += glm::normalize(camera_lookingAt);
+    } else if (button == GLUT_RIGHT_BUTTON && state == GLUT_DOWN) {
+        // left click go forward
+        camera_position += -glm::normalize(camera_lookingAt);
+    }
+}
+
+void mouseMove(int x, int y) {
+    int cX = glutGet(GLUT_WINDOW_WIDTH) / 2;                                     
+    int cY = glutGet(GLUT_WINDOW_HEIGHT) / 2;                                    
+    if (cX != x || cY != y) {                                                    
+        glutWarpPointer(cX, cY);                                                 
+    }
+
+    auto mouseOffset = glm::vec2(x, cY) - glm::vec2(cX, y);                      
+	float halfWidth = glutGet(GLUT_WINDOW_WIDTH)/2.0f;
+	float halfHeight = glutGet(GLUT_WINDOW_HEIGHT)/2.0f;
+
+	float xPos = x/halfWidth - 1.0f;
+	float yPos = 1.0f - y/halfHeight;
+	float oldCursorX = mouseX;
+	float oldCursorY = mouseY;
+    float deltaX = mouseOffset.x/halfWidth;
+    float deltaY = mouseOffset.y/halfHeight;
+	//float deltaX = xPos-oldCursorX;
+	//float deltaY = yPos-oldCursorY;
+	static const float PI_BY_EIGHTEEN = M_PI/18.0f; 
+	static const float PI_BY_EIGHTEEN_TIMES_SEVENTEEN = 17.0f * M_PI/18.0f; 
+	glm::vec3 lookingAtCopy = camera_lookingAt;
+
+	// don't want to move too far, ie. from 169 degrees up round to bottom, if such a move, won't do it
+	float newAngle = std::acos(glm::dot(lookingAtCopy,UP_VECTOR))-deltaY;
+	if (newAngle > PI_BY_EIGHTEEN && newAngle < PI_BY_EIGHTEEN_TIMES_SEVENTEEN) {
+		lookingAtCopy = glm::normalize(glm::rotate(lookingAtCopy, (float)deltaY, glm::cross(lookingAtCopy,UP_VECTOR))); // y
+	}
+	lookingAtCopy = glm::normalize(glm::rotate(lookingAtCopy, -(float)(deltaX), UP_VECTOR)); // x
+	camera_lookingAt = lookingAtCopy;
+
+	mouseX += deltaX;
+	mouseY += deltaY;
 }
 
 void bindBuffers(Shapes& shapes) {
@@ -487,7 +614,8 @@ void keyboard(unsigned char key, int mouseX, int mouseY) {
             Movement m(id, Movement::Transform::Translation, translate * translateMultiplier);
             movements.push_back(m);
         } else if (rotateV != zeroV) {
-            Movement m(id, Movement::Transform::Rotation, rotateV);
+            const v3 rotationMultiplier = shape.cuboid().rotationMultiplier;
+            Movement m(id, Movement::Transform::Rotation, rotationMultiplier * rotateV);
             movements.push_back(m);
         }
         glutPostRedisplay();
@@ -550,7 +678,7 @@ void switchShape(int by) {
             }
         }
         shapes[idSelected]->selected(false);
-        idSelected++;
+        idSelected += by;
         idSelected %= ids.size();
         selectedShape = ids[idSelected];
         shapes[idSelected]->selected(true);
@@ -573,7 +701,7 @@ int main(int argc, char* argv[]) {
 
     cleanupAndExit();
 
-	return 0; 
+    return 0; 
 }
 
 void cleanupAndExit() {
@@ -612,11 +740,14 @@ int init(int argc, char* argv[]) {
         std::cout << "Failed to initialize GLEW" << std::endl;
         return -1;
     }
-
     glutDisplayFunc(main_loop); 
 	glutKeyboardFunc(keyboard); 
 	glutIdleFunc(idle); 
     glutSpecialFunc(specialInput); 
+    glutMouseFunc(mouseClicks);
+    glutPassiveMotionFunc(mouseMove);
+    glutSetCursor(GLUT_CURSOR_NONE);
+    
 	//glutKeyboardFunc(keyboard); 
 	//glutReshapeFunc(reshape); 
     return 0;
@@ -625,36 +756,3 @@ int init(int argc, char* argv[]) {
 void idle() {
     glutPostRedisplay();
 }
-
-/*
-void extraShapes() {
-    float ranMul = areaSize/3.0f;
-    float ranFix = areaSize/2.0f;
-    srand (static_cast <unsigned> (timeNowMicros()));
-    const int startId = 10;
-    for (int i = startId; i<startId+numbShapes; ++i) {
-        
-        Id id = i;
-        
-        float x = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-        float y = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-        float z = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-        float t = x + 1.2f;
-        auto scale = v3(t,1.0f,1.0f);
-        x *= ranMul;
-        x -= ranFix;
-        y *= ranMul;
-        y -= ranFix;
-        z *= ranMul;
-        z -= ranFix;
-
-        auto worked = shapes.insert(std::make_pair(id,new Shape(&cubePointsCentered,&cubeColours,&cubeColoursPurple,&cubeColoursGreen,id,scale,oneV,oneV)));
-        if (!worked.second) {
-            std::cout << "Could not insert into map, element likely already present\n";
-        }
-
-        translateShape(shapes[id],v3(x,y,z));
-        rotateShape(shapes[id],v3(x,y,z));
-    }
-}*/
-

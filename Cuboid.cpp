@@ -18,10 +18,11 @@
 
 // USING RADIANS
 
-Cuboid::Cuboid(fv points, v3 topCenter, v3 scale, v3 translationMultiplier) :
+Cuboid::Cuboid(fv points, v3 topCenter, v3 scale, v3 translationMultiplier, v3 rotationMultiplier) :
     points_(points),
     scale_(scale),
-    translationMultiplier(translationMultiplier)
+    translationMultiplier(translationMultiplier),
+    rotationMultiplier(rotationMultiplier)
 {
     const int size = points_.size(); // 3d
     for (int i=0; i<size; i+=18) {
@@ -36,8 +37,8 @@ Cuboid::Cuboid(fv points, v3 topCenter, v3 scale, v3 translationMultiplier) :
         concat(actualPoints_, square);
     }
     recalcEdges();
-    furthestVertex_ = calcFurthestVertex();
     half_xyz_ = v3();
+    // assumes centre 0,0,0 of shape
     for (const auto& v: vertices_) {
         half_xyz_ = glm::max(half_xyz_,glm::abs(v));
     }
@@ -48,6 +49,7 @@ Cuboid::Cuboid(fv points, v3 topCenter, v3 scale, v3 translationMultiplier) :
     state_.topCenter = topCenter*scale_;
     state_.rotation = zeroV;
     lastState_ = state_;
+    furthestVertex_ = calcFurthestVertex();
 }
 
 State Cuboid::translate(v3 by) {
@@ -64,10 +66,11 @@ State Cuboid::rotateRads(const v3& ypr) {
     lastState_.orient = state_.orient;
     lastState_.topCenter = state_.topCenter;
     lastState_.rotation = state_.rotation;
-
-    const fq q = glm::quat(ypr);
+    assert(ypr != zeroV && "yaw-pitch-roll for rotation should never be zero!");
+    const fq q(ypr);
 
     state_.orient = q * state_.orient;
+    //state_.orient = glm::normalize(state_.orient);
     state_.topCenter = q * state_.topCenter;
     recalcEdges();
     // the function that actually does the rotating
