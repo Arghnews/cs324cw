@@ -37,8 +37,8 @@ Cuboid::Cuboid(fv points, v3 topCenter, v3 scale, v3 translationMultiplier, v3 r
         concat(actualPoints_, square);
     }
     recalcEdges();
-    furthestVertex_ = calcFurthestVertex();
     half_xyz_ = v3();
+    // assumes centre 0,0,0 of shape
     for (const auto& v: vertices_) {
         half_xyz_ = glm::max(half_xyz_,glm::abs(v));
     }
@@ -49,6 +49,7 @@ Cuboid::Cuboid(fv points, v3 topCenter, v3 scale, v3 translationMultiplier, v3 r
     state_.topCenter = topCenter*scale_;
     state_.rotation = zeroV;
     lastState_ = state_;
+    furthestVertex_ = calcFurthestVertex();
 }
 
 State Cuboid::translate(v3 by) {

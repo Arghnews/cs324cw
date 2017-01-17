@@ -59,8 +59,8 @@ static const Id base = 0;
 static const Id shoulder = 1;
 static const Id arm = 2;
 static const Id platter = 3;
-static const Id claw1 = 3;
-static const Id claw2 = 4;
+static const Id claw1 = 4;
+static const Id claw2 = 5;
 
 static const std::vector<std::vector<Id>> ARM_PARTS = {
     {base},
@@ -83,38 +83,64 @@ void createShapes() {
 
     v3 bottom_upRightTop = v3(0.0f, 1.0f, 0.0f);
     v3 center_upRightTop = v3(0.0f, 0.5f, 0.0f);
+    std::set<Id> canCollideWith = {};
 
 //Shape::Shape(const fv* points, const fv* colours, const fv* purple, const fv* green,
 //int id, v3 topCenter, std::set<Id> canCollideWith, v3 scale, v3 translationMultiplier)
-    std::set<Id> canCollideWith = {};
+    
+    // base
     shapes[base] = (new Shape(&cubePointsCentered,
             &cubeColours,&cubeColoursPurple,&cubeColoursGreen,
             base,center_upRightTop,canCollideWith,
             v3(5.0f,1.0f,5.0f),zeroV,v3(0.0f,1.0f,0.0)));
 
+    // shoulder
     canCollideWith = {arm};
     float n = 1.5f;
     shapes[shoulder] = (new Shape(&cubePointsBottom,
             &cubeColours,&cubeColoursPurple,&cubeColoursGreen,
             shoulder,bottom_upRightTop,canCollideWith,
-            v3(1.0f,2.5f,1.0f),zeroV));
+            v3(1.0f,4.5f,1.0f),zeroV));
 
+    // arm
     canCollideWith = {shoulder,platter};
     shapes[arm] = (new Shape(&cubePointsBottom,
             &cubeColours,&cubeColoursPurple,&cubeColoursGreen,
             arm,bottom_upRightTop,canCollideWith,
-            v3(1.0f,1.75f,1.0f),zeroV));
+            v3(1.0f,3.5f,1.0f),zeroV));
 
+    // platter
     canCollideWith = {arm};
     shapes[platter] = (new Shape(&cubePointsCentered,
             &cubeColours,&cubeColoursPurple,&cubeColoursGreen,
             platter,center_upRightTop,canCollideWith,
-            v3(1.5f,0.5f,1.5f),zeroV));
+            v3(4.5f,0.25f,4.5f),zeroV));
 
-    float offset = 0.05f;
-    v3 baseHeight = offset + 2.0f * shapes[base]->cuboid().state().topCenter;
-    v3 shoulderHeight = offset + shapes[shoulder]->cuboid().state().topCenter;
-    v3 armHeight = offset + shapes[arm]->cuboid().state().topCenter;
+    const v3 clawDimensions = v3(0.2,3.0f,0.2f);
+    // claw1
+    canCollideWith = {};
+    shapes[claw1] = (new Shape(&cubePointsBottom,
+            &cubeColours,&cubeColoursPurple,&cubeColoursGreen,
+            claw1,bottom_upRightTop,canCollideWith,
+            clawDimensions,zeroV));
+
+    // claw2
+    canCollideWith = {};
+    shapes[claw2] = (new Shape(&cubePointsBottom,
+            &cubeColours,&cubeColoursPurple,&cubeColoursGreen,
+            claw2,bottom_upRightTop,canCollideWith,
+            clawDimensions,zeroV));
+
+    v3 gap(0.0f,0.1f,0.0f); // gap between things
+    v3 baseHeight = gap + 2.0f * shapes[base]->cuboid().state().topCenter;
+    v3 shoulderHeight = shapes[shoulder]->cuboid().state().topCenter;
+    v3 armHeight = shapes[arm]->cuboid().state().topCenter;
+    v3 platterHeight = shapes[platter]->cuboid().state().topCenter;
+    // assumes platter square
+    const v3 halfDimensions = shapes[platter]->cuboid().half_xyz();
+    const float x_d = halfDimensions.x;
+    const float z_d = halfDimensions.z;
+    float platter_diag_flat = sqrt((x_d*x_d + z_d*z_d));
 
     for (auto& s: shapes) {
         auto& shape = s.second;
@@ -130,7 +156,24 @@ void createShapes() {
     translateShape(platter,shoulderHeight);
     translateShape(platter,armHeight);
 
-    //v3 rotatedBy(90.0f,0.0f,0.0f);
+    // claws
+    translateShape(claw1,baseHeight);
+    translateShape(claw1,shoulderHeight);
+    translateShape(claw1,armHeight);
+    translateShape(claw1,platterHeight);
+
+    translateShape(claw2,baseHeight);
+    translateShape(claw2,shoulderHeight);
+    translateShape(claw2,armHeight);
+    translateShape(claw2,platterHeight);
+    
+    gap *= 0.0f;
+    // move claw to side
+    v3 claw1_offset = v3(platter_diag_flat,0.0f,platter_diag_flat);
+    v3 claw2_offset = claw1_offset * -1.0f;
+    translateShape(claw1,claw1_offset+gap);
+    translateShape(claw2,claw2_offset+gap);
+
     for (auto& s: shapes) {
         auto& shape = s.second;
         glGenVertexArrays(1, &(shape->VAO));
@@ -210,6 +253,7 @@ Movements processMovements() {
             if (chain) { // chaining movement of linked objects
                 const Id parent = where;
                 const Id child = parent + 1;
+
                 if (ARM_PARTS[child].size() == 1) { // only one child
                     if (m.t == Movement::Transform::Rotation) {
                         acc_transform.topCenter += difference.topCenter; // difference in top center
@@ -218,11 +262,23 @@ Movements processMovements() {
                         thisMove.push_back(mRotate);
                         thisMove.push_back(mTrans);
                     }
-                } else {
-                    const Id children = parent + 1; // may have multiple dependents that all need to be moved
-                    
+                } else { // only works if multiple objects are at the end! only, ie arm -> shoulder -> .. {claw1,claw2}
+                    if (m.t == Movement::Transform::Rotation) {
+                        auto& children = ARM_PARTS[child];
+                        const int children_size = children.size();
+                        // WRONG NEEDS BESPOKE REWRITE
+                        for (int j=0; j<children_size; ++j) {
+                            Id this_child = children[j];
+                            acc_transform.topCenter = difference.topCenter; // difference in top center
+                            Movement mTrans(this_child, Movement::Transform::TranslationTopCenter, acc_transform);
+                            Movement mRotate(this_child, Movement::Transform::Rotation, acc_transform);
+                            thisMove.push_back(mRotate);
+                            thisMove.push_back(mTrans);
+                        }
+                    }
                 }
             }
+
             movements_done.push_back(m);
             thisMove.pop_front();
         }
@@ -296,7 +352,7 @@ void collisions() {
         const bool can1Hit2 = shape1CanHit.find(shape2Id) != shape1CanHit.end();
         std::set<Id> shape2CanHit = shape2.canCollideWith;
         const bool can2Hit1 = shape2CanHit.find(shape1Id) != shape2CanHit.end();
-        const bool mayCollide = can1Hit2 && can2Hit1;
+        const bool mayCollide = can1Hit2 || can2Hit1;
         if (!mayCollide && !allowedToCollideGlobal) {
             needUndo = true;
             break;
@@ -357,7 +413,7 @@ void render() {
                 UP_VECTOR); // up
 
         glm::mat4 projection;
-        projection = glm::perspective(glm::radians(80.0f), aspectRatio, 0.1f, 100.0f);
+        projection = glm::perspective(glm::radians(80.0f), aspectRatio, 0.1f, 200.0f);
         //projection = glm::ortho(-3.0f,3.0f,-3.0f,3.0f,0.1f, 100.0f);
 
         GLint modelLoc = glGetUniformLocation(shaderProgram, "model");
