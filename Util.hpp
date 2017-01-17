@@ -33,6 +33,7 @@ typedef std::vector<Movement> Movements;
 
 static const v3 zeroV(0.0f,0.0f,0.0f);
 static const v3 oneV(1.0f,1.0f,1.0f);
+static const v3 UP_VECTOR(0.0f,1.0f,0.0f);
 static const float PI(M_PI);
 static const float HALF_PI(M_PI/2.0f);
 static const v3 V3_PI(M_PI,M_PI,M_PI);

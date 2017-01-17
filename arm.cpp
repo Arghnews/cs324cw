@@ -29,6 +29,7 @@
 #include "Shape.hpp"
 #include "Octtree.hpp"
 #include "AABB.hpp"
+#include "Movement.hpp"
 #include "State.hpp"
 
 void idle();
@@ -37,6 +38,7 @@ void createShapes();
 void render();
 void bindBuffers(Shapes& shapes);
 void bindBuffers(GLuint VAO, std::vector<GLuint> VBOs, const fv* vertexData, const fv* colourData);
+void mouseClicks(int button, int state, int x, int y);
 void startLoopGl();
 void collisions();
 void keyboard(unsigned char key, int mouseX, int mouseY);
@@ -49,72 +51,16 @@ State rotateShape(Id shape, const v3& rotateBy);
 State translateShape(Id shape, const v3& translate);
 void extraShapes();
 
-struct Movement {
-    enum Transform { Rotation, Translation, TranslationTopCenter };
-    State state; // if all aligned doesn't matter
-    Transform t; // biggest first for better packing (maybe)
-    Id shape;
-    friend std::ostream& operator<<(std::ostream& stream, const Movement& m) {
-        std::string type = "";
-        if (m.t == Transform::Rotation) {
-            type = "rotation";
-        } else if (m.t == Transform::Translation) {
-            type = "translation";
-        } else if (m.t == Transform::TranslationTopCenter) {
-            type = "translationTopCenter";
-        }
-        return stream << "Movement on " << m.shape << " of type " << type << " of " << m.state;
-    }
-    Movement(Id shape, Transform t, v3 transforma) : shape(shape), t(t) {
-        if (t == Transform::Rotation) {
-            state.rotation = transforma;
-        } else if (t == Transform::Translation) {
-            state.pos = transforma;
-        } else if (t == Transform::TranslationTopCenter) {
-            state.topCenter = transforma;
-        }
-    }
-    Movement (Id shape, Transform t, State state) : shape(shape), t(t), state(state) {
-    }
-    Movement(const Movement& m) : 
-        state(m.state),
-        t(m.t),
-        shape(m.shape) {}
-    Movement& operator=(const Movement& m) {
-        if (this != &m) {
-            state = m.state;
-            t = m.t;
-            shape = m.shape;
-        }
-        return *this;
-    }
-    State move() {
-        if (t == Movement::Transform::Rotation) {
-            return rotateShape(shape,state.rotation);
-        } else if (t == Movement::Transform::Translation) {
-            return translateShape(shape,state.pos);
-        } else if (t == Movement::Transform::TranslationTopCenter) {
-            return translateShape(shape,state.topCenter);
-        }
-    }
-    State undo() {
-        if (t == Movement::Transform::Rotation) {
-            return rotateShape(shape,-1.0f*state.rotation);
-        } else if (t == Movement::Transform::Translation) {
-            return translateShape(shape,-1.0f*state.pos);
-        } else if (t == Movement::Transform::TranslationTopCenter) {
-            return translateShape(shape,-1.0f*state.topCenter);
-        }
-    }
-};
-
 static bool allowedCollide = false;
+
 static const int numbShapes = 2;
 static int selectedShape = 1;
 static const Id base = 0;
 static const Id shoulder = 1;
 static const Id arm = 2;
 static const Id platter = 3;
+
+static const std::vector<Id> arm_parts = { base, shoulder, arm, platter};
 
 GLuint shaderProgram;
 Shapes shapes;
@@ -238,8 +184,6 @@ Movements processMovements() {
 
     Movements movements_done;
 
-    static const std::vector<Id> arm_d = { base, shoulder, arm, platter};
-
     for (int i=0; i<movements.size(); ++i) {
 
         std::deque<Movement> thisMove;
@@ -253,10 +197,10 @@ Movements processMovements() {
             State difference = m.move();
             Id& id = m.shape;
             
-            const auto has_index = vecContains(arm_d, id); // O(n^2), but list is always tiny
+            const auto has_index = vecContains(arm_parts, id); // O(n^2), but list is always tiny
             const bool has = has_index.first;
             const int where = has_index.second;
-            const bool valid_place = !(where==0 && arm_d.size()==1) && (where < arm_d.size()-1);
+            const bool valid_place = !(where==0 && arm_parts.size()==1) && (where < arm_parts.size()-1);
             const bool chain = has && valid_place;
 
             if (chain) {
@@ -367,6 +311,11 @@ void collisions() {
     movements.clear();
 }
 
+static v3 camera_lookingAt(-1.5f,-8.0f,-3.0f); // eye, coordinate in world
+static v3 camera_position(1.5f,9.0f,3.0f);  // center, where looking at
+static float mouseX;
+static float mouseY;
+
 void render() {
     for (auto& s: shapes) {
         Shape& shape = *s.second;
@@ -394,9 +343,9 @@ void render() {
         // Note that we're translating the scene in the reverse direction of where we want to move
         //view = glm::translate(view, v3(0.0f, 0.0f, -3.0f)); 
         view = glm::lookAt(
-                v3(1.5f,9.0f,3.0f), // eye
-                v3(0.0f,0.0f,0.0f),  // center
-                v3(0.0f,1.0f,0.0f)); // up
+                camera_position, // eye, coordinate in world
+                camera_position + camera_lookingAt,  // center, where looking at
+                UP_VECTOR); // up
 
         glm::mat4 projection;
         projection = glm::perspective(glm::radians(80.0f), aspectRatio, 0.1f, 100.0f);
@@ -413,6 +362,33 @@ void render() {
     }
     glBindVertexArray(0);
     glutSwapBuffers(); 
+}
+
+
+
+void mouseMove(int x, int y) {
+	float halfWidth = glutGet(GLUT_WINDOW_WIDTH)/2.0f;
+	float halfHeight = glutGet(GLUT_WINDOW_HEIGHT)/2.0f;
+	float xPos = x/halfWidth - 1.0f;
+	float yPos = 1.0f - y/halfHeight;
+	float oldCursorX = mouseX;
+	float oldCursorY = mouseY;
+	float deltaX = xPos-oldCursorX;
+	float deltaY = yPos-oldCursorY;
+	static const float PI_BY_EIGHTEEN = M_PI/18.0f; 
+	static const float PI_BY_EIGHTEEN_TIMES_SEVENTEEN = 17.0f * M_PI/18.0f; 
+	glm::vec3 lookingAtCopy = camera_lookingAt;
+
+	// don't want to move too far, ie. from 169 degrees up round to bottom, if such a move, won't do it
+	float newAngle = std::acos(glm::dot(lookingAtCopy,UP_VECTOR))-deltaY;
+	if (newAngle > PI_BY_EIGHTEEN && newAngle < PI_BY_EIGHTEEN_TIMES_SEVENTEEN) {
+		lookingAtCopy = glm::normalize(glm::rotate(lookingAtCopy, (float)deltaY, glm::cross(lookingAtCopy,UP_VECTOR))); // y
+	}
+	lookingAtCopy = glm::normalize(glm::rotate(lookingAtCopy, -(float)(deltaX), UP_VECTOR)); // x
+	camera_lookingAt = lookingAtCopy;
+
+	mouseX += deltaX;
+	mouseY += deltaY;
 }
 
 void bindBuffers(Shapes& shapes) {
@@ -612,11 +588,12 @@ int init(int argc, char* argv[]) {
         std::cout << "Failed to initialize GLEW" << std::endl;
         return -1;
     }
-
     glutDisplayFunc(main_loop); 
 	glutKeyboardFunc(keyboard); 
 	glutIdleFunc(idle); 
     glutSpecialFunc(specialInput); 
+    //glutMouseFunc(mouseClicks);
+    glutPassiveMotionFunc(mouseMove);
 	//glutKeyboardFunc(keyboard); 
 	//glutReshapeFunc(reshape); 
     return 0;
@@ -625,36 +602,3 @@ int init(int argc, char* argv[]) {
 void idle() {
     glutPostRedisplay();
 }
-
-/*
-void extraShapes() {
-    float ranMul = areaSize/3.0f;
-    float ranFix = areaSize/2.0f;
-    srand (static_cast <unsigned> (timeNowMicros()));
-    const int startId = 10;
-    for (int i = startId; i<startId+numbShapes; ++i) {
-        
-        Id id = i;
-        
-        float x = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-        float y = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-        float z = static_cast <float> (rand()) / static_cast <float> (RAND_MAX);
-        float t = x + 1.2f;
-        auto scale = v3(t,1.0f,1.0f);
-        x *= ranMul;
-        x -= ranFix;
-        y *= ranMul;
-        y -= ranFix;
-        z *= ranMul;
-        z -= ranFix;
-
-        auto worked = shapes.insert(std::make_pair(id,new Shape(&cubePointsCentered,&cubeColours,&cubeColoursPurple,&cubeColoursGreen,id,scale,oneV,oneV)));
-        if (!worked.second) {
-            std::cout << "Could not insert into map, element likely already present\n";
-        }
-
-        translateShape(shapes[id],v3(x,y,z));
-        rotateShape(shapes[id],v3(x,y,z));
-    }
-}*/
-
