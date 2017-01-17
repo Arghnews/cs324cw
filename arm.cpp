@@ -52,7 +52,7 @@ State rotateShape(Id shape, const v3& rotateBy);
 State translateShape(Id shape, const v3& translate);
 void extraShapes();
 
-static bool allowCollision = true;
+static bool allowCollision = false;
 
 //static const int numbShapes = 2;
 static int selectedShape = 1;
@@ -133,7 +133,7 @@ void createShapes() {
             claw2,bottom_upRightTop,canCollideWith,
             clawDimensions,zeroV));
 
-    v3 gap(0.0f,0.0f,0.0f); // gap between things
+    v3 gap(0.0f,0.1f,0.0f); // gap between things
     v3 baseHeight = gap + 2.0f * shapes[base]->cuboid().state().topCenter;
     v3 shoulderHeight = shapes[shoulder]->cuboid().state().topCenter;
     v3 armHeight = shapes[arm]->cuboid().state().topCenter;
@@ -193,11 +193,9 @@ State rotateShape(Id s, const v3& rotateBy) {
         std::string err = "No element with id " + std::to_string(s) + " in map";
         throw std::runtime_error(err);
     }
-    std::cout << "Rotating shape " << s << " by " << printVec(rotateBy) << "\n";
     auto orient = shapes[s]->cuboid().state().orient;
-    std::cout << "Quart before " << printQ(orient) << "\n";
     auto r = shapes[s]->cuboid().rotateRads(rotateBy);
-    std::cout << "Quart after " << printQ(shapes[s]->cuboid().state().orient) << "\n";
+    return r;
 }
 
 State translateShape(Id s, const v3& translate) {
@@ -243,20 +241,62 @@ Movements processMovements() {
 
         std::deque<Movement> thisMove;
 
-        State acc_transform = State(movements[i].state);
+        Movement& m = movements[i];
+        State originalMove = m.state;
+        const Id& id = m.shape;
+        const State& before = shapes[id]->cuboid().state();
+        State difference = m.move();
+        const State& after = shapes[id]->cuboid().state();
 
-        thisMove.push_back(movements[i]);
+        const auto has_index = vecContains(ARM_PARTS, id); // O(n^2), but list is always tiny
+        const bool has = has_index.first;
+        const int where = has_index.second;
+        const bool valid_place = !(where==0 && ARM_PARTS.size()==1) && (where < ARM_PARTS.size()-1);
+        const bool chain = has && valid_place;
+
+        std::cout << "Why did I choose to do the robot arm?\n";
+
+        if (chain) { // chaining movement of linked objects
+            std::cout << "In chain\n";
+            const Id parent = where;
+            const Id child_start = parent + 1;
+            const int chain_size = ARM_PARTS.size();
+            const v3 parent_pos = after.pos;
+            const fq q(originalMove.rotation);
+
+            if (m.t == Movement::Transform::Rotation) {
+
+                for (int j=child_start; j<chain_size; ++j) {
+                    const auto& children = ARM_PARTS[j];
+                    for (int k=0; k<children.size(); ++k) {
+                        const Id this_child = children[k];
+                        const State childState = shapes[this_child]->cuboid().state();
+                        const v3 my_pos = childState.pos;
+                        const v3 rotated_point = parent_pos + (q * (my_pos - parent_pos) );
+                        const v3 translationVec = rotated_point - childState.pos;
+                        Movement mTrans(this_child, Movement::Transform::Translation, translationVec);
+                        Movement mRotate(this_child, Movement::Transform::Rotation, originalMove);
+                        thisMove.push_back(mRotate);
+                        thisMove.push_back(mTrans);
+                    }
+                }
+
+            }
+        }
+        movements_done.push_back(m);
 
         while (!thisMove.empty()) {
             Movement& m = thisMove.front();
-            State difference = m.move();
-            Id& id = m.shape;
-            
-            const auto has_index = vecContains(ARM_PARTS, id); // O(n^2), but list is always tiny
-            const bool has = has_index.first;
-            const int where = has_index.second;
-            const bool valid_place = !(where==0 && ARM_PARTS.size()==1) && (where < ARM_PARTS.size()-1);
-            const bool chain = has && valid_place;
+            m.move();
+            movements_done.push_back(m);
+            thisMove.pop_front();
+        }
+
+    }
+    return movements_done;
+}
+        /*
+        while (!thisMove.empty()) {
 
             if (chain) { // chaining movement of linked objects
                 const Id parent = where;
@@ -293,10 +333,10 @@ Movements processMovements() {
                             const fq q(offset.rotation);
 
                             const v3 rotated_point = parent_pos + (q * (my_pos - parent_pos) );
+                            const v3 translationVec = rotated_point - childState.pos;
                             //rotated_point = origin + (orientation_quaternion * (point-origin));
                             //v3 rotated_point = glm::rotate(my_pos, rot, axe);
                             //v3 rotated_point = glm::axis(parentState.orient) * my_pos;
-                            const v3 translationVec = rotated_point - childState.pos;
 
                             offset.topCenter += translationVec;
 
@@ -313,13 +353,7 @@ Movements processMovements() {
                 }
             }
 
-            movements_done.push_back(m);
-            thisMove.pop_front();
-        }
-    }
-
-    return movements_done;
-}
+        }*/
 
 void collisions() {
 

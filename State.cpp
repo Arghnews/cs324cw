@@ -19,7 +19,6 @@ State::State(const State& s) :
 }
 
 State& State::operator=(const State& other) {
-    std::cout << "Deep copy state\n";
     if (this != &other) {
         orient = other.orient;
         pos = other.pos;
