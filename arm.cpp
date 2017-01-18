@@ -581,13 +581,17 @@ void keyboard(unsigned char key, int mouseX, int mouseY) {
                 if (vecContains(ARM_PARTS, platterId).first && shapes.count(platterId) > 0) {
                     const Id& clawId = id;
                     const State& platterState = shapes[platterId]->cuboid().state();
-                    State originalClawState = shapes[clawId]->cuboid().state();
-                    State clawState = shapes[clawId]->cuboid().state();
+                    const State& clawState = shapes[clawId]->cuboid().state();
                     const v3 v1 = platterState.topCenter + platterState.pos - clawState.pos;
                     const v3 v2 = clawState.topCenter;
-                    const fq q1 = glm::normalize(glm::rotation(glm::normalize(v2),glm::normalize(v1)));
+
+                    const fq q = glm::normalize(glm::rotation(glm::normalize(v2),glm::normalize(v1)));
+                    const fq q1 = clawState.orient; // start state
+                    const fq q2 = q * q1; // result orient
+                    const fq quat = glm::lerp(glm::normalize(q1), glm::normalize(q2), 0.1f);
+                    std::cout << "Move!\n";
                     //clawState.orient = q1 * clawState.orient;
-                    Movement m(id, Movement::Transform::Orient, q1);
+                    Movement m(id, Movement::Transform::Orient, quat);
                     movements.push_back(m);
                 }
             }
@@ -603,7 +607,6 @@ void keyboard(unsigned char key, int mouseX, int mouseY) {
 }
 
 void keyboard_up(unsigned char key, int x, int y) {
-    std::cout << "Key up!\n";
 }
 
 void specialInput(int key, int x, int y) {
