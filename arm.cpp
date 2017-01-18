@@ -20,7 +20,6 @@
 #include <chrono>
 #include <thread>
 #include <algorithm>
-#include <iterator>
 #include <set>
 #include <deque>
 #include <stdexcept>
@@ -84,10 +83,12 @@ static const Id base_shoulder_connector = 1;
 static const Id shoulder = 2;
 static const Id shoulder_arm_connector = 3;
 static const Id arm = 4;
-static const Id arm_platter_connector = 5;
-static const Id platter = 6;
-static const Id claw1 = 7;
-static const Id claw2 = 8;
+static const Id arm_forearm_connector = 5;
+static const Id forearm = 6;
+static const Id forearm_platter_connector = 7;
+static const Id platter = 8;
+static const Id claw1 = 9;
+static const Id claw2 = 10;
 static std::vector<v3> claw_offsets;
 
 static const std::vector<Id> CLAW_PARTS = {
@@ -100,7 +101,9 @@ static const std::vector<std::vector<Id>> ARM_PARTS = {
     {shoulder},
     {shoulder_arm_connector},
     {arm},
-    {arm_platter_connector},
+    {arm_forearm_connector},
+    {forearm},
+    {forearm_platter_connector},
     {platter},
     CLAW_PARTS
 };
@@ -158,11 +161,25 @@ void createShapes() {
             arm,bottom_upRightTop,canCollideWith,
             v3(1.0f,4.5f,1.0f),zeroV));
 
-    // arm->platter
-    canCollideWith = {arm,platter};
-    shapes[arm_platter_connector] = (new Shape(&cubePointsBottom,
+    // arm->forearm
+    canCollideWith = {arm,forearm};
+    shapes[arm_forearm_connector] = (new Shape(&cubePointsBottom,
             &cubeColours,&cubeColoursPurple,&cubeColoursGreen,
-            arm_platter_connector,bottom_upRightTop,canCollideWith,
+            arm_forearm_connector,bottom_upRightTop,canCollideWith,
+            connector_dims,zeroV));
+
+    // forearm
+    canCollideWith = {};
+    shapes[forearm] = (new Shape(&cubePointsBottom,
+            &cubeColours,&cubeColoursPurple,&cubeColoursGreen,
+            forearm,bottom_upRightTop,canCollideWith,
+            v3(1.0f,4.5f,1.0f),zeroV));
+
+    // forearm->platter
+    canCollideWith = {forearm,platter};
+    shapes[forearm_platter_connector] = (new Shape(&cubePointsBottom,
+            &cubeColours,&cubeColoursPurple,&cubeColoursGreen,
+            forearm_platter_connector,bottom_upRightTop,canCollideWith,
             connector_dims,zeroV));
 
     // platter
@@ -187,7 +204,7 @@ void createShapes() {
             claw2,bottom_upRightTop,canCollideWith,
             clawDimensions,zeroV));
 
-    v3 gap(0.0f,0.1f,0.0f); // gap between things
+    v3 gap(0.0f,0.05f,0.0f); // gap between things
     // assumes platter square
     const v3 halfDimensions = shapes[platter]->cuboid().half_xyz();
     const float x_d = halfDimensions.x;
@@ -219,14 +236,8 @@ void createShapes() {
         } else if (id == platter) {
             height += shape.cuboid().state().topCenter;
         }
-        switch (id) {
-            case claw1:
-                break;
-            case claw2:
-                break;
-            default:
-                height += myHeight;
-                break;
+        if (!(std::find(CLAW_PARTS.begin(),CLAW_PARTS.end(), id) != CLAW_PARTS.end())) {
+            height += myHeight;
         }
     }
 
