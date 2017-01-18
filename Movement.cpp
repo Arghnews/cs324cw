@@ -8,7 +8,7 @@
 #include <string>
 
 State rotateShape(Id shape, const v3& rotateBy);
-State rotateShape(Id shape, const fq& quat);
+State setOrient(Id shape, const fq& quat);
 State translateShape(Id shape, const v3& translate);
 
 std::ostream& operator<<(std::ostream& stream, const Movement& m) {
@@ -46,6 +46,7 @@ Movement::Movement(const Movement& m) :
     t(m.t),
     shape(m.shape) {
     }
+
 Movement& Movement::operator=(const Movement& m) {
         if (this != &m) {
             state = m.state;
@@ -63,7 +64,8 @@ State Movement::move() {
     } else if (t == Movement::Transform::TranslationTopCenter) {
         return translateShape(shape,state.topCenter);
     } else if (t == Movement::Transform::Orient) {
-        return rotateShape(shape,state.orient);
+        state.orient = setOrient(shape, state.orient).orient;
+        return state;
     }
 }
 
@@ -75,6 +77,6 @@ State Movement::undo() {
     } else if (t == Movement::Transform::TranslationTopCenter) {
         return translateShape(shape,-1.0f*state.topCenter);
     } else if (t == Movement::Transform::Orient) {
-        return rotateShape(shape,glm::inverse(state.orient));
+        return setOrient(shape,state.orient);
     }
 }

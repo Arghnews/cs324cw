@@ -17,6 +17,7 @@ struct Movement {
     Movement(Id shape, Transform t, v3 transforma);
     Movement(Id shape, Transform t, fq orient);
     Movement (Id shape, Transform t, State state);
+    Movement (Id shape, Transform t, State before, State after);
     Movement(const Movement& m);
     Movement& operator=(const Movement& m);
     State move();

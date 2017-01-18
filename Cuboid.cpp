@@ -22,7 +22,8 @@ Cuboid::Cuboid(fv points, v3 topCenter, v3 scale, v3 translationMultiplier, v3 r
     points_(points),
     scale_(scale),
     translationMultiplier(translationMultiplier),
-    rotationMultiplier(rotationMultiplier)
+    rotationMultiplier(rotationMultiplier),
+    originalTopCenter(scale*topCenter)
 {
     const int size = points_.size(); // 3d
     for (int i=0; i<size; i+=18) {
@@ -65,12 +66,28 @@ State Cuboid::translate(v3 by) {
     return s;
 }
 
+State Cuboid::setOrient(const fq& orient) {
+    lastState_.orient = state_.orient;
+    lastState_.topCenter = state_.topCenter;
+    lastState_.rotation = state_.rotation;
+    
+    state_.orient = orient;
+    state_.topCenter = orient * originalTopCenter;
+    recalcEdges();
+
+    State s;
+    s.orient = lastState_.orient;
+    s.topCenter = state_.topCenter - lastState_.topCenter;
+    s.rotation = state_.rotation - lastState_.rotation;
+    return s;
+}
+
 State Cuboid::rotateQuat(const fq& q) {
     if (q == fq()) {
         // if identity ie. no rotation
         return State();
     }
-    const fq quat = glm::normalize(q);
+    const fq quat = q;
 
     lastState_.orient = state_.orient;
     lastState_.topCenter = state_.topCenter;

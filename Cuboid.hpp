@@ -31,11 +31,13 @@ class Cuboid {
         v3 half_xyz_;
         float furthestVertex_;
         float calcFurthestVertex();
+        const v3 originalTopCenter;
 
     public:
         State rotateRads(const v3& ypr);
         State rotateQuat(const fq& q);
         State translate(v3 by);
+        State setOrient(const fq& orient);
 
         void state(State& s);
         State state();

@@ -33,6 +33,12 @@
 #include "Movement.hpp"
 #include "State.hpp"
 
+struct Lerp {
+    Id shape;
+    fq from;
+    fq to;
+};
+
 void idle();
 int init(int argc, char* argv[]);
 void createShapes();
@@ -52,11 +58,13 @@ std::vector<Shape*> getShapes();
 Movements processMovements();
 State rotateShape(Id shape, const v3& rotateBy);
 State rotateShape(Id shape, const fq& quat);
+State setOrient(Id shape, const fq& quat);
 State translateShape(Id shape, const v3& translate);
 void extraShapes();
 void updateKey(char c, bool state);
 void processKeystates();
 void moveCamera(v3 camera_movement_multiplier);
+std::vector<Lerp> calcClawLerps();
 
 static const float fps = 60.0f;
 static v3 camera_velocity(0.15f,0.15f,0.15f);
@@ -67,16 +75,19 @@ static float mouseX;
 static float mouseY;
 static std::map<char, bool> keys;
 
-static bool allowCollision = true;
+static bool allowCollision = false;
 
 static int selectedPartIndex = 0;
 //static const int numbShapes = 2;
 static const Id base = 0;
-static const Id shoulder = 1;
-static const Id arm = 2;
-static const Id platter = 3;
-static const Id claw1 = 4;
-static const Id claw2 = 5;
+static const Id base_shoulder_connector = 1;
+static const Id shoulder = 2;
+static const Id shoulder_arm_connector = 3;
+static const Id arm = 4;
+static const Id arm_platter_connector = 5;
+static const Id platter = 6;
+static const Id claw1 = 7;
+static const Id claw2 = 8;
 static std::vector<v3> claw_offsets;
 
 static const std::vector<Id> CLAW_PARTS = {
@@ -85,8 +96,11 @@ static const std::vector<Id> CLAW_PARTS = {
 
 static const std::vector<std::vector<Id>> ARM_PARTS = {
     {base},
+    {base_shoulder_connector},
     {shoulder},
+    {shoulder_arm_connector},
     {arm},
+    {arm_platter_connector},
     {platter},
     CLAW_PARTS
 };
@@ -104,40 +118,61 @@ void createShapes() {
 
     v3 bottom_upRightTop = v3(0.0f, 1.0f, 0.0f);
     v3 center_upRightTop = v3(0.0f, 0.5f, 0.0f);
-    std::set<Id> canCollideWith = {};
+    v3 connector_dims(0.1f,0.5f,0.1f);
 
 //Shape::Shape(const fv* points, const fv* colours, const fv* purple, const fv* green,
 //int id, v3 topCenter, std::set<Id> canCollideWith, v3 scale, v3 translationMultiplier)
     
+    std::set<Id> canCollideWith = {};
     // base
     shapes[base] = (new Shape(&cubePointsCentered,
             &cubeColours,&cubeColoursPurple,&cubeColoursGreen,
             base,center_upRightTop,canCollideWith,
             v3(5.0f,1.0f,5.0f),zeroV,v3(0.0f,1.0f,0.0)));
 
+    canCollideWith = {base, shoulder};
+    // base->shoulder
+    shapes[base_shoulder_connector] = (new Shape(&cubePointsBottom,
+            &cubeColours,&cubeColoursPurple,&cubeColoursGreen,
+            base_shoulder_connector,bottom_upRightTop,canCollideWith,
+            connector_dims,zeroV));
+
     // shoulder
-    canCollideWith = {arm};
-    float n = 1.5f;
+    canCollideWith = {};
     shapes[shoulder] = (new Shape(&cubePointsBottom,
             &cubeColours,&cubeColoursPurple,&cubeColoursGreen,
             shoulder,bottom_upRightTop,canCollideWith,
-            v3(1.0f,4.5f,1.0f),zeroV));
+            v3(1.0f,5.5f,1.0f),zeroV));
+
+    canCollideWith = {shoulder, arm};
+    // shoulder->arm
+    shapes[shoulder_arm_connector] = (new Shape(&cubePointsBottom,
+            &cubeColours,&cubeColoursPurple,&cubeColoursGreen,
+            shoulder_arm_connector,bottom_upRightTop,canCollideWith,
+            connector_dims,zeroV));
 
     // arm
-    canCollideWith = {shoulder,platter};
+    canCollideWith = {};
     shapes[arm] = (new Shape(&cubePointsBottom,
             &cubeColours,&cubeColoursPurple,&cubeColoursGreen,
             arm,bottom_upRightTop,canCollideWith,
-            v3(1.0f,3.5f,1.0f),zeroV));
+            v3(1.0f,4.5f,1.0f),zeroV));
+
+    // arm->platter
+    canCollideWith = {arm,platter};
+    shapes[arm_platter_connector] = (new Shape(&cubePointsBottom,
+            &cubeColours,&cubeColoursPurple,&cubeColoursGreen,
+            arm_platter_connector,bottom_upRightTop,canCollideWith,
+            connector_dims,zeroV));
 
     // platter
-    canCollideWith = {arm};
+    canCollideWith = {};
     shapes[platter] = (new Shape(&cubePointsCentered,
             &cubeColours,&cubeColoursPurple,&cubeColoursGreen,
             platter,center_upRightTop,canCollideWith,
-            v3(4.5f,0.25f,4.5f),zeroV));
+            v3(5.5f,0.25f,5.5f),zeroV));
 
-    const v3 clawDimensions = v3(0.2,3.0f,0.2f);
+    const v3 clawDimensions = v3(0.2f,3.0f,0.2f);
     // claw1
     canCollideWith = {};
     shapes[claw1] = (new Shape(&cubePointsBottom,
@@ -152,11 +187,7 @@ void createShapes() {
             claw2,bottom_upRightTop,canCollideWith,
             clawDimensions,zeroV));
 
-    v3 gap(0.0f,0.25f,0.0f); // gap between things
-    v3 baseHeight = gap + 2.0f * shapes[base]->cuboid().state().topCenter;
-    v3 shoulderHeight = shapes[shoulder]->cuboid().state().topCenter;
-    v3 armHeight = shapes[arm]->cuboid().state().topCenter;
-    v3 platterHeight = shapes[platter]->cuboid().state().topCenter;
+    v3 gap(0.0f,0.1f,0.0f); // gap between things
     // assumes platter square
     const v3 halfDimensions = shapes[platter]->cuboid().half_xyz();
     const float x_d = halfDimensions.x;
@@ -168,33 +199,36 @@ void createShapes() {
         bigTree.insert(shape->cuboid().state().pos,shape);
     }
 
-    translateShape(shoulder,baseHeight);
-
-    translateShape(arm,baseHeight);
-    translateShape(arm,shoulderHeight);
-
-    translateShape(platter,baseHeight);
-    translateShape(platter,shoulderHeight);
-    translateShape(platter,armHeight);
-
     // claws
-    translateShape(claw1,baseHeight);
-    translateShape(claw1,shoulderHeight);
-    translateShape(claw1,armHeight);
-    translateShape(claw1,platterHeight);
-
-    translateShape(claw2,baseHeight);
-    translateShape(claw2,shoulderHeight);
-    translateShape(claw2,armHeight);
-    translateShape(claw2,platterHeight);
-    
     // move claw to side
-    auto claw_offset = v3(platter_diag_flat,0.0f,platter_diag_flat);
+    auto claw_offset = v3(platter_diag_flat,0.0f,0.0f);
     //auto claw1_offset = zeroV;
     claw_offsets.push_back(claw_offset);
     claw_offsets.push_back(claw_offset * -1.0f);
     translateShape(claw1,claw_offsets[0]+gap);
     translateShape(claw2,claw_offsets[1]+gap);
+
+    v3 height;
+    for (auto& s: shapes) {
+        Id id = s.first;
+        Shape& shape = *s.second;
+        translateShape(id, height);
+        v3 myHeight = shape.cuboid().state().topCenter;
+        if (id == base) {
+            height += shape.cuboid().state().topCenter;
+        } else if (id == platter) {
+            height += shape.cuboid().state().topCenter;
+        }
+        switch (id) {
+            case claw1:
+                break;
+            case claw2:
+                break;
+            default:
+                height += myHeight;
+                break;
+        }
+    }
 
     for (auto& s: shapes) {
         auto& shape = s.second;
@@ -203,6 +237,15 @@ void createShapes() {
         glGenBuffers(1, &(shape->VBOs[1])); // colour
     }
 
+}
+
+State setOrient(Id s, const fq& quat) {
+    if (shapes.count(s) == 0) {
+        std::string err = "No element with id " + std::to_string(s) + " in map";
+        throw std::runtime_error(err);
+    }
+    auto r = shapes[s]->cuboid().setOrient(quat);
+    return r;
 }
 
 State rotateShape(Id s, const fq& quat) {
@@ -245,39 +288,71 @@ void processKeystates() {
     v3 camera_movement_multiplier(zeroV);
     bool stop = false;
 
-    const float ang = glm::radians(20.0f)/fps;
+    const float ang = glm::radians(40.0f)/fps;
 
-    if (keys['r']) {
+    if (keys['r'])
         rotateV = v3(ang,0.0f,0.0f);
-    } else if (keys['R']) {
+    if (keys['R'])
         rotateV = v3(-ang,0.0f,0.0f);
-    } else if (keys['y']) {
+    if (keys['y'])
         rotateV = v3(0.0f,ang,0.0f);
-    } else if (keys['Y']) {
+    if (keys['Y'])
         rotateV = v3(0.0f,-ang,0.0f);
-    } else if (keys['z']) {
+    if (keys['z'])
         rotateV = v3(0.0f,0.0f,ang);
-    } else if (keys['Z']) {
+    if (keys['Z'])
         rotateV = v3(0.0f,0.0f,-ang);
-    } else if (keys['w']) {
+    if (keys['w'])
         camera_movement_multiplier = oneV;
-    } else if (keys['W']) {
+    if (keys['W'])
         camera_movement_multiplier = oneV;
-    } else if (keys['s']) {
+    if (keys['s'])
         camera_movement_multiplier = -oneV;
-    } else if (keys['S']) {
+    if (keys['S'])
         camera_movement_multiplier = -oneV;
-    } else if (keys[static_cast<char>(27)]) {
+    if (keys[static_cast<char>(27)])
         stop = true; // escape key
-    } else if (keys[GLUT_KEY_LEFT]) {
+    if (keys[GLUT_KEY_LEFT])
         switchShapes(-1);
-    } else if (keys[GLUT_KEY_RIGHT]) {
+    if (keys[GLUT_KEY_RIGHT])
         switchShapes(1);
-    } else if (keys[static_cast<char>(9)]) {
+    if (keys[static_cast<char>(9)])
         switchShapes(1); // tab
+
+    static const float interp_const = 0.4f / fps;
+
+    static bool clawMoving = false;
+    static std::vector<Lerp> lerps;
+    static float interp = 0.0f;
+    if (keys[GLUT_LEFT_BUTTON]) {
+        if (!clawMoving) {
+            lerps = calcClawLerps();
+            clawMoving = true;
+        } 
+        for (const auto& l: lerps) { // move each shape
+            const fq rotation = glm::mix(l.from, l.to, interp);
+            Movement m(l.shape, Movement::Transform::Orient, rotation);
+            movements.push_back(m);
+        }
+        interp += interp_const;
+    } 
+    if (!keys[GLUT_LEFT_BUTTON]) {
+        clawMoving = false;
+        interp = 0.0f;
     }
+    
+    if (keys[GLUT_RIGHT_BUTTON]) {
+        // reset claw
+        State platter_state = shapes[platter]->cuboid().state();
+        for (auto& id: CLAW_PARTS) {
+            Movement reset(id, Movement::Transform::Orient, platter_state.orient);
+            movements.push_back(reset);
+        }
+    }
+    
 
     moveCamera(camera_movement_multiplier);
+
     for (auto& s: getShapes()) { // for every shape selected
         Shape& shape = *s;
         const Id id = shape.id;
@@ -287,38 +362,43 @@ void processKeystates() {
             Movement m(id, Movement::Transform::Translation, translate * translateMultiplier);
             movements.push_back(m);
         } else if (rotateV != zeroV) {
-
             if (!(std::find(CLAW_PARTS.begin(), CLAW_PARTS.end(), id) != CLAW_PARTS.end())) {
                 // if not a claw part
                 const v3 rotationMultiplier = shape.cuboid().rotationMultiplier;
                 Movement m(id, Movement::Transform::Rotation, rotationMultiplier * rotateV);
                 movements.push_back(m);
-            } else {
-                // if here intercept, special case for a claw part
-                const Id& platterId = platter;
-                if (vecContains(ARM_PARTS, platterId).first && shapes.count(platterId) > 0) {
-                    const Id& clawId = id;
-                    const State& platterState = shapes[platterId]->cuboid().state();
-                    const State& clawState = shapes[clawId]->cuboid().state();
-                    const v3 v1 = platterState.topCenter + platterState.pos - clawState.pos;
-                    const v3 v2 = clawState.topCenter;
-
-                    const fq q = glm::normalize(glm::rotation(glm::normalize(v2),glm::normalize(v1)));
-                    const fq q1 = clawState.orient; // start state
-                    const fq q2 = q * q1; // result orient
-                    const fq quat = glm::lerp(glm::normalize(q1), glm::normalize(q2), 0.1f);
-                    std::cout << "Move!\n";
-                    //clawState.orient = q1 * clawState.orient;
-                    Movement m(id, Movement::Transform::Orient, quat);
-                    movements.push_back(m);
-                }
             }
-
         }
     }
+
     if (stop) {
         cleanupAndExit();
     }
+}
+
+std::vector<Lerp> calcClawLerps() {
+    const Id& platterId = platter;
+    // if a platter exists - which it bloody should
+    const bool platterExists = vecContains(ARM_PARTS, platterId).first && shapes.count(platterId) > 0;
+    assert(platterExists && "No platter for claws to move relative to");
+    std::vector<Lerp> lerps;
+    for (const auto& claw_part_id: CLAW_PARTS) {
+        const Id& clawId = claw_part_id;
+        const State& platterState = shapes[platterId]->cuboid().state();
+        const State& clawState = shapes[clawId]->cuboid().state();
+        const v3 v1 = platterState.topCenter + platterState.pos - clawState.pos;
+        const v3 v2 = clawState.topCenter;
+
+        const fq q = glm::normalize(glm::rotation(glm::normalize(v2),glm::normalize(v1)));
+        const fq q1 = glm::normalize(clawState.orient); // start state
+        const fq q2 = glm::normalize(q * q1); // result orient
+        Lerp l;
+        l.shape = clawId;
+        l.from = q1;
+        l.to = q2;
+        lerps.push_back(l);
+    }
+    return lerps;
 }
 
 // char is key, state->true is down, state->false is up
@@ -547,10 +627,13 @@ void render() {
 
 void mouseClicks(int button, int state, int x, int y) {
     if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
-        std::cout << GLUT_LEFT_BUTTON << "\n";
+        updateKey(GLUT_LEFT_BUTTON, true);
     } else if (button == GLUT_LEFT_BUTTON && state == GLUT_UP) {
+        updateKey(GLUT_LEFT_BUTTON, false);
     } else if (button == GLUT_RIGHT_BUTTON && state == GLUT_DOWN) {
+        updateKey(GLUT_RIGHT_BUTTON, true);
     } else if (button == GLUT_RIGHT_BUTTON && state == GLUT_UP) {
+        updateKey(GLUT_RIGHT_BUTTON, false);
     }
 }
 
@@ -656,6 +739,9 @@ void switchShapes(int by) {
     if (timeSinceLast > interval) {
         // update selected part
         selectedPartIndex += by;
+        if (selectedPartIndex % 2 != 0) {
+            selectedPartIndex += by;
+        }
         selectedPartIndex %= ARM_PARTS.size();
         lastTime = timeNowMillis();
     }
@@ -738,3 +824,4 @@ int init(int argc, char* argv[]) {
 void idle() {
     glutPostRedisplay();
 }
+
