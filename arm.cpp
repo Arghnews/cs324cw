@@ -46,8 +46,7 @@ void keyboard(unsigned char key, int mouseX, int mouseY);
 void keyboard_up(unsigned char key, int x, int y);
 void specialInput(int key, int x, int y);
 void cleanupAndExit();
-std::vector<Shape*> getShapes();
-void switchShape(int);
+std::vector<Shape*> switchShapes(int);
 Movements processMovements();
 State rotateShape(Id shape, const v3& rotateBy);
 State translateShape(Id shape, const v3& translate);
@@ -65,7 +64,6 @@ static float mouseY;
 static bool allowCollision = false;
 
 //static const int numbShapes = 2;
-static int selectedShape = 0;
 static const Id base = 0;
 static const Id shoulder = 1;
 static const Id arm = 2;
@@ -516,7 +514,7 @@ void bindBuffers(GLuint VAO, std::vector<GLuint> VBOs, const fv* vertexData, con
 
 void keyboard(unsigned char key, int mouseX, int mouseY) {
     bool stop = false;
-    for (auto& s: getShapes()) {
+    for (auto& s: switchShapes(0)) {
         Shape& shape = *s;
         const Id id = shape.id;
 
@@ -562,7 +560,32 @@ void keyboard(unsigned char key, int mouseX, int mouseY) {
             Movement m(id, Movement::Transform::Translation, translate * translateMultiplier);
             movements.push_back(m);
         } else if (rotateV != zeroV) {
-            const v3 rotationMultiplier = shape.cuboid().rotationMultiplier;
+
+            v3 rotationMultiplier(oneV);
+
+            if (std::find(CLAW_PARTS.begin(), CLAW_PARTS.end(), id) != CLAW_PARTS.end()) {
+                // if here intercept, special case for a claw part
+                const Id& platterId = platter;
+                if (vecContains(ARM_PARTS, platterId).first && shapes.count(platterId) > 0) {
+
+                    const Id& clawId = id;
+                    const State& platterState = shapes[platterId]->cuboid().state();
+                    State originalClawState = shapes[clawId]->cuboid().state();
+                    State clawState = shapes[clawId]->cuboid().state();
+                    const v3 v1 = platterState.topCenter + platterState.pos - clawState.pos;
+                    std::cout << "Platter state, pos:" << printVec(platterState.pos) << ", topC" << printVec(platterState.topCenter) << "\n";
+                    const v3 v2 = clawState.topCenter;
+                    std::cout << "Claw state, claw pos:" << printVec(clawState.pos) << " and claw top: " << printVec(clawState.topCenter) << "\n";
+                    const fq q1 = glm::normalize(glm::rotation(glm::normalize(v2),glm::normalize(v1)));
+                    std::cout << "Quat for rotation " << printQ(q1) << "\n";
+                    clawState.orient = q1 * clawState.orient;
+                    shapes[clawId]->cuboid().lastState(originalClawState);
+                    shapes[clawId]->cuboid().state(clawState);
+                    rotationMultiplier = zeroV;
+                }
+
+            }
+            rotationMultiplier = shape.cuboid().rotationMultiplier;
             Movement m(id, Movement::Transform::Rotation, rotationMultiplier * rotateV);
             movements.push_back(m);
         }
@@ -572,6 +595,7 @@ void keyboard(unsigned char key, int mouseX, int mouseY) {
     } else {
         cleanupAndExit();
     }
+
 }
 
 void keyboard_up(unsigned char key, int x, int y) {
@@ -580,7 +604,7 @@ void keyboard_up(unsigned char key, int x, int y) {
 
 void specialInput(int key, int x, int y) {
     bool stop = false;
-    for (auto& s: getShapes()) {
+    for (auto& s: switchShapes(0)) {
         Shape& shape = *s;
         const Id id = shape.id;
         v3 translate;
@@ -592,10 +616,10 @@ void specialInput(int key, int x, int y) {
                 translate = v3(0,-step,0);
                 break;
             case GLUT_KEY_LEFT:
-                switchShape(-1);
+                switchShapes(-1);
                 break;
             case GLUT_KEY_RIGHT:
-                switchShape(1);
+                switchShapes(1);
                 break;
         }
         if (translate != zeroV) {
@@ -611,39 +635,28 @@ void specialInput(int key, int x, int y) {
     }
 }
 
-std::vector<Shape*> getShapes() {
-    static bool run = false;
-    std::vector<Shape*> r;
-    std::vector<Id> selected = ARM_PARTS[selectedShape];
-    for (auto& s: selected) {
-        r.push_back(shapes[s]);
-    }
-    return r;
-}
+//
+std::vector<Shape*> switchShapes(int by) {
 
-void switchShape(int by) {
-    if (shapes.size() == 0) {
-        std::cout << "warning - shape list size 0, cannot switch shape" << "\n";
-    } else if (shapes.size() > 1) {
-        static std::vector<Id> ids;
-        static int idSelected = selectedShape;
-        if (ids.size() == 0) {
-            for (auto& arm_part: ARM_PARTS) {
-                for (auto& part: arm_part) {
-                    ids.push_back(part);
-                }
-            }
-        }
-        for (auto& s: ARM_PARTS[idSelected]) {
-            shapes[s]->selected(false);
-        }
-        idSelected += by; // there is a logic flaw somewhere here
-        idSelected %= ids.size();
-        selectedShape = ARM_PARTS[idSelected];
-        for (auto& s: ARM_PARTS[idSelected]) {
-            shapes[s]->selected(true);
+    static int i = 0;
+    std::vector<Shape*> selectedShapes;
+    // turn off all
+    for (auto& ARM_PART: ARM_PARTS) {
+        for (auto& piece_Id: ARM_PARTS[i]) {
+            shapes[piece_Id]->selected(false);
         }
     }
+
+    // change i
+    i += by;
+    i %= ARM_PARTS.size();
+
+    // turn on and select all
+    for (auto& piece_part: ARM_PARTS[i]) {
+        shapes[piece_part]->selected(true);
+        selectedShapes.push_back(shapes[piece_part]);
+    }
+    return selectedShapes;
 }
 
 int main(int argc, char* argv[]) {
@@ -702,7 +715,7 @@ int init(int argc, char* argv[]) {
         return -1;
     }
     glutDisplayFunc(main_loop); 
-    glutSetKeyRepeat(GLUT_KEY_REPEAT_OFF);
+    //glutSetKeyRepeat(GLUT_KEY_REPEAT_OFF);
 	glutKeyboardFunc(keyboard); 
     glutKeyboardUpFunc(keyboard_up);
 	glutIdleFunc(idle); 

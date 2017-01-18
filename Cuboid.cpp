@@ -53,6 +53,9 @@ Cuboid::Cuboid(fv points, v3 topCenter, v3 scale, v3 translationMultiplier, v3 r
 }
 
 State Cuboid::translate(v3 by) {
+    if (by == zeroV) {
+        return State();
+    }
     lastState_.pos = state_.pos;
     state_.pos += by;
     recalcEdges();
@@ -63,13 +66,16 @@ State Cuboid::translate(v3 by) {
 }
 
 State Cuboid::rotateRads(const v3& ypr) {
+    // if no change just return
+    if (ypr == zeroV) {
+        //return State();
+    }
     lastState_.orient = state_.orient;
     lastState_.topCenter = state_.topCenter;
     lastState_.rotation = state_.rotation;
-    assert(ypr != zeroV && "yaw-pitch-roll for rotation should never be zero!");
     const fq q(ypr);
 
-    state_.orient = q * state_.orient;
+    state_.orient = glm::normalize(q * state_.orient);
     //state_.orient = glm::normalize(state_.orient);
     state_.topCenter = q * state_.topCenter;
     recalcEdges();
