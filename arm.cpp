@@ -49,6 +49,7 @@ void cleanupAndExit();
 std::vector<Shape*> switchShapes(int);
 Movements processMovements();
 State rotateShape(Id shape, const v3& rotateBy);
+State rotateShape(Id shape, const fq& quat);
 State translateShape(Id shape, const v3& translate);
 void extraShapes();
 
@@ -61,7 +62,7 @@ static v3 camera_position(1.5f,9.0f,3.0f);  // center, where looking at
 static float mouseX;
 static float mouseY;
 
-static bool allowCollision = false;
+static bool allowCollision = true;
 
 //static const int numbShapes = 2;
 static const Id base = 0;
@@ -198,12 +199,20 @@ void createShapes() {
 
 }
 
+State rotateShape(Id s, const fq& quat) {
+    if (shapes.count(s) == 0) {
+        std::string err = "No element with id " + std::to_string(s) + " in map";
+        throw std::runtime_error(err);
+    }
+    auto r = shapes[s]->cuboid().rotateQuat(quat);
+    return r;
+}
+
 State rotateShape(Id s, const v3& rotateBy) {
     if (shapes.count(s) == 0) {
         std::string err = "No element with id " + std::to_string(s) + " in map";
         throw std::runtime_error(err);
     }
-    auto orient = shapes[s]->cuboid().state().orient;
     auto r = shapes[s]->cuboid().rotateRads(rotateBy);
     return r;
 }
@@ -561,33 +570,28 @@ void keyboard(unsigned char key, int mouseX, int mouseY) {
             movements.push_back(m);
         } else if (rotateV != zeroV) {
 
-            v3 rotationMultiplier(oneV);
-
-            if (std::find(CLAW_PARTS.begin(), CLAW_PARTS.end(), id) != CLAW_PARTS.end()) {
+            if (!(std::find(CLAW_PARTS.begin(), CLAW_PARTS.end(), id) != CLAW_PARTS.end())) {
+                // if not a claw part
+                const v3 rotationMultiplier = shape.cuboid().rotationMultiplier;
+                Movement m(id, Movement::Transform::Rotation, rotationMultiplier * rotateV);
+                movements.push_back(m);
+            } else {
                 // if here intercept, special case for a claw part
                 const Id& platterId = platter;
                 if (vecContains(ARM_PARTS, platterId).first && shapes.count(platterId) > 0) {
-
                     const Id& clawId = id;
                     const State& platterState = shapes[platterId]->cuboid().state();
                     State originalClawState = shapes[clawId]->cuboid().state();
                     State clawState = shapes[clawId]->cuboid().state();
                     const v3 v1 = platterState.topCenter + platterState.pos - clawState.pos;
-                    std::cout << "Platter state, pos:" << printVec(platterState.pos) << ", topC" << printVec(platterState.topCenter) << "\n";
                     const v3 v2 = clawState.topCenter;
-                    std::cout << "Claw state, claw pos:" << printVec(clawState.pos) << " and claw top: " << printVec(clawState.topCenter) << "\n";
                     const fq q1 = glm::normalize(glm::rotation(glm::normalize(v2),glm::normalize(v1)));
-                    std::cout << "Quat for rotation " << printQ(q1) << "\n";
-                    clawState.orient = q1 * clawState.orient;
-                    shapes[clawId]->cuboid().lastState(originalClawState);
-                    shapes[clawId]->cuboid().state(clawState);
-                    rotationMultiplier = zeroV;
+                    //clawState.orient = q1 * clawState.orient;
+                    Movement m(id, Movement::Transform::Orient, q1);
+                    movements.push_back(m);
                 }
-
             }
-            rotationMultiplier = shape.cuboid().rotationMultiplier;
-            Movement m(id, Movement::Transform::Rotation, rotationMultiplier * rotateV);
-            movements.push_back(m);
+
         }
     }
     if (!stop) {

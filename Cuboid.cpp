@@ -65,26 +65,31 @@ State Cuboid::translate(v3 by) {
     return s;
 }
 
-State Cuboid::rotateRads(const v3& ypr) {
-    // if no change just return
-    if (ypr == zeroV) {
-        //return State();
+State Cuboid::rotateQuat(const fq& q) {
+    if (q == fq()) {
+        // if identity ie. no rotation
+        return State();
     }
+    const fq quat = glm::normalize(q);
+
     lastState_.orient = state_.orient;
     lastState_.topCenter = state_.topCenter;
     lastState_.rotation = state_.rotation;
-    const fq q(ypr);
 
-    state_.orient = glm::normalize(q * state_.orient);
-    //state_.orient = glm::normalize(state_.orient);
-    state_.topCenter = q * state_.topCenter;
+    state_.orient = quat * state_.orient;
+    state_.topCenter = quat * state_.topCenter;
     recalcEdges();
     // the function that actually does the rotating
     State s;
-    s.orient = q;
+    s.orient = quat;
     s.topCenter = state_.topCenter - lastState_.topCenter;
     s.rotation = state_.rotation - lastState_.rotation;
     return s;
+}
+
+State Cuboid::rotateRads(const v3& ypr) {
+    // if no change just return
+    return rotateQuat(fq(ypr));
 }
 
 const v3 Cuboid::scale() const {

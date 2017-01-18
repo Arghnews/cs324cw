@@ -34,6 +34,7 @@ class Cuboid {
 
     public:
         State rotateRads(const v3& ypr);
+        State rotateQuat(const fq& q);
         State translate(v3 by);
 
         void state(State& s);

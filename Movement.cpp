@@ -8,6 +8,7 @@
 #include <string>
 
 State rotateShape(Id shape, const v3& rotateBy);
+State rotateShape(Id shape, const fq& quat);
 State translateShape(Id shape, const v3& translate);
 
 std::ostream& operator<<(std::ostream& stream, const Movement& m) {
@@ -32,6 +33,12 @@ Movement::Movement(Id shape, Transform t, v3 transforma) : shape(shape), t(t) {
     }
 }
 
+Movement::Movement(Id shape, Transform t, fq orient) : shape(shape), t(t) {
+    if (t == Movement::Transform::Orient) {
+        state.orient = orient;
+    }
+}
+
 Movement::Movement (Id shape, Transform t, State state) : shape(shape), t(t), state(state) {}
 
 Movement::Movement(const Movement& m) : 
@@ -49,21 +56,25 @@ Movement& Movement::operator=(const Movement& m) {
     }
 
 State Movement::move() {
-    if (t == Movement::Movement::Transform::Rotation) {
+    if (t == Movement::Transform::Rotation) {
         return rotateShape(shape,state.rotation);
-    } else if (t == Movement::Movement::Transform::Translation) {
+    } else if (t == Movement::Transform::Translation) {
         return translateShape(shape,state.pos);
-    } else if (t == Movement::Movement::Transform::TranslationTopCenter) {
+    } else if (t == Movement::Transform::TranslationTopCenter) {
         return translateShape(shape,state.topCenter);
+    } else if (t == Movement::Transform::Orient) {
+        return rotateShape(shape,state.orient);
     }
 }
 
 State Movement::undo() {
-    if (t == Movement::Movement::Transform::Rotation) {
+    if (t == Movement::Transform::Rotation) {
         return rotateShape(shape,-1.0f*state.rotation);
-    } else if (t == Movement::Movement::Transform::Translation) {
+    } else if (t == Movement::Transform::Translation) {
         return translateShape(shape,-1.0f*state.pos);
-    } else if (t == Movement::Movement::Transform::TranslationTopCenter) {
+    } else if (t == Movement::Transform::TranslationTopCenter) {
         return translateShape(shape,-1.0f*state.topCenter);
+    } else if (t == Movement::Transform::Orient) {
+        return rotateShape(shape,glm::inverse(state.orient));
     }
 }
