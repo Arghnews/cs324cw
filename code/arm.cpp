@@ -122,7 +122,7 @@ void createShapes() {
 
     v3 bottom_upRightTop = v3(0.0f, 1.0f, 0.0f);
     v3 center_upRightTop = v3(0.0f, 0.5f, 0.0f);
-    v3 connector_dims(0.1f,0.5f,0.1f);
+    v3 connector_dims(0.05f,3.0f,0.05f);
 
 //Shape::Shape(const fv* points, const fv* colours, const fv* purple, const fv* green,
 //int id, v3 topCenter, std::set<Id> canCollideWith, v3 scale, v3 translationMultiplier, v3 rotationMultiplier)

@@ -3,3 +3,8 @@ arm
 collision
 robot-arm
 *~
+*.aux
+*.bbl
+*.blg
+*.out
+*.log
