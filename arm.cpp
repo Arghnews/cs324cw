@@ -45,25 +45,31 @@ void collisions();
 void keyboard(unsigned char key, int mouseX, int mouseY);
 void keyboard_up(unsigned char key, int x, int y);
 void specialInput(int key, int x, int y);
+void specialInputUp(int key, int x, int y);
 void cleanupAndExit();
-std::vector<Shape*> switchShapes(int);
+void switchShapes(int);
+std::vector<Shape*> getShapes();
 Movements processMovements();
 State rotateShape(Id shape, const v3& rotateBy);
 State rotateShape(Id shape, const fq& quat);
 State translateShape(Id shape, const v3& translate);
 void extraShapes();
+void updateKey(char c, bool state);
+void processKeystates();
+void moveCamera(v3 camera_movement_multiplier);
 
 static const float fps = 60.0f;
-static v3 camera_movement_multiplier(zeroV);
 static v3 camera_velocity(0.15f,0.15f,0.15f);
 // make sure these aren't same otherwise nan's
 static v3 camera_lookingAt(-1.5f,-8.0f,-3.0f); // eye, coordinate in world
 static v3 camera_position(1.5f,9.0f,3.0f);  // center, where looking at
 static float mouseX;
 static float mouseY;
+static std::map<char, bool> keys;
 
 static bool allowCollision = true;
 
+static int selectedPartIndex = 0;
 //static const int numbShapes = 2;
 static const Id base = 0;
 static const Id shoulder = 1;
@@ -229,8 +235,95 @@ State translateShape(Id s, const v3& translate) {
     return worked;
 }
 
-void moveCamera() {
+void moveCamera(v3 camera_movement_multiplier) {
     camera_position += camera_movement_multiplier * camera_velocity * glm::normalize(camera_lookingAt);
+}
+
+void processKeystates() {
+    v3 translate(zeroV);
+    v3 rotateV(zeroV);
+    v3 camera_movement_multiplier(zeroV);
+    bool stop = false;
+
+    const float ang = glm::radians(20.0f)/fps;
+
+    if (keys['r']) {
+        rotateV = v3(ang,0.0f,0.0f);
+    } else if (keys['R']) {
+        rotateV = v3(-ang,0.0f,0.0f);
+    } else if (keys['y']) {
+        rotateV = v3(0.0f,ang,0.0f);
+    } else if (keys['Y']) {
+        rotateV = v3(0.0f,-ang,0.0f);
+    } else if (keys['z']) {
+        rotateV = v3(0.0f,0.0f,ang);
+    } else if (keys['Z']) {
+        rotateV = v3(0.0f,0.0f,-ang);
+    } else if (keys['w']) {
+        camera_movement_multiplier = oneV;
+    } else if (keys['W']) {
+        camera_movement_multiplier = oneV;
+    } else if (keys['s']) {
+        camera_movement_multiplier = -oneV;
+    } else if (keys['S']) {
+        camera_movement_multiplier = -oneV;
+    } else if (keys[static_cast<char>(27)]) {
+        stop = true; // escape key
+    } else if (keys[GLUT_KEY_LEFT]) {
+        switchShapes(-1);
+    } else if (keys[GLUT_KEY_RIGHT]) {
+        switchShapes(1);
+    } else if (keys[static_cast<char>(9)]) {
+        switchShapes(1); // tab
+    }
+
+    moveCamera(camera_movement_multiplier);
+    for (auto& s: getShapes()) { // for every shape selected
+        Shape& shape = *s;
+        const Id id = shape.id;
+        if (translate != zeroV) {
+            // for some shapes translationMultiplier will be 0, so cannot move
+            const v3 translateMultiplier = shape.cuboid().translationMultiplier;
+            Movement m(id, Movement::Transform::Translation, translate * translateMultiplier);
+            movements.push_back(m);
+        } else if (rotateV != zeroV) {
+
+            if (!(std::find(CLAW_PARTS.begin(), CLAW_PARTS.end(), id) != CLAW_PARTS.end())) {
+                // if not a claw part
+                const v3 rotationMultiplier = shape.cuboid().rotationMultiplier;
+                Movement m(id, Movement::Transform::Rotation, rotationMultiplier * rotateV);
+                movements.push_back(m);
+            } else {
+                // if here intercept, special case for a claw part
+                const Id& platterId = platter;
+                if (vecContains(ARM_PARTS, platterId).first && shapes.count(platterId) > 0) {
+                    const Id& clawId = id;
+                    const State& platterState = shapes[platterId]->cuboid().state();
+                    const State& clawState = shapes[clawId]->cuboid().state();
+                    const v3 v1 = platterState.topCenter + platterState.pos - clawState.pos;
+                    const v3 v2 = clawState.topCenter;
+
+                    const fq q = glm::normalize(glm::rotation(glm::normalize(v2),glm::normalize(v1)));
+                    const fq q1 = clawState.orient; // start state
+                    const fq q2 = q * q1; // result orient
+                    const fq quat = glm::lerp(glm::normalize(q1), glm::normalize(q2), 0.1f);
+                    std::cout << "Move!\n";
+                    //clawState.orient = q1 * clawState.orient;
+                    Movement m(id, Movement::Transform::Orient, quat);
+                    movements.push_back(m);
+                }
+            }
+
+        }
+    }
+    if (stop) {
+        cleanupAndExit();
+    }
+}
+
+// char is key, state->true is down, state->false is up
+void updateKey(char c, bool state) {
+    keys[c] = state;
 }
 
 void main_loop() {
@@ -243,12 +336,12 @@ void main_loop() {
     long startTime = timeNowMicros();
 
     startLoopGl();
+    processKeystates();
     
     collisions();
 
     bindBuffers(shapes);
     render();
-    moveCamera();
 
     float fullFrametime = (1000.0f*1000.0f)/fps;
     long timeTaken = timeNowMicros() - startTime;
@@ -454,13 +547,10 @@ void render() {
 
 void mouseClicks(int button, int state, int x, int y) {
     if (button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
-        camera_movement_multiplier = oneV;
+        std::cout << GLUT_LEFT_BUTTON << "\n";
     } else if (button == GLUT_LEFT_BUTTON && state == GLUT_UP) {
-        camera_movement_multiplier = zeroV;
     } else if (button == GLUT_RIGHT_BUTTON && state == GLUT_DOWN) {
-        camera_movement_multiplier = -oneV;
     } else if (button == GLUT_RIGHT_BUTTON && state == GLUT_UP) {
-        camera_movement_multiplier = zeroV;
     }
 }
 
@@ -522,148 +612,57 @@ void bindBuffers(GLuint VAO, std::vector<GLuint> VBOs, const fv* vertexData, con
 }
 
 void keyboard(unsigned char key, int mouseX, int mouseY) {
-    bool stop = false;
-    for (auto& s: switchShapes(0)) {
-        Shape& shape = *s;
-        const Id id = shape.id;
-
-        v3 translate(zeroV);
-        v3 rotateV(zeroV);
-        switch (key) {
-            case 'r':  rotateV = v3(glm::radians(10.0f),0.0f,0.0f);
-                       break;
-            case 'R':  rotateV = v3(glm::radians(-10.0f),0.0f,0.0f);
-                       break;
-            case 'y':  rotateV = v3(0.0f,glm::radians(10.0f),0.0f);
-                       break;
-            case 'Y':  rotateV = v3(0.0f,glm::radians(-10.0f),0.0f);
-                       break;
-            case 'z':  rotateV = v3(0.0f,0.0f,glm::radians(10.0f));
-                       break;
-            case 'Z':  rotateV = v3(0.0f,0.0f,glm::radians(-10.0f));
-                       break;
-
-            case 'Q':
-            case 'q':  stop = true; 
-                       break;
-            case 'W':  
-            case 'w':  
-                       translate = v3(0,0,-step);
-                       break;
-            case 'S':  
-            case 's':  
-                       translate = v3(0,0,step);
-                       break;
-            case 'A':
-            case 'a':
-                       translate = v3(-step,0,0);
-                       break;
-            case 'D':  
-            case 'd':  
-                       translate = v3(step,0,0);
-                       break;
-        }
-        if (translate != zeroV) {
-            // for some shapes translationMultiplier will be 0, so cannot move
-            const v3 translateMultiplier = shape.cuboid().translationMultiplier;
-            Movement m(id, Movement::Transform::Translation, translate * translateMultiplier);
-            movements.push_back(m);
-        } else if (rotateV != zeroV) {
-
-            if (!(std::find(CLAW_PARTS.begin(), CLAW_PARTS.end(), id) != CLAW_PARTS.end())) {
-                // if not a claw part
-                const v3 rotationMultiplier = shape.cuboid().rotationMultiplier;
-                Movement m(id, Movement::Transform::Rotation, rotationMultiplier * rotateV);
-                movements.push_back(m);
-            } else {
-                // if here intercept, special case for a claw part
-                const Id& platterId = platter;
-                if (vecContains(ARM_PARTS, platterId).first && shapes.count(platterId) > 0) {
-                    const Id& clawId = id;
-                    const State& platterState = shapes[platterId]->cuboid().state();
-                    const State& clawState = shapes[clawId]->cuboid().state();
-                    const v3 v1 = platterState.topCenter + platterState.pos - clawState.pos;
-                    const v3 v2 = clawState.topCenter;
-
-                    const fq q = glm::normalize(glm::rotation(glm::normalize(v2),glm::normalize(v1)));
-                    const fq q1 = clawState.orient; // start state
-                    const fq q2 = q * q1; // result orient
-                    const fq quat = glm::lerp(glm::normalize(q1), glm::normalize(q2), 0.1f);
-                    std::cout << "Move!\n";
-                    //clawState.orient = q1 * clawState.orient;
-                    Movement m(id, Movement::Transform::Orient, quat);
-                    movements.push_back(m);
-                }
-            }
-
-        }
-    }
-    if (!stop) {
-        glutPostRedisplay();
-    } else {
-        cleanupAndExit();
-    }
-
+    updateKey(key, true);
 }
 
 void keyboard_up(unsigned char key, int x, int y) {
+    updateKey(key, false);
 }
 
 void specialInput(int key, int x, int y) {
-    bool stop = false;
-    for (auto& s: switchShapes(0)) {
-        Shape& shape = *s;
-        const Id id = shape.id;
-        v3 translate;
-        switch(key) {
-            case GLUT_KEY_UP:
-                translate = v3(0,step,0);
-                break;    
-            case GLUT_KEY_DOWN:
-                translate = v3(0,-step,0);
-                break;
-            case GLUT_KEY_LEFT:
-                switchShapes(-1);
-                break;
-            case GLUT_KEY_RIGHT:
-                switchShapes(1);
-                break;
-        }
-        if (translate != zeroV) {
-            const v3 translateMultiplier = shape.cuboid().translationMultiplier;
-            Movement m(id, Movement::Transform::Translation, translate * translateMultiplier);
-            movements.push_back(m);
-        }
-    }
-    if (!stop) {
-        glutPostRedisplay();
-    } else {
-        cleanupAndExit();
-    }
+    updateKey(key, true);
 }
 
-//
-std::vector<Shape*> switchShapes(int by) {
+void specialInputUp(int key, int x, int y) {
+    updateKey(key, false);
+}
 
-    static int i = 0;
+std::vector<Shape*> getShapes() {
     std::vector<Shape*> selectedShapes;
     // turn off all
     for (auto& ARM_PART: ARM_PARTS) {
-        for (auto& piece_Id: ARM_PARTS[i]) {
+        for (auto& piece_Id: ARM_PARTS[selectedPartIndex]) {
             shapes[piece_Id]->selected(false);
         }
     }
-
-    // change i
-    i += by;
-    i %= ARM_PARTS.size();
-
-    // turn on and select all
-    for (auto& piece_part: ARM_PARTS[i]) {
+    // select appropriate parts and turn on and return
+    for (auto& piece_part: ARM_PARTS[selectedPartIndex]) {
         shapes[piece_part]->selected(true);
         selectedShapes.push_back(shapes[piece_part]);
     }
     return selectedShapes;
+}
+
+void switchShapes(int by) {
+    // turn off all
+    for (auto& ARM_PART: ARM_PARTS) {
+        for (auto& piece_Id: ARM_PARTS[selectedPartIndex]) {
+            shapes[piece_Id]->selected(false);
+        }
+    }
+    static long lastTime = timeNowMillis();
+    long timeSinceLast = timeNowMillis() - lastTime;
+    const long interval = 125l; // quarter of a second, ms
+    if (timeSinceLast > interval) {
+        // update selected part
+        selectedPartIndex += by;
+        selectedPartIndex %= ARM_PARTS.size();
+        lastTime = timeNowMillis();
+    }
+    // turn on, highlight, said part
+    for (auto& piece_part: ARM_PARTS[selectedPartIndex]) {
+        shapes[piece_part]->selected(true);
+    }
 }
 
 int main(int argc, char* argv[]) {
@@ -722,18 +721,17 @@ int init(int argc, char* argv[]) {
         return -1;
     }
     glutDisplayFunc(main_loop); 
-    //glutSetKeyRepeat(GLUT_KEY_REPEAT_OFF);
+    glutSetKeyRepeat(GLUT_KEY_REPEAT_OFF);
 	glutKeyboardFunc(keyboard); 
     glutKeyboardUpFunc(keyboard_up);
 	glutIdleFunc(idle); 
     glutSpecialFunc(specialInput); 
+    glutSpecialUpFunc(specialInputUp); 
     glutMouseFunc(mouseClicks);
     glutMotionFunc(mouseMove);
     glutPassiveMotionFunc(mouseMove);
     glutSetCursor(GLUT_CURSOR_NONE);
     
-	//glutKeyboardFunc(keyboard); 
-	//glutReshapeFunc(reshape); 
     return 0;
 }
 
