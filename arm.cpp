@@ -95,7 +95,7 @@ static const std::vector<Id> CLAW_PARTS = {
     claw1, claw2
 };
 
-static const std::vector<std::vector<Id>> ARM_PARTS = {
+std::vector<std::vector<Id>> ARM_PARTS = {
     {base},
     {base_shoulder_connector},
     {shoulder},
@@ -105,7 +105,8 @@ static const std::vector<std::vector<Id>> ARM_PARTS = {
     {forearm},
     {forearm_platter_connector},
     {platter},
-    CLAW_PARTS
+    CLAW_PARTS,
+    {}
 };
 
 GLuint shaderProgram;
@@ -124,14 +125,14 @@ void createShapes() {
     v3 connector_dims(0.1f,0.5f,0.1f);
 
 //Shape::Shape(const fv* points, const fv* colours, const fv* purple, const fv* green,
-//int id, v3 topCenter, std::set<Id> canCollideWith, v3 scale, v3 translationMultiplier)
+//int id, v3 topCenter, std::set<Id> canCollideWith, v3 scale, v3 translationMultiplier, v3 rotationMultiplier)
     
     std::set<Id> canCollideWith = {};
     // base
     shapes[base] = (new Shape(&cubePointsCentered,
             &cubeColours,&cubeColoursPurple,&cubeColoursGreen,
             base,center_upRightTop,canCollideWith,
-            v3(5.0f,1.0f,5.0f),zeroV,v3(0.0f,1.0f,0.0)));
+            v3(5.0f,1.0f,5.0f),v3(1.0f,0.0f,1.0f),v3(0.0f,1.0f,0.0f)));
 
     canCollideWith = {base, shoulder};
     // base->shoulder
@@ -145,7 +146,7 @@ void createShapes() {
     shapes[shoulder] = (new Shape(&cubePointsBottom,
             &cubeColours,&cubeColoursPurple,&cubeColoursGreen,
             shoulder,bottom_upRightTop,canCollideWith,
-            v3(1.0f,5.5f,1.0f),zeroV));
+            v3(1.0f,7.5f,1.0f),zeroV));
 
     canCollideWith = {shoulder, arm};
     // shoulder->arm
@@ -159,7 +160,7 @@ void createShapes() {
     shapes[arm] = (new Shape(&cubePointsBottom,
             &cubeColours,&cubeColoursPurple,&cubeColoursGreen,
             arm,bottom_upRightTop,canCollideWith,
-            v3(1.0f,4.5f,1.0f),zeroV));
+            v3(1.0f,5.5f,1.0f),zeroV));
 
     // arm->forearm
     canCollideWith = {arm,forearm};
@@ -180,7 +181,7 @@ void createShapes() {
     shapes[forearm_platter_connector] = (new Shape(&cubePointsBottom,
             &cubeColours,&cubeColoursPurple,&cubeColoursGreen,
             forearm_platter_connector,bottom_upRightTop,canCollideWith,
-            connector_dims,zeroV));
+            1.25f*connector_dims,zeroV));
 
     // platter
     canCollideWith = {};
@@ -241,6 +242,19 @@ void createShapes() {
         }
     }
 
+    int otherShape = shapes.size();
+    shapes[otherShape] = (new Shape(&cubePointsCentered,
+            &cubeColours,&cubeColoursPurple,&cubeColoursGreen,
+            otherShape,center_upRightTop,canCollideWith,
+            v3(2.0f,1.0f,1.5f),zeroV));
+    translateShape(otherShape, v3(7.0f,1.0f,3.0f));
+    otherShape += 1;
+    shapes[otherShape] = (new Shape(&cubePointsCentered,
+            &cubeColours,&cubeColoursPurple,&cubeColoursGreen,
+            otherShape,center_upRightTop,canCollideWith,
+            v3(1.0f,2.0f,2.5f),zeroV));
+    translateShape(otherShape, v3(10.0f,0.2f,5.0f));
+
     for (auto& s: shapes) {
         auto& shape = s.second;
         glGenVertexArrays(1, &(shape->VAO));
@@ -300,6 +314,7 @@ void processKeystates() {
     bool stop = false;
 
     const float ang = glm::radians(40.0f)/fps;
+    const float trans(3.0f/fps);
 
     if (keys['r'])
         rotateV = v3(ang,0.0f,0.0f);
@@ -313,6 +328,14 @@ void processKeystates() {
         rotateV = v3(0.0f,0.0f,ang);
     if (keys['Z'])
         rotateV = v3(0.0f,0.0f,-ang);
+    if (keys['h'])
+        translate = v3(-trans,0.0f,0.0f);
+    if (keys['l'])
+        translate = v3(trans,0.0f,0.0f);
+    if (keys['k'])
+        translate = v3(0.0f,0.0f,trans);
+    if (keys['j'])
+        translate = v3(0.0f,0.0f,-trans);
     if (keys['w'])
         camera_movement_multiplier = oneV;
     if (keys['W'])
@@ -361,7 +384,6 @@ void processKeystates() {
         }
     }
     
-
     moveCamera(camera_movement_multiplier);
 
     for (auto& s: getShapes()) { // for every shape selected
@@ -465,11 +487,10 @@ Movements processMovements() {
             const Id parent = where;
             const Id child_start = parent + 1;
             const int chain_size = ARM_PARTS.size();
-            const v3 parent_pos = after.pos;
-            const fq q(originalMove.rotation);
 
             if (m.t == Movement::Transform::Rotation) {
-
+                const v3 parent_pos = after.pos;
+                const fq q(originalMove.rotation);
                 for (int j=child_start; j<chain_size; ++j) {
                     const auto& children = ARM_PARTS[j];
                     for (int k=0; k<children.size(); ++k) {
@@ -484,7 +505,15 @@ Movements processMovements() {
                         thisMove.push_back(mTrans);
                     }
                 }
-
+            } else if (m.t == Movement::Transform::Translation) {
+                for (int j=child_start; j<chain_size; ++j) {
+                    const auto& children = ARM_PARTS[j];
+                    for (int k=0; k<children.size(); ++k) {
+                        const Id this_child = children[k];
+                        Movement mTrans(this_child, Movement::Transform::Translation, originalMove.pos);
+                        thisMove.push_back(mTrans);
+                    }
+                }
             }
         }
         movements_done.push_back(m);
@@ -552,21 +581,87 @@ void collisions() {
     // to undo those lists of all affected objects
 
     bool needUndo = false;
+    
+    // for things that should stick together -
+    // if both claws touching a cube that isn't in the arm anywhere
+    // map of things touching claws -> number of claws touched
+    // only if thing A touches CLAW_PARTS.size() then attach it to vector of parts
+
+    std::map<Id,int> hittingAllClaws;
+    for (auto& pai: shapes) {
+        // everything hitting 0 times
+        hittingAllClaws.insert(std::make_pair(pai.first,0));
+    }
+    for (auto& pai: collidingPairs) {
+        const Id& shape1Id = pai.first;
+        const Id& shape2Id = pai.second;
+        const Shape& shape1 = *shapes[shape1Id];
+        const Shape& shape2 = *shapes[shape2Id];
+        // if object hitting a claw part, add it to above set
+        const bool is1claw = std::find(CLAW_PARTS.begin(), CLAW_PARTS.end(), shape1Id) != CLAW_PARTS.end();
+        const bool is2claw = std::find(CLAW_PARTS.begin(), CLAW_PARTS.end(), shape2Id) != CLAW_PARTS.end();
+        if (is1claw ^ is2claw) {
+            if (is1claw) {
+                hittingAllClaws[shape2Id] += 1;
+            } else {
+                hittingAllClaws[shape1Id] += 1;
+            }
+        }
+    }
+
+    const int CLAW_PARTS_SIZE = CLAW_PARTS.size();
+
+    std::set<Id> just_grabbed;
+    static std::set<Id> grabbed;
+    std::set<Id> just_released;
+
+    // map of id -> number of hits on claws
+    for (auto& pai: hittingAllClaws) {
+        // part is grabbed by all claw parts
+        if (pai.second == CLAW_PARTS_SIZE) {
+            // if not already grabbed, add to just_grabbed
+            if (!(grabbed.find(pai.first) != grabbed.end())) {
+                just_grabbed.insert(pai.first);
+            }
+            // add to full grabbed list
+            grabbed.insert(pai.first);
+        } else {
+            // if it was grabbed and now it's not hitting any claws
+            const bool was_grabbed = grabbed.find(pai.first) != grabbed.end();
+            if (was_grabbed) {
+                just_released.insert(pai.first);
+            }
+            grabbed.erase(pai.first);
+        }
+    }
+
+    std::vector<Id>& GRABBED_SHAPES = ARM_PARTS.back();
+
+    for (auto& id: just_grabbed) {
+        std::cout << "Just grabbed " << id << "\n";
+        GRABBED_SHAPES.push_back(id);
+    }
+    for (auto& id: just_released) {
+        GRABBED_SHAPES.erase(std::remove(GRABBED_SHAPES.begin(), GRABBED_SHAPES.end(), id), GRABBED_SHAPES.end());
+        std::cout << "Just released " << id << "\n";
+    }
 
     for (auto& pai: collidingPairs) {
         const Id& shape1Id = pai.first;
         const Id& shape2Id = pai.second;
         const Shape& shape1 = *shapes[shape1Id];
         const Shape& shape2 = *shapes[shape2Id];
-        static const bool allowedToCollideGlobal = allowCollision; // global for now
+        //const bool allowedToCollideGlobal = allowCollision; // global for now
         //static const bool allowedToCollideGlobal = false; // global for now
-
+        const bool grabbed_1 = grabbed.find(shape1Id) != grabbed.end();
+        const bool grabbed_2 = grabbed.find(shape2Id) != grabbed.end();
+        const bool allowedToCollide = grabbed_1 || grabbed_2;
         std::set<Id> shape1CanHit = shape1.canCollideWith;
         const bool can1Hit2 = shape1CanHit.find(shape2Id) != shape1CanHit.end();
         std::set<Id> shape2CanHit = shape2.canCollideWith;
         const bool can2Hit1 = shape2CanHit.find(shape1Id) != shape2CanHit.end();
         const bool mayCollide = can1Hit2 || can2Hit1;
-        if (!mayCollide && !allowedToCollideGlobal) {
+        if (!mayCollide && !allowedToCollide) {
             needUndo = true;
             break;
         }
@@ -737,6 +832,10 @@ std::vector<Shape*> getShapes() {
     return selectedShapes;
 }
 
+template <typename T> int sgn(T val) {
+    return (T(0) < val) - (val < T(0));
+}
+
 void switchShapes(int by) {
     // turn off all
     for (auto& ARM_PART: ARM_PARTS) {
@@ -751,7 +850,7 @@ void switchShapes(int by) {
         // update selected part
         selectedPartIndex += by;
         if (selectedPartIndex % 2 != 0) {
-            selectedPartIndex += by;
+            selectedPartIndex += sgn(by);
         }
         selectedPartIndex %= ARM_PARTS.size();
         lastTime = timeNowMillis();

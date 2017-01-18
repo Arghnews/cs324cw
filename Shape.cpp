@@ -16,9 +16,8 @@
 #include "Shape.hpp"
 #include "State.hpp"
 
-    //Shape(const fv* points, const fv* colours, const fv* red, int id, v3 topCenter, Set<Id> canCollideWith,
-    //        v3 scale=oneV, v3 motionLimiter=oneV, v3 translationMultiplier=oneV
-    //        size,          rotation,            , translationMultiplier, yaw_pitch_roll_min, yaw_pitch_roll_max
+//Shape::Shape(const fv* points, const fv* colours, const fv* purple, const fv* green,
+        //int id, v3 topCenter, std::set<Id> canCollideWith, v3 scale, v3 translationMultiplier, v3 rotationMultiplier) :
 
 Shape::Shape(const fv* points, const fv* colours, const fv* purple, const fv* green,
         int id, v3 topCenter, std::set<Id> canCollideWith, v3 scale, v3 translationMultiplier, v3 rotationMultiplier) :
